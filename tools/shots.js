@@ -48,8 +48,14 @@ await page.click('[data-go="collection"]');
 await shot('04-collection');
 
 await page.click('[data-go="title"]');
-await page.click('[data-go="audio"]');
-await shot('05-audio');
+await page.click('[data-go="rules"]');
+await shot('04b-rules', 500);
+
+await page.click('[data-go="title"]');
+await page.click('[data-go="settings"]');
+await shot('05-settings');
+await page.click('[data-settab="sound"]');
+await shot('05b-settings-sound');
 
 // --- 戦闘: マリガン → 開始演出 → 盤面 ---
 await page.click('[data-go="title"]');
