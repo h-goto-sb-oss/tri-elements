@@ -42,7 +42,9 @@ node sim/sweep.js                  # ルール案の比較
 | 置き場所 | 内容 |
 |---|---|
 | `assets/art/<カードID>.png` | カードのイラスト（512pxの透過PNG。背景は弾ごとに自動で敷かれます） |
-| `assets/enemy/<エリアID>_<番号>.png` | 敵の立ち絵。無い間は代表カードの絵を使います |
+| `assets/enemies/area-NN-MM-名前.png` | 敵の立ち絵（NN=エリア1〜5、MM=敵1〜3）。無い間は代表カードの絵 |
+| `assets/backgrounds/area-NN-名前.png` | エリアの背景（冒険画面と戦闘画面の両方で使用） |
+| `assets/backgrounds/battle-common.png` | 共通の戦闘背景（フリーバトル用の予備） |
 | `assets/audio/bgm_menu.*` | タイトル / デッキ編集 / カード図鑑 / ルール説明 |
 | `assets/audio/bgm_map.*` | 冒険（エリア画面） |
 | `assets/audio/bgm_battle.*` | 戦闘画面 |
@@ -50,6 +52,9 @@ node sim/sweep.js                  # ルール案の比較
 
 音声の拡張子は `.mp3 / .ogg / .m4a / .wav` のどれでも構いません。
 アプリの「サウンド設定」画面で読み込み状況を確認できます。
+
+敵と背景を追加・差し替えたら `python tools/make_manifest.py` を実行してください
+（`src/ui/assets_map.js` を作り直します）。
 
 イラストの一括取り込みは `python tools/import_art.py`（OneDriveの素材フォルダから
 名前でカードに割り当て、透明な余白を自動でトリムします）。

@@ -16,6 +16,7 @@ import {
   areaUnlocked, addCards, deckCurve, STARTER_DECK,
 } from '../game/campaign.js';
 import * as Audio from './audio.js';
+import { ENEMY_ART, AREA_BG } from './assets_map.js';
 
 const $app = document.getElementById('app');
 
@@ -64,20 +65,23 @@ function toast(msg, ms = 1700) {
 // ============================================================
 const AREA_TINT = { a1: '#4a7a3a', a2: '#9a4020', a3: '#2b6a9a', a4: '#2f7048', a5: '#6a4a8a' };
 
-/** 敵の立ち絵。assets/enemy/<area>_<i>.png があればそれ、無ければ代表カードの絵を使う。 */
+/** 敵の立ち絵。assets/enemies の実素材があればそれ、無ければ代表カードの絵を使う。 */
 function portraitHtml(areaId, index, enemy) {
-  const key = areaId + '_' + index;
+  const src = ENEMY_ART[areaId + ':' + index];
+  const bg = AREA_BG[areaId] || AREA_BG.common;
   const tint = AREA_TINT[areaId] || '#3a4a60';
+  if (src) {
+    return '<div class="portrait art">'
+      + (bg ? '<div class="pbg" style="background-image:url(' + bg + ')"></div>' : '')
+      + '<img class="pchar" src="' + src + '" alt="">'
+      + '<div class="picon">' + enemy.icon + '</div></div>';
+  }
   const faceCard = enemy.face ? card(enemy.face) : null;
   const fallback = faceCard
     ? '<div class="pface">' + cardArtSvg(faceCard) + '</div>'
     : '<div class="emoji">' + enemy.icon + '</div>';
   return '<div class="portrait" style="background:radial-gradient(circle at 50% 35%, ' + tint + ', #070a10 74%)">'
-    + fallback
-    + '<img src="assets/enemy/' + key + '.png" alt="" onerror="this.remove()"'
-    + ' onload="this.parentNode.querySelectorAll(\'.pface,.emoji\').forEach(e=>e.style.display=\'none\')">'
-    + '<div class="picon">' + enemy.icon + '</div>'
-    + '</div>';
+    + fallback + '<div class="picon">' + enemy.icon + '</div></div>';
 }
 
 /** エリアごとの背景。奥行きのあるシルエットを重ねる。 */
@@ -208,7 +212,10 @@ function renderAdventure() {
       <div class="desc">${esc(area.desc)}<br><span style="color:#9fb2c8">報酬: ${PACK_TYPES[REWARD[area.id]].name}　／　撃破 ${area.enemies.filter((_, k) => app.save.cleared[`${area.id}:${k}`]).length}/${area.enemies.length}</span></div>
       <div class="adv-tabs">${tabs}</div>
     </div>
-    <div class="adv-stage adv-${area.id}">${areaSceneSvg(area.id)}<div class="foes">${foes}</div></div>
+    <div class="adv-stage adv-${area.id}" ${AREA_BG[area.id] ? `style="--bgimg:url(${AREA_BG[area.id]})"` : ''}>
+      ${AREA_BG[area.id] ? '<div class="stagebg"></div>' : areaSceneSvg(area.id)}
+      <div class="foes">${foes}</div>
+    </div>
     <div class="adv-foot">
       ${packs}
       <button class="btn" data-go="deck">デッキ編集</button>
@@ -441,9 +448,13 @@ function renderBattle() {
   const pips = n => Array.from({ length: maxPips }, (_, i) => `<div class="pip ${i < n ? 'on' : ''}"></div>`).join('');
   const logHtml = g.log.slice(-24).map(l => `<div class="l ${l.kind}">${esc(l.text)}</div>`).join('');
 
-  return `<div class="battle">
+  const bg = AREA_BG[AREAS[app.areaIndex]?.id] || AREA_BG.common;
+  return `<div class="battle" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
     <div class="bar">
-      <div class="who"><div class="face">${app.enemy ? app.enemy.icon : '🤖'}</div>${esc(op.name)}</div>
+      <div class="who"><div class="face">${(() => {
+        const src = ENEMY_ART[`${AREAS[app.areaIndex]?.id}:${Number((app.enemyKey || ':0').split(':')[1])}`];
+        return src ? `<img src="${src}" alt="">` : (app.enemy ? app.enemy.icon : '🤖');
+      })()}</div>${esc(op.name)}</div>
       <div class="lifebox"><span class="lifeval">${op.life}</span>
         <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, op.life / (app.enemy?.life || 20) * 100))}%"></div></div></div>
       <div class="costpips">${pips(op.cost)}</div>
@@ -548,7 +559,10 @@ function battleStartOverlay() {
       </div>
       <div class="bs-vslabel">VS</div>
       <div class="bs-side">
-        <div class="bs-face">${e.icon}</div>
+        <div class="bs-face">${(() => {
+          const src = ENEMY_ART[`${AREAS[app.areaIndex].id}:${Number(app.enemyKey.split(':')[1])}`];
+          return src ? `<img src="${src}" alt="">` : e.icon;
+        })()}</div>
         <div class="bs-name">${esc(e.name)}</div>
         <div class="bs-desc">${esc(e.desc)}<br>ライフ ${app.game.players[1].life}${e.startCost ? ` ／ 開始コスト ${e.startCost}` : ''}</div>
       </div>
