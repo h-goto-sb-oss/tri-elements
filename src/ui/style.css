@@ -1,179 +1,331 @@
 :root{
-  --bg:#0d1117; --bg2:#141b25; --panel:#1a2331; --panel2:#222d3d;
-  --line:#2e3b4d; --text:#e8eef6; --muted:#93a3b8;
+  --bg:#0b0f16; --panel:#161e2a; --panel2:#1f2937; --line:#2c3a4d;
+  --text:#e8eef6; --muted:#8fa0b6; --gold:#f2c15b; --danger:#ff5566;
   --fire:#ff6a3d; --water:#3da9ff; --grass:#4cc46a; --none:#c9b57e;
-  --gold:#f2c15b; --danger:#ff5566;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
-  background:radial-gradient(1200px 700px at 50% -10%, #1b2740 0%, var(--bg) 60%);
+  background:radial-gradient(1300px 800px at 50% -12%, #1a2740 0%, var(--bg) 62%);
   color:var(--text);
   font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
-  overflow:hidden;
+  overflow:hidden; user-select:none;
 }
 #app{height:100vh;display:flex;flex-direction:column}
 button{font-family:inherit;color:inherit;cursor:pointer}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#33415a;border-radius:5px}
+::-webkit-scrollbar-track{background:#131a25}
 
 /* ---------- 汎用 ---------- */
-.btn{
-  background:linear-gradient(180deg,var(--panel2),var(--panel));
-  border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:14px;font-weight:700;
-  transition:.12s;
-}
+.btn{background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:8px;padding:8px 16px;font-size:14px;font-weight:700;transition:.12s}
 .btn:hover{border-color:var(--gold);transform:translateY(-1px)}
-.btn.primary{background:linear-gradient(180deg,#c9922f,#8f6415);border-color:#e0b258;color:#fff8e6}
-.btn.danger{background:linear-gradient(180deg,#a33,#722);border-color:#c55}
-.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn.primary{background:linear-gradient(180deg,#d0a03a,#8f6415);border-color:#e8c268;color:#fff8e6}
+.btn.danger{background:linear-gradient(180deg,#b34,#722);border-color:#c55}
+.btn:disabled{opacity:.32;cursor:not-allowed;transform:none}
 .btn.small{padding:4px 10px;font-size:12px}
+.btn.tiny{padding:2px 8px;font-size:11px;border-radius:6px}
+.hint{font-size:12px;color:var(--muted);text-align:center;min-height:16px}
 
-/* ---------- カード ---------- */
+/* ============================================================
+   カード
+   ============================================================ */
 .card{
-  width:110px;height:186px;border-radius:9px;position:relative;flex:none;
-  background:linear-gradient(180deg,#28313f,#161d27);
-  border:2px solid #3a4657; box-shadow:0 3px 8px rgba(0,0,0,.5);
+  width:106px;height:176px;border-radius:10px;position:relative;flex:none;overflow:hidden;
+  background:linear-gradient(180deg,#232d3c,#141b25);
+  border:2px solid #3a4657;box-shadow:0 3px 9px rgba(0,0,0,.55);
   transition:transform .12s, box-shadow .12s, border-color .12s;
-  overflow:hidden; user-select:none;
 }
-.card.fire{border-color:#8c3a1c;background:linear-gradient(180deg,#33211c,#1a1210)}
-.card.water{border-color:#1c5b8c;background:linear-gradient(180deg,#182836,#101820)}
-.card.grass{border-color:#2a6b39;background:linear-gradient(180deg,#1b2c1e,#101810)}
-.card.none{border-color:#6b5c34;background:linear-gradient(180deg,#2c2820,#171410)}
-.card .cname{
-  font-size:10.5px;font-weight:800;padding:3px 20px 2px 5px;line-height:1.15;
-  text-shadow:0 1px 2px #000; height:26px; display:flex; align-items:center;
-}
-.card .cost{
-  position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
+.card.fire{border-color:#8c3a1c}.card.water{border-color:#1c5b8c}
+.card.grass{border-color:#2a6b39}.card.none{border-color:#6b5c34}
+.card .cname{font-size:10.5px;font-weight:800;padding:3px 22px 2px 5px;line-height:1.15;
+  height:25px;display:flex;align-items:center;text-shadow:0 1px 2px #000;position:relative;z-index:2}
+.card .cost{position:absolute;top:2px;right:2px;width:21px;height:21px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,#ffe9a8,#c9922f);color:#3a2600;
   font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;
-  border:1px solid #6b4c10;z-index:2;
-}
-.card .art{height:93px;position:relative;background:#0a0d12}
+  border:1px solid #6b4c10;z-index:3}
+.card .art{height:92px;position:relative;background:#080b11}
 .card-art-svg{width:100%;height:100%;display:block}
 .card .elem{position:absolute;left:3px;bottom:2px;font-size:11px;filter:drop-shadow(0 1px 1px #000)}
-.card .body{padding:3px 5px;font-size:9px;line-height:1.3;color:#c8d4e2;height:40px;overflow:hidden}
-.card .stats{
-  position:absolute;bottom:0;left:0;right:0;height:20px;display:flex;
-  background:linear-gradient(0deg,rgba(0,0,0,.75),transparent);
-  align-items:center;justify-content:space-between;padding:0 5px;font-weight:900;font-size:12px;
-}
+.card .body{padding:3px 5px;font-size:8.8px;line-height:1.3;color:#c3d2e2;height:38px;overflow:hidden}
+.card .stats{position:absolute;bottom:0;left:0;right:0;height:20px;display:flex;
+  background:linear-gradient(0deg,rgba(0,0,0,.82),transparent);
+  align-items:center;justify-content:space-between;padding:0 6px;font-weight:900;font-size:12px;z-index:2}
 .card .atk{color:#ff9c6b}.card .def{color:#7fc4ff}
-.card .kw{position:absolute;top:27px;right:3px;font-size:8px;background:#000a;padding:1px 3px;border-radius:3px;color:var(--gold)}
-.card.selectable:hover{transform:translateY(-10px);box-shadow:0 10px 22px rgba(0,0,0,.7);border-color:var(--gold)}
-.card.selected{transform:translateY(-14px);border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 10px 22px #000}
-.card.disabled{filter:grayscale(.55) brightness(.72)}
+.card .kw{position:absolute;top:26px;right:3px;font-size:8px;background:#000b;
+  padding:1px 4px;border-radius:3px;color:var(--gold);z-index:2}
+.card .rarity{position:absolute;top:26px;left:3px;font-size:8px;font-weight:900;
+  background:#000a;border:1px solid;padding:0 4px;border-radius:3px;z-index:2}
+.card .shine{position:absolute;inset:0;pointer-events:none;z-index:4;border-radius:8px}
 
-/* ---------- 盤面 ---------- */
-.battle{display:flex;flex-direction:column;height:100vh;padding:6px 10px;gap:4px}
-.boardwrap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:0}
-.side{display:flex;flex-direction:column;gap:4px}
-.side.enemy{}
-.zonerow{display:flex;gap:12px;justify-content:center;align-items:center}
-.slot{
-  width:152px;height:142px;border-radius:8px;border:1.5px dashed #33415a;
-  display:flex;align-items:center;justify-content:center;position:relative;flex:none;
-  background:rgba(255,255,255,.015);
-}
-.slot.support{width:112px;height:78px}
-.slot.droppable{border-color:var(--gold);background:rgba(242,193,91,.1)}
-.slot.targetable{border-color:var(--danger);background:rgba(255,85,102,.14);cursor:crosshair}
-.mini{
-  width:146px;height:136px;border-radius:7px;position:relative;overflow:hidden;cursor:pointer;
-  border:2px solid #3a4657;background:#141a22;
-}
-.mini.fire{border-color:#a2492a}.mini.water{border-color:#2a6ea8}.mini.grass{border-color:#357f47}.mini.none{border-color:#7d6c3f}
-.mini .mart{position:absolute;inset:0;opacity:.95}
-.mini .mname{position:absolute;top:0;left:0;right:0;font-size:11px;font-weight:800;padding:2px 3px;background:linear-gradient(180deg,#000c,transparent);text-shadow:0 1px 2px #000}
-.mini .mstat{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;padding:2px 6px;font-size:16px;font-weight:900;background:linear-gradient(0deg,#000d,transparent)}
-.mini.defense{transform:rotate(0deg)}
-.mini.defense .mart{filter:saturate(.7) brightness(.85)}
-.mini .modebadge{position:absolute;top:17px;right:3px;font-size:11px;padding:1px 5px;border-radius:4px;font-weight:800}
-.mini.attackmode .modebadge{background:#c0402099;color:#ffd9c9}
-.mini.defense .modebadge{background:#2060c099;color:#cfe6ff}
-.mini.canattack{box-shadow:0 0 0 2px #f2c15b88}
-.mini.attacking{box-shadow:0 0 0 3px var(--gold);transform:translateY(-6px)}
-.mini.targetable{box-shadow:0 0 0 3px var(--danger);cursor:crosshair}
-.mini.exhausted{filter:brightness(.55) grayscale(.4)}
-.mini .guardmark{position:absolute;top:17px;left:3px;font-size:10px;background:#1c4f8a;padding:1px 3px;border-radius:3px}
+/* レア度の枠 */
+.card.r-uncommon{box-shadow:0 0 0 1px #4fc78f55,0 3px 9px #0009}
+.card.r-rare{box-shadow:0 0 0 1px #5aa8ff88,0 0 12px #5aa8ff3a,0 3px 9px #0009}
+.card.r-rare .shine{background:linear-gradient(135deg,#7fd0ff26 0%,transparent 44%)}
+.card.r-epic{box-shadow:0 0 0 1px #b579ffaa,0 0 18px #b579ff5a,0 3px 9px #0009}
+.card.r-epic .shine{background:linear-gradient(115deg,transparent 30%,#e9c9ff55 46%,#8fe4ff44 54%,transparent 68%);
+  background-size:260% 260%;animation:sheen 3.4s linear infinite}
+.card.r-legend{box-shadow:0 0 0 2px #ffcf5a,0 0 24px #ffcf5a66,0 3px 9px #0009}
+@keyframes sheen{0%{background-position:130% 0}100%{background-position:-30% 0}}
 
-.playerbar{display:flex;align-items:center;gap:14px;padding:2px 6px}
-.lifebox{display:flex;align-items:center;gap:6px;font-weight:900}
-.lifeval{font-size:24px;color:#ff8a8a;text-shadow:0 0 8px #f005}
-.lifebar{width:180px;height:8px;background:#2a1a1e;border-radius:4px;overflow:hidden;border:1px solid #4a2a30}
-.lifebar>div{height:100%;background:linear-gradient(90deg,#ff5566,#ffa07a);transition:width .3s}
-.costpips{display:flex;gap:3px}
-.pip{width:13px;height:13px;border-radius:50%;background:#26303f;border:1px solid #3d4a5c}
-.pip.on{background:radial-gradient(circle at 35% 30%,#ffe9a8,#c9922f);border-color:#e0b258;box-shadow:0 0 6px #f2c15b77}
+.card.selectable{cursor:grab}
+.card.selectable:hover{transform:translateY(-10px);box-shadow:0 12px 24px rgba(0,0,0,.75);border-color:var(--gold)}
+.card.selected{transform:translateY(-14px);border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 12px 24px #000}
+.card.disabled{filter:grayscale(.6) brightness(.62);cursor:default}
+.card.dragging{opacity:.4}
+.card.big{width:150px;height:246px;flex:none}
+.card.big .art{height:132px}.card.big .cname{font-size:13px;height:30px;padding-right:28px}
+.card.big .cost{width:26px;height:26px;font-size:15px}
+.card.big .body{font-size:10.4px;height:56px;padding:5px 7px}
+.card.big .stats{height:26px;font-size:15px}
+.card.big .kw,.card.big .rarity{top:31px;font-size:9.5px}
+
+/* ============================================================
+   バトル画面
+   ============================================================ */
+.battle{display:flex;flex-direction:column;height:100vh;padding:4px 10px 2px;gap:2px}
+.bar{display:flex;align-items:center;gap:12px;padding:2px 4px;min-height:36px}
+.bar .who{display:flex;align-items:center;gap:7px;font-weight:800;font-size:14px}
+.bar .face{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:19px;background:#1d2634;border:1px solid var(--line);overflow:hidden}
+.bar .face img{width:100%;height:100%;object-fit:cover}
+.lifebox{display:flex;align-items:center;gap:6px}
+.lifeval{font-size:22px;font-weight:900;color:#ff8a8a;text-shadow:0 0 8px #f004;min-width:34px;text-align:right}
+.lifebar{width:150px;height:8px;background:#2a1a1e;border-radius:4px;overflow:hidden;border:1px solid #4a2a30}
+.lifebar>div{height:100%;background:linear-gradient(90deg,#ff4f63,#ffa07a);transition:width .35s}
+.costpips{display:flex;gap:3px;flex-wrap:wrap;max-width:158px}
+.pip{width:12px;height:12px;border-radius:50%;background:#242e3d;border:1px solid #3b485c}
+.pip.on{background:radial-gradient(circle at 35% 30%,#ffe9a8,#c9922f);border-color:#e0b258;box-shadow:0 0 5px #f2c15b88}
 .meta{font-size:12px;color:var(--muted)}
 .meta b{color:var(--text)}
 
-.hand{display:flex;gap:8px;justify-content:center;align-items:flex-end;height:198px;padding:6px 0 6px}
-.center{display:flex;align-items:center;justify-content:center;gap:16px;padding:2px 0;
+.field{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:0}
+.row{display:flex;gap:9px;justify-content:center;align-items:center}
+.slot{width:158px;height:158px;border-radius:9px;border:1.5px dashed #2f3d52;
+  display:flex;align-items:center;justify-content:center;position:relative;flex:none;
+  background:rgba(255,255,255,.014);transition:.12s}
+.slot.sup{width:118px;height:86px}
+.slot.drop{border-color:var(--gold);background:rgba(242,193,91,.13);box-shadow:0 0 12px #f2c15b33}
+.slot.drop.hot{background:rgba(242,193,91,.28);transform:scale(1.04)}
+
+/* 攻撃=縦置き / 防御=横置き（枠の向きで表す。絵は起こしたまま） */
+.mini{width:118px;height:152px;border-radius:8px;position:relative;overflow:hidden;cursor:pointer;
+  border:2px solid #3a4657;background:#0c1119;transition:width .18s,height .18s,box-shadow .12s,transform .12s}
+.mini.defense{width:152px;height:118px}
+.mini.fire{border-color:#a2492a}.mini.water{border-color:#2a6ea8}
+.mini.grass{border-color:#357f47}.mini.none{border-color:#7d6c3f}
+.mini.r-rare{box-shadow:0 0 0 1px #5aa8ff66,0 0 9px #5aa8ff2b}
+.mini.r-epic{box-shadow:0 0 0 1px #b579ff88,0 0 13px #b579ff44}
+.mini .inner{position:absolute;inset:0}
+.mini .mart{position:absolute;inset:0}
+.mini .mname{position:absolute;top:0;left:0;right:0;font-size:9.5px;font-weight:800;padding:2px 4px;
+  background:linear-gradient(180deg,#000d,transparent);text-shadow:0 1px 2px #000;z-index:2}
+.mini .mstat{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;
+  padding:1px 6px 2px;font-size:15px;font-weight:900;background:linear-gradient(0deg,#000e,transparent);z-index:2}
+.mini .mstat .atk{color:#ff9c6b}.mini .mstat .def{color:#7fc4ff}
+.mini .mstat.buffed{text-shadow:0 0 7px #ffd76a}
+.mini .modetag{position:absolute;top:16px;right:3px;font-size:10px;font-weight:900;
+  padding:1px 5px;border-radius:4px;z-index:3}
+.mini.attackmode .modetag{background:#c34a26dd;color:#ffe3d6}
+.mini.defense .modetag{background:#2b6bc4dd;color:#dceaff}
+.mini.defense{box-shadow:inset 0 0 0 1px #2b6bc466}
+.mini .gmark{position:absolute;top:16px;left:3px;font-size:9px;background:#1c4f8add;
+  padding:1px 4px;border-radius:3px;z-index:3}
+.mini .gmark.pierce{background:#8a3a1cdd;top:32px}
+.mini .gmark.dbl{background:#7a2f7add;top:32px}
+.mini.canact{box-shadow:0 0 0 2px #f2c15baa,0 0 12px #f2c15b44}
+.mini.attacking{box-shadow:0 0 0 3px var(--gold),0 0 16px #f2c15b88;transform:translateY(-5px)}
+.mini.targetable{box-shadow:0 0 0 3px var(--danger),0 0 14px #ff556688;cursor:crosshair}
+.mini.exhausted{filter:brightness(.55) saturate(.6)}
+.mini.justplayed{animation:pop .28s ease-out}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* 召喚時のモード選択（モンスターの横に小さく出す） */
+.modepick{position:fixed;z-index:60;display:flex;flex-direction:column;gap:4px;
+  background:#121a25f5;border:1px solid var(--gold);border-radius:8px;padding:5px;box-shadow:0 6px 20px #000c}
+.modepick button{border:1px solid var(--line);background:#1e2836;border-radius:6px;
+  padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap;text-align:left}
+.modepick button:hover{border-color:var(--gold);background:#2a3648}
+.modepick .mp-atk{color:#ffb08a}.modepick .mp-def{color:#9ccdff}
+.modepick .tip{font-size:9.5px;color:var(--muted);max-width:142px;line-height:1.35}
+
+/* サポートゾーン */
+.sup{width:112px;height:80px;border-radius:7px;position:relative;overflow:hidden;cursor:pointer;
+  border:2px solid #4b5468;background:#0c1119}
+.sup.fire{border-color:#8c3a1c}.sup.water{border-color:#1c5b8c}
+.sup.grass{border-color:#2a6b39}.sup.none{border-color:#6b5c34}
+.sup .sart{position:absolute;inset:0}
+.sup .sname{position:absolute;bottom:0;left:0;right:0;font-size:9px;font-weight:800;padding:1px 3px;
+  background:linear-gradient(0deg,#000e,transparent);text-shadow:0 1px 2px #000}
+
+/* 山札・墓地 */
+.pile{width:74px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:11px;font-weight:800;color:#b8c7d8;cursor:pointer}
+.pile .stack{width:52px;height:70px;position:relative}
+.pile .stack i{position:absolute;inset:0;border-radius:6px;border:1.5px solid #43536b;
+  background:repeating-linear-gradient(135deg,#1b2635 0 5px,#223050 5px 10px);box-shadow:0 2px 5px #0008}
+.pile .stack i:nth-child(2){transform:translate(2px,-2px)}
+.pile .stack i:nth-child(3){transform:translate(4px,-4px)}
+.pile.grave .stack i{background:repeating-linear-gradient(135deg,#241d20 0 5px,#33242b 5px 10px);border-color:#5a4048}
+.pile .n{font-size:14px;color:#fff}
+.pile.empty .stack i{opacity:.22}
+.pile:hover{color:var(--gold)}
+
+.center{display:flex;align-items:center;justify-content:center;gap:14px;padding:1px 0;min-height:26px;
   border-top:1px solid var(--line);border-bottom:1px solid var(--line);
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent)}
-.turnlabel{font-weight:900;font-size:13px;letter-spacing:.06em;color:var(--gold)}
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.035),transparent)}
+.turnlabel{font-weight:900;font-size:13px;letter-spacing:.05em;color:var(--gold)}
 
-/* ---------- ログ ---------- */
-.logpane{
-  position:fixed;right:8px;top:52px;width:230px;max-height:44vh;overflow-y:auto;
-  background:#0d1219ee;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11px;line-height:1.5;
-  z-index:20;
-}
-.logpane .l{color:var(--muted);border-bottom:1px solid #1c2430;padding:1px 0}
+.hand{display:flex;gap:7px;justify-content:center;align-items:flex-end;height:180px;padding:3px 0}
+.hand .card{cursor:grab}
+.hand .card:active{cursor:grabbing}
+
+/* ログ */
+.logpane{position:fixed;right:8px;top:46px;width:212px;max-height:38vh;overflow-y:auto;
+  background:#0b1119ee;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:11px;line-height:1.5;z-index:20}
+.logpane .l{color:var(--muted);border-bottom:1px solid #1a222e;padding:1px 0}
 .logpane .l.turn{color:var(--gold);font-weight:800;margin-top:3px}
-.logpane .l.damage{color:#ff8f9a}
-.logpane .l.destroy{color:#ffb27a}
-.logpane .l.heal{color:#8fe0a8}
-.logpane .l.end{color:var(--gold);font-weight:800}
+.logpane .l.damage{color:#ff8f9a}.logpane .l.destroy{color:#ffb27a}
+.logpane .l.heal{color:#8fe0a8}.logpane .l.end{color:var(--gold);font-weight:800}
 
-/* ---------- モーダル/画面 ---------- */
-.screen{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;align-items:center;gap:18px}
-.title-hero{text-align:center;margin-top:6vh}
-.title-hero h1{font-size:52px;letter-spacing:.16em;font-weight:900;
+/* ============================================================
+   オーバーレイ・モーダル
+   ============================================================ */
+.overlay{position:fixed;inset:0;background:#05080fdd;display:flex;align-items:center;justify-content:center;
+  z-index:100;backdrop-filter:blur(3px)}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;
+  max-width:860px;max-height:88vh;overflow-y:auto;text-align:center;box-shadow:0 20px 60px #000}
+.modal h2{font-size:24px;margin-bottom:8px;color:var(--gold)}
+.modal p{color:var(--muted);margin-bottom:12px;line-height:1.7;font-size:13px}
+.modal .row-btn{display:flex;gap:10px;justify-content:center;margin-top:12px}
+
+.detail{display:flex;gap:16px;text-align:left;align-items:flex-start}
+.d-name{font-size:19px;font-weight:900;margin-bottom:6px}
+.d-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:10px}
+.d-meta .atk{color:#ff9c6b}.d-meta .def{color:#7fc4ff}
+.d-text{font-size:13px;line-height:1.75;margin-bottom:8px;max-width:340px}
+.d-kw{font-size:11.5px;color:#a8bdd4;line-height:1.7;background:#111a24;padding:6px 9px;border-radius:7px;margin-bottom:8px}
+.d-kw b{color:var(--gold)}
+.d-flavor{font-size:11.5px;color:#7b8ca1;font-style:italic}
+
+/* バトル開始演出 */
+.battlestart{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;
+  background:#04070cf5;animation:bsfade .3s ease-out}
+.bs-inner{text-align:center}
+.bs-vs{display:flex;align-items:center;gap:34px;margin-bottom:20px;justify-content:center}
+.bs-side{display:flex;flex-direction:column;align-items:center;gap:8px}
+.bs-face{width:112px;height:112px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+  font-size:58px;background:#18202c;border:2px solid var(--line);overflow:hidden}
+.bs-face img{width:100%;height:100%;object-fit:cover}
+.bs-name{font-weight:900;font-size:16px}
+.bs-desc{font-size:12px;color:var(--muted);max-width:240px;line-height:1.6}
+.bs-vslabel{font-size:38px;font-weight:900;color:var(--gold);text-shadow:0 0 22px #f2c15b66}
+.bs-title{font-size:44px;font-weight:900;letter-spacing:.22em;margin-bottom:6px;
+  background:linear-gradient(180deg,#fff3d2,#e6b348 55%,#a3701a);-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:bspop .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes bsfade{from{opacity:0}to{opacity:1}}
+@keyframes bspop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* マリガン */
+.mull-hand{display:flex;gap:10px;justify-content:center;margin:14px 0}
+
+/* ============================================================
+   タイトル・図鑑
+   ============================================================ */
+.screen{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.title-hero{text-align:center;margin-top:5vh}
+.title-hero h1{font-size:54px;letter-spacing:.16em;font-weight:900;
   background:linear-gradient(180deg,#fff2cf,#e0a93c 60%,#a2701a);-webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow:0 4px 24px #0008}
-.title-hero p{color:var(--muted);margin-top:6px;letter-spacing:.3em;font-size:13px}
-.elemrow{display:flex;gap:26px;justify-content:center;margin:22px 0;font-size:34px}
-.menu{display:flex;flex-direction:column;gap:10px;width:260px;margin-top:10px}
+  text-shadow:0 4px 28px #0008}
+.title-hero p{color:var(--muted);margin-top:6px;letter-spacing:.32em;font-size:13px}
+.elemrow{display:flex;gap:26px;justify-content:center;margin:20px 0;font-size:34px}
+.menu{display:flex;flex-direction:column;gap:10px;width:264px}
+.grid{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:1240px}
 
-.overlay{position:fixed;inset:0;background:#050810dd;display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px;max-width:560px;text-align:center;box-shadow:0 20px 60px #000}
-.modal h2{font-size:26px;margin-bottom:8px;color:var(--gold)}
-.modal p{color:var(--muted);margin-bottom:14px;line-height:1.7}
+/* ============================================================
+   冒険（エリアページ）
+   ============================================================ */
+.adventure{flex:1;display:flex;flex-direction:column;min-height:0;padding:10px 16px 12px;gap:8px}
+.adv-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.adv-head h2{font-size:24px;letter-spacing:.08em}
+.adv-head .desc{font-size:12.5px;color:var(--muted);flex:1;min-width:200px}
+.adv-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.adv-tab{padding:5px 13px;border-radius:16px;font-size:12px;font-weight:800;border:1px solid var(--line);
+  background:#161e2a;color:var(--muted)}
+.adv-tab.on{background:linear-gradient(180deg,#d0a03a,#8f6415);color:#fff8e6;border-color:#e8c268}
+.adv-tab.locked{opacity:.4;cursor:not-allowed}
+.adv-stage{flex:1;display:flex;align-items:center;justify-content:center;gap:22px;min-height:0;
+  border-radius:16px;position:relative;overflow:hidden;padding:16px}
+.adv-stage .scene{position:absolute;inset:0;width:100%;height:100%;opacity:.75}
+.adv-stage .foes{position:relative;z-index:2;display:flex;gap:22px;align-items:center;justify-content:center;flex-wrap:wrap}
+.adv-stage::before{content:'';position:absolute;inset:0;opacity:.25;z-index:1}
+.adv-a1::before{background:radial-gradient(circle at 30% 20%,#4a7a3a,#16260f 72%)}
+.adv-a2::before{background:radial-gradient(circle at 70% 25%,#9a4020,#280e06 72%)}
+.adv-a3::before{background:radial-gradient(circle at 40% 25%,#2b6a9a,#08182a 72%)}
+.adv-a4::before{background:radial-gradient(circle at 55% 20%,#2f7048,#0c1e14 72%)}
+.adv-a5::before{background:radial-gradient(circle at 50% 18%,#6a4a8a,#150e22 72%)}
+.foe{position:relative;z-index:2;width:242px;border-radius:14px;overflow:hidden;
+  background:#0d1420ee;border:2px solid var(--line);box-shadow:0 10px 30px #000a;transition:.15s}
+.foe:hover{transform:translateY(-4px);border-color:var(--gold)}
+.foe.locked{filter:grayscale(.85) brightness(.5)}
+.foe.cleared{border-color:#3f8f5a}
+.foe .portrait{height:186px;position:relative;background:#070a10;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.foe .portrait img{width:100%;height:100%;object-fit:cover}
+.foe .portrait .emoji{font-size:92px;filter:drop-shadow(0 6px 14px #000)}
+.foe .portrait .pface{position:absolute;inset:0}
+.foe .portrait .pface svg{width:100%;height:100%}
+.foe .picon{position:absolute;left:8px;top:8px;font-size:24px;filter:drop-shadow(0 2px 4px #000);z-index:4}
+.foe .fname{font-size:15px;font-weight:900;padding:7px 10px 2px}
+.foe .fdesc{font-size:11.5px;color:var(--muted);padding:0 10px 7px;line-height:1.5;min-height:42px}
+.foe .fmeta{display:flex;gap:9px;padding:0 10px 8px;font-size:11px;color:#9fb2c8}
+.foe .fmeta b{color:#ffb9b9}
+.foe .fbtn{display:block;width:calc(100% - 20px);margin:0 10px 10px}
+.foe .badge{position:absolute;top:8px;right:8px;background:#2f7d4dEE;color:#dfffe9;
+  font-size:11px;font-weight:900;padding:2px 8px;border-radius:12px;z-index:3}
+.foe .lockicon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;z-index:3}
+.adv-foot{display:flex;justify-content:center;gap:10px;align-items:center}
 
-.grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:1160px}
-.deckpanel{display:flex;gap:20px;align-items:flex-start;width:100%;max-width:1200px}
-.curve{display:flex;gap:4px;align-items:flex-end;height:70px}
-.curve .bar{width:26px;background:linear-gradient(180deg,#6ea8ff,#2f5fa8);border-radius:3px 3px 0 0;position:relative}
-.curve .bar span{position:absolute;top:-15px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
-.curve .bar em{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);font-style:normal}
+/* ============================================================
+   デッキ編集
+   ============================================================ */
+.deckwrap{flex:1;display:flex;gap:14px;min-height:0;padding:10px 14px}
+.deckcol{width:336px;flex:none;display:flex;flex-direction:column;gap:8px;min-height:0}
+.deckcol h3{font-size:15px;color:var(--gold)}
+.curve{display:flex;gap:5px;align-items:flex-end;height:70px;padding:16px 2px 0;margin-bottom:18px}
+.curve .bar{width:30px;background:linear-gradient(180deg,#6ea8ff,#2f5fa8);border-radius:3px 3px 0 0;position:relative}
+.curve .bar span{position:absolute;top:-14px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
+.curve .bar em{position:absolute;bottom:-15px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);font-style:normal}
+.decklist{flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;
+  border:1.5px dashed #2f3d52;border-radius:10px;padding:8px;background:rgba(255,255,255,.012)}
+.decklist.drop{border-color:var(--gold);background:rgba(242,193,91,.09)}
+.dcard{width:70px;position:relative;cursor:grab}
+.dcard .card{width:70px;height:118px}
+.dcard .card .art{height:62px}
+.dcard .card .cname{font-size:8px;height:19px;padding:2px 15px 1px 3px}
+.dcard .card .cost{width:15px;height:15px;font-size:9px;top:1px;right:1px}
+.dcard .card .body{display:none}
+.dcard .card .stats{height:15px;font-size:9.5px}
+.dcard .card .kw,.dcard .card .rarity{display:none}
+.dcard .cnt{position:absolute;bottom:-3px;right:-3px;background:#0d1420;border:1px solid var(--gold);
+  color:var(--gold);font-size:10px;font-weight:900;border-radius:9px;padding:0 5px;z-index:5}
+.poolcol{flex:1;display:flex;flex-direction:column;gap:7px;min-height:0}
+.pooltools{display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:12px}
+.pool{flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;padding:4px}
+.poolcard{position:relative}
+.poolcard .own{position:absolute;bottom:-2px;right:2px;background:#000c;border-radius:6px;
+  padding:0 6px;font-size:10.5px;font-weight:800;z-index:6}
+.poolcard.full .card{filter:grayscale(.65) brightness(.6)}
 
-.arealist{display:flex;flex-direction:column;gap:12px;width:100%;max-width:720px}
-.areacard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:16px}
-.areacard.locked{opacity:.4}
-.areacard .an{font-size:17px;font-weight:800}
-.areacard .ad{font-size:12px;color:var(--muted)}
-.enemychips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.chip{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
-.chip.done{background:#1e3a24;border-color:#2f6b3c;color:#a8e6b4}
+/* 図鑑 */
+.dexbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px}
+.sel{background:#1b2432;border:1px solid var(--line);border-radius:7px;color:var(--text);
+  padding:5px 9px;font-size:12px;font-family:inherit}
 
-.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#1b2431;border:1px solid var(--gold);
-  padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;z-index:200;box-shadow:0 6px 20px #000a}
-.hint{font-size:12px;color:var(--muted);text-align:center;min-height:16px}
-.tooltip{position:fixed;z-index:300;pointer-events:none;transform:translate(-50%,-100%)}
+/* トースト */
+.toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#1b2431;
+  border:1px solid var(--gold);padding:7px 18px;border-radius:20px;font-size:13px;font-weight:700;
+  z-index:200;box-shadow:0 6px 20px #000a;animation:bsfade .2s}
 
-/* ---------- 山札・墓地の山 ---------- */
-.pile{width:104px;height:132px;border-radius:9px;position:relative;flex:none;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  font-size:12px;font-weight:800;color:#c3d2e4}
-.pile .stack{width:78px;height:100px;border-radius:8px;position:relative}
-.pile .stack i{position:absolute;inset:0;border-radius:8px;border:1.5px solid #43536b;
-  background:repeating-linear-gradient(135deg,#1e2a3c 0 6px,#243350 6px 12px);
-  box-shadow:0 2px 6px #0008}
-.pile .stack i:nth-child(2){transform:translate(3px,-3px)}
-.pile .stack i:nth-child(3){transform:translate(6px,-6px)}
-.pile.grave .stack i{background:repeating-linear-gradient(135deg,#241d20 0 6px,#332428 6px 12px);border-color:#5a4048}
-.pile .n{font-size:15px;color:#fff}
-.pile.empty .stack i{opacity:.25}
-.boardwrap{gap:2px}
+/* ドラッグ中の見た目 */
+.dragghost{position:fixed;pointer-events:none;z-index:300;opacity:.9;transform:translate(-50%,-50%) scale(.92)}

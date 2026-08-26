@@ -31,7 +31,7 @@ export function createGame({ decks, seed = 1, rules = {}, names = ['あなた', 
       name: names[i], life: R.startLife, cost: 0, maxCost: 0,
       deck: shuffle({ rngState: (seed + i * 7919) >>> 0 }, [...decks[i]]),
       hand: [], field: Array(R.fieldSlots).fill(null), supports: Array(R.supportSlots).fill(null),
-      grave: [], summoned: false, fogUntil: -1, mulliganed: false,
+      grave: [], summoned: false, summons: 0, forges: 0, fogUntil: -1, mulliganed: false,
     })),
   };
   // デッキは state の rng でシャッフルし直す（決定性のため）
@@ -318,7 +318,7 @@ export function startTurn(state) {
   p.maxCost = Math.min(p.maxCost + 1, R.maxCostCap);
   p.cost = p.maxCost;
   if (R.secondPlayerBonusCost && pi === 1 && state.turn === 2) p.cost += R.secondPlayerBonusCost;
-  p.summoned = false;
+  p.summoned = false; p.summons = 0; p.forges = 0;
   p.field.forEach(m => { if (m) { m.hasAttacked = false; m.attacks = 0; m.modeChanged = false; m.tempAtk = 0; m.tempDef = 0; } });
   log(state, 'turn', `── ${p.name} のターン ${state.turn}（コスト ${p.cost}）`, { p: pi });
 
@@ -358,17 +358,32 @@ export function discardCard(state, handIndex) {
 export function canSummon(state, pi, handIndex) {
   const p = state.players[pi], id = p.hand[handIndex];
   if (!id || !isMonster(id)) return false;
-  if (p.summoned) return false;
+  if ((p.summons || 0) >= state.rules.summonsPerTurn) return false;
   if (card(id).cost > p.cost) return false;
   return emptySlot(p) >= 0;
 }
 
-export function summon(state, pi, handIndex, mode = 'attack') {
+export function canForge(state, pi) {
+  const p = state.players[pi], R = state.rules;
+  return p.cost >= R.forgeCost && (p.forges || 0) < R.forgePerTurn && p.deck.length > 0;
+}
+export function forge(state, pi) {
+  if (!canForge(state, pi)) return false;
+  const p = state.players[pi];
+  p.cost -= state.rules.forgeCost;
+  p.forges = (p.forges || 0) + 1;
+  log(state, 'info', `${p.name} が鍛錬（コスト${state.rules.forgeCost}）でカードを1枚引いた`, { p: pi });
+  draw(state, pi, 1);
+  return true;
+}
+
+export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
   if (!canSummon(state, pi, handIndex)) return false;
   const p = state.players[pi], id = p.hand.splice(handIndex, 1)[0];
   p.cost -= card(id).cost;
+  p.summons = (p.summons || 0) + 1;
   p.summoned = true;
-  const slot = emptySlot(p);
+  const slot = (wantSlot != null && p.field[wantSlot] === null) ? wantSlot : emptySlot(p);
   const m = makeMonster(state, id, mode);
   if (!state.rules.summonModeIsFree && mode === 'defense') m.modeChanged = true;
   p.field[slot] = m;
@@ -554,6 +569,7 @@ export function legalActions(state, pi) {
     }
   });
   p.field.forEach((m, i) => { if (m && canChangeMode(state, pi, i)) acts.push({ type: 'mode', slot: i }); });
+  if (canForge(state, pi)) acts.push({ type: 'forge' });
   p.field.forEach((m, i) => {
     if (m && canAttack(state, pi, i)) {
       legalAttackTargets(state, pi, i).forEach(t => acts.push({ type: 'attack', slot: i, target: t }));
@@ -565,10 +581,11 @@ export function legalActions(state, pi) {
 
 export function applyAction(state, pi, act) {
   switch (act.type) {
-    case 'summon': state.pendingTarget = act.target || null; return summon(state, pi, act.hand, act.mode);
+    case 'summon': state.pendingTarget = act.target || null; return summon(state, pi, act.hand, act.mode, act.slot);
     case 'support': return playSupport(state, pi, act.hand, act.target || null);
     case 'mode': return changeMode(state, pi, act.slot);
     case 'attack': return attack(state, pi, act.slot, act.target);
+    case 'forge': return forge(state, pi);
     case 'end': return endTurn(state);
     case 'discard': discardCard(state, act.hand); return true;
     default: return false;

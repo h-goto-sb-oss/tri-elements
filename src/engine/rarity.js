@@ -1,0 +1,55 @@
+// ============================================================
+// レア度
+//   common   コモン     … 基本の低コスト・バニラ・単純効果
+//   uncommon アンコモン … 中コスト・役割のある効果
+//   rare     レア       … 各属性の看板・切り札級（第1弾はここまで）
+//   epic     エピック   … 第2弾の切り札。1枚で盤面がひっくり返る
+//   legend   レジェンド … 未実装（第3弾以降）
+// ============================================================
+
+export const RARITY = {
+  common:   { key: 'common',   name: 'コモン',     short: 'C',  color: '#9fb0c4', order: 0 },
+  uncommon: { key: 'uncommon', name: 'アンコモン', short: 'U',  color: '#6fd3a8', order: 1 },
+  rare:     { key: 'rare',     name: 'レア',       short: 'R',  color: '#67b6ff', order: 2 },
+  epic:     { key: 'epic',     name: 'エピック',   short: 'E',  color: '#c58cff', order: 3 },
+  legend:   { key: 'legend',   name: 'レジェンド', short: 'L',  color: '#ffcf5a', order: 4 },
+};
+
+// カードID → レア度（ここに無いものは common）
+export const RARITY_OF = {
+  // ---------------- 第1弾（レアまで） ----------------
+  // 炎
+  f05: 'uncommon', f06: 'uncommon', f07: 'uncommon',
+  f08: 'rare', f09: 'rare', f10: 'rare',
+  sf3: 'uncommon', sf4: 'uncommon', sf5: 'rare',
+  // 水
+  w05: 'uncommon', w06: 'uncommon', w07: 'uncommon',
+  w08: 'rare', w09: 'rare', w10: 'rare',
+  sw3: 'uncommon', sw4: 'uncommon', sw5: 'rare',
+  // 草
+  g05: 'uncommon', g06: 'uncommon', g08: 'uncommon',
+  g07: 'rare', g09: 'rare', g10: 'rare',
+  sg3: 'uncommon', sg4: 'uncommon', sg5: 'rare',
+  // 汎用
+  sn7: 'uncommon', sn8: 'uncommon', sn9: 'uncommon', sn10: 'uncommon',
+
+  // ---------------- 第2弾（エピックまで） ----------------
+  // 炎
+  x_f1: 'uncommon', x_f3: 'uncommon', x_sf1: 'uncommon',
+  x_f2: 'rare', x_f4: 'rare', x_f5: 'rare', x_sf3: 'rare',
+  x_f6: 'epic', x_sf2: 'epic',
+  // 水
+  x_w1: 'uncommon', x_w2: 'uncommon', x_w3: 'uncommon',
+  x_sw1: 'uncommon', x_sw3: 'uncommon',
+  x_w4: 'rare', x_w5: 'rare', x_w7: 'rare', x_sw4: 'rare', x_sw5: 'rare',
+  x_w6: 'epic', x_sw2: 'epic',
+  // 草
+  x_g1: 'uncommon', x_g2: 'uncommon', x_g4: 'uncommon',
+  x_sg1: 'uncommon', x_sg3: 'uncommon', x_sg5: 'uncommon', x_sg6: 'uncommon',
+  x_g3: 'rare', x_g5: 'rare', x_sg4: 'rare',
+  x_g6: 'epic', x_sg2: 'epic',
+  // 汎用
+  x_sn2: 'uncommon', x_sn1: 'rare',
+};
+
+export const rarityOf = id => RARITY_OF[id] || 'common';

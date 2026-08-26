@@ -6,6 +6,7 @@
 // ============================================================
 import { M, S } from './cardbuild.js';
 import { SET2 } from './cards_set2.js';
+import { rarityOf } from './rarity.js';
 
 export const ELEMENTS = {
   fire:  { key: 'fire',  name: '炎', icon: '🔥', color: '#ff6a3d' },
@@ -247,7 +248,8 @@ const SUPPORTS = [
   }),
 ];
 
-export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS, ...SET2];
+export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS, ...SET2]
+  .map(c => ({ ...c, rarity: rarityOf(c.id) }));
 export const SET1_CARDS = ALL_CARDS.filter(c => c.set === 1);
 export const SET2_CARDS = ALL_CARDS.filter(c => c.set === 2);
 export const CARD_MAP = Object.fromEntries(ALL_CARDS.map(c => [c.id, c]));

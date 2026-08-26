@@ -245,7 +245,52 @@ const S = {
     <path d="M50 16 q6 8 4 14 q-1 4 -4 4 q-3 0 -4 -4 q-2 -6 4 -14z" fill="${p.accent}"/>`,
 };
 
-// ---- カードごとに絵を少しずつ変える（同アーキタイプの使い回しを避ける） ----
+// ---- 弾ごと・属性ごとの背景（透過イラストの下に敷く） ----
+const BACKDROP = {
+  1: {   // 第1弾: 光が差す穏やかな背景
+    fire:  { a: '#ff9a4d', b: '#7d2410', c: '#2a0c04' },
+    water: { a: '#7fd8ff', b: '#0c4a76', c: '#03182c' },
+    grass: { a: '#a8e88c', b: '#1d5c2b', c: '#08200e' },
+    none:  { a: '#f0dea6', b: '#5d5033', c: '#221c11' },
+  },
+  2: {   // 第2弾『嵐の来訪者』: 嵐と稲光の背景
+    fire:  { a: '#ffd08a', b: '#8f2f52', c: '#280716' },
+    water: { a: '#b9e6ff', b: '#2d3f96', c: '#0a1038' },
+    grass: { a: '#d6f08a', b: '#2c6b57', c: '#08201c' },
+    none:  { a: '#ffeec4', b: '#6a4a6e', c: '#1e1024' },
+  },
+};
+
+function backdropSvg(c, uid) {
+  const set = c.set === 2 ? 2 : 1;
+  const p = (BACKDROP[set] || BACKDROP[1])[c.element] || BACKDROP[1].none;
+  const storm = set === 2 ? `
+    <g opacity="0.30">
+      <path d="M-20 30 L40 -20 M0 40 L60 -10 M20 50 L80 0 M40 60 L100 10 M60 70 L120 20"
+        stroke="${p.a}" stroke-width="2.5" fill="none" opacity="0.5"/>
+      <path d="M46 8 l-8 26 l10 0 l-6 24 l20 -32 l-11 0 l7 -18z" fill="${p.a}" opacity="0.75"/>
+    </g>` : `
+    <g opacity="0.28">
+      <path d="M14 -10 L44 100 L30 100 L4 -10z" fill="${p.a}" opacity="0.35"/>
+      <path d="M56 -10 L82 100 L72 100 L48 -10z" fill="${p.a}" opacity="0.22"/>
+    </g>`;
+  return `<defs>
+      <radialGradient id="bg${uid}" cx="50%" cy="38%" r="72%">
+        <stop offset="0%" stop-color="${p.a}"/>
+        <stop offset="52%" stop-color="${p.b}"/>
+        <stop offset="100%" stop-color="${p.c}"/>
+      </radialGradient>
+      <radialGradient id="vg${uid}" cx="50%" cy="45%" r="62%">
+        <stop offset="60%" stop-color="#000" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
+      </radialGradient>
+    </defs>
+    <rect width="100" height="100" fill="url(#bg${uid})"/>
+    ${storm}
+    <ellipse cx="50" cy="62" rx="34" ry="9" fill="#000" opacity="0.28"/>`;
+}
+
+// ---- カードごとに絵を少しずつ変える（手続き生成の絵のみ） ----
 function hash(str) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -275,65 +320,34 @@ function hslToHex(h, s, l) {
 function shiftPalette(p, v) {
   const dh = (v - 0.5) * 20, dl = (v - 0.5) * 0.09, ds = (v - 0.5) * 0.10;
   const sh = hex => { const [h, s, l] = hexToHsl(hex); return hslToHex(h + dh, s + ds, l + dl); };
-  return { ...p, body: sh(p.body), body2: sh(p.body2), bg1: p.bg1, bg2: p.bg2, dark: sh(p.dark), accent: p.accent };
-}
-
-// 高コストのカードには"格"を足す小物
-function regalia(c, p) {
-  if (c.type !== 'monster') return '';
-  if (c.cost >= 6) {
-    return `<path d="M34 8 l6 8 l10 -11 l10 11 l6 -8 l-3 14 l-26 0z" fill="${p.accent}"
-       stroke="rgba(0,0,0,.4)" stroke-width="1.2"/>`;
-  }
-  if (c.cost === 5) {
-    return `<circle cx="16" cy="16" r="3" fill="${p.accent}" opacity=".85"/>
-      <circle cx="86" cy="20" r="2.4" fill="${p.accent}" opacity=".7"/>
-      <circle cx="76" cy="8" r="1.8" fill="${p.accent}" opacity=".6"/>`;
-  }
-  return '';
+  return { ...p, body: sh(p.body), body2: sh(p.body2), dark: sh(p.dark) };
 }
 
 export function cardArtSvg(c) {
-  // カードに img（画像パス/データURL）が指定されていればそれを使う。
-  // 後から手描きイラストへ差し替えられるようにするためのフック。
+  const uid = c.id.replace(/[^\w]/g, '');
   const src = c.img || ART_MAP[c.id];
   if (src) {
-    return `<svg viewBox="0 0 118 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
-      <image href="${ART_BASE}${src}" x="0" y="0" width="118" height="100"
-        preserveAspectRatio="xMidYMid slice"/>
+    // 透過イラスト + 弾ごとの背景
+    return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
+      ${backdropSvg(c, uid)}
+      <image href="${src}" x="3" y="1" width="94" height="94" preserveAspectRatio="xMidYMid meet"/>
+      <rect width="100" height="100" fill="url(#vg${uid})"/>
     </svg>`;
   }
+  // ---- 素材が無いカードは手続き生成 ----
   const base = PALETTES[c.element] || PALETTES.none;
   const v = hash(c.id);
   const p = shiftPalette(base, v);
   const shape = S[c.art] || S.orb;
-  const gid = `g_${c.id}`;
-  const sc = 0.93 + v * 0.16;                 // 大きさの揺らぎ
-  const dx = (hash(c.id + 'x') - 0.5) * 7;    // 位置の揺らぎ
-  const rot = (hash(c.id + 'r') - 0.5) * 5;
-  return `<svg viewBox="0 0 100 70" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
-    <defs>
-      <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${p.bg2}"/><stop offset="100%" stop-color="${p.bg1}"/>
-      </linearGradient>
-      <linearGradient id="${gid}_l" x1="0" y1="0" x2="0.35" y2="1">
-        <stop offset="0%" stop-color="#fff" stop-opacity="0.26"/>
-        <stop offset="55%" stop-color="#fff" stop-opacity="0.02"/>
-        <stop offset="100%" stop-color="#000" stop-opacity="0.28"/>
-      </linearGradient>
-      <filter id="${gid}_s" x="-25%" y="-25%" width="150%" height="150%">
-        <feDropShadow dx="0" dy="1.6" stdDeviation="1.2" flood-color="#000" flood-opacity="0.55"/>
-      </filter>
-    </defs>
-    <rect width="100" height="70" fill="url(#${gid})"/>
-    <circle cx="80" cy="12" r="18" fill="${p.body2}" opacity="0.12"/>
-    <circle cx="14" cy="60" r="14" fill="${p.body}" opacity="0.1"/>
-    <g filter="url(#${gid}_s)" stroke="rgba(0,0,0,0.42)" stroke-width="1.5" paint-order="stroke"
-       transform="translate(${(50 + dx).toFixed(1)} 36) rotate(${rot.toFixed(1)}) scale(${sc.toFixed(3)}) translate(-50 -36)">
+  const sc = 0.93 + v * 0.16;
+  const dx = (hash(c.id + 'x') - 0.5) * 7;
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
+    ${backdropSvg(c, uid)}
+    <g transform="translate(${(dx).toFixed(1)} 12) scale(${sc.toFixed(3)})"
+       stroke="rgba(0,0,0,0.42)" stroke-width="1.5" paint-order="stroke">
       ${shape(p)}
-      ${regalia(c, p)}
     </g>
-    <rect width="100" height="70" fill="url(#${gid}_l)"/>
+    <rect width="100" height="100" fill="url(#vg${uid})"/>
   </svg>`;
 }
 

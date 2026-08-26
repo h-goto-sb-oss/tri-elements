@@ -31,7 +31,9 @@ export const SET2 = [
     flavor: '三つの口が別々に吼える。',
   }),
   M('x_f6', '焦土の王 イグナ', 'fire', 6, 7, 6, 'dragon', {
-    set: 2, tier: 3, keywords: ['pierce'], text: '【貫通】【断末魔】相手プレイヤーに4ダメージ。',
+    set: 2, tier: 3, keywords: ['pierce'],
+    text: '【貫通】【登場時】相手プレイヤーに2ダメージ。【断末魔】相手プレイヤーに4ダメージ。',
+    onSummon: [{ op: 'damageFace', side: 'enemy', v: 2 }],
     onDeath: [{ op: 'damageFace', side: 'enemy', v: 4 }],
     flavor: '倒れたあとに、本当の火が来る。',
   }),
@@ -77,8 +79,8 @@ export const SET2 = [
   }),
   M('x_w6', '深海王 アビスガルド', 'water', 6, 6, 7, 'kraken', {
     set: 2, tier: 3, keywords: ['guard'],
-    text: '【守護】【登場時】相手モンスター1体を持ち主の手札に戻し、カードを1枚引く。',
-    onSummon: [{ op: 'bounce', side: 'enemy', target: 'one' }, { op: 'draw', side: 'self', n: 1 }],
+    text: '【守護】【登場時】相手モンスター1体を持ち主の手札に戻し、カードを2枚引く。',
+    onSummon: [{ op: 'bounce', side: 'enemy', target: 'one' }, { op: 'draw', side: 'self', n: 2 }],
     flavor: '光の届かない場所にも、玉座はある。',
   }),
   S('x_sw1', '静かな水面', 'water', 2, 'wave', {
@@ -137,7 +139,10 @@ export const SET2 = [
     set: 2, tier: 3, flavor: '森が牙を持ったらこうなる。',
   }),
   M('x_g6', '大地竜ガイオン', 'grass', 6, 8, 7, 'giant', {
-    set: 2, tier: 3, flavor: '歩けば地形が変わる。',
+    set: 2, tier: 3,
+    text: '【登場時】自分の墓地からコスト4以下のモンスター1体を場に出す。',
+    onSummon: [{ op: 'revive', maxCost: 4 }],
+    flavor: '歩けば地形が変わり、踏まれた者も起き上がる。',
   }),
   S('x_sg1', '大樹の抱擁', 'grass', 3, 'ward', {
     set: 2, tier: 2, text: '自分のモンスター1体を+2/+4する。',
@@ -160,8 +165,8 @@ export const SET2 = [
     flavor: '根がつながっている限り、一緒に育つ。',
   }),
   S('x_sg2', '森の再生', 'grass', 4, 'sprout', {
-    set: 2, tier: 3, text: '自分の墓地からコスト5以下のモンスター1体を場に出す。',
-    effects: [{ op: 'revive', maxCost: 5 }],
+    set: 2, tier: 3, text: '自分の墓地からコスト5以下のモンスターを2体まで場に出す。',
+    effects: [{ op: 'revive', maxCost: 5 }, { op: 'revive', maxCost: 5 }],
     flavor: '倒れた木の上に、次の森が育つ。',
   }),
 

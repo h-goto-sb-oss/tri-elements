@@ -12,6 +12,9 @@ export const DEFAULT_RULES = {
   fieldSlots: 3,          // モンスターゾーン
   supportSlots: 3,        // サポートゾーン
   maxCostCap: 10,         // 最大コストの上限（原案に無かったので追加）
+  summonsPerTurn: 99,     // 1ターンの召喚回数（原案は1。コストが余って手詰まりになるため撤廃）
+  forgeCost: 2,           // 【鍛錬】コストを払ってカードを1枚引く
+  forgePerTurn: 1,        // 鍛錬の回数/ターン（盤面が埋まってもコストの使い道を残す）
   firstPlayerNoDraw: true,// 先攻1ターン目はドローなし
   mulligan: true,         // 初期手札の引き直し（1回）
   secondPlayerExtraCard: true, // 後攻は初期手札+1枚（先攻有利の緩和）
