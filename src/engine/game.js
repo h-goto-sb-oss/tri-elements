@@ -335,6 +335,11 @@ export function startTurn(state) {
 
 export function endTurn(state) {
   const pi = state.active, p = state.players[pi], R = state.rules;
+  // 計測用: ターン終了時に余ったコストと盤面の埋まり具合を記録する
+  log(state, 'endturn', `${p.name} のターン終了（余りコスト ${p.cost}）`, {
+    p: pi, leftCost: p.cost, fieldFull: p.field.every(x => x !== null),
+    handMonsters: p.hand.filter(id => isMonster(id)).length,
+  });
   if (p.hand.length > R.handLimit) { state.pendingDiscard = p.hand.length - R.handLimit; state.phase = 'discard'; return false; }
   // 相手ターンへ
   p.field.forEach(m => { if (m) { m.tempAtk = 0; m.tempDef = 0; } });
@@ -355,12 +360,28 @@ export function discardCard(state, handIndex) {
 // ============================================================
 // アクション
 // ============================================================
-export function canSummon(state, pi, handIndex) {
+/** その手札のモンスターを召喚するのに必要なコスト（空きが無ければ入れ替え分を加算） */
+export function summonCostOf(state, pi, handIndex, slot = null) {
   const p = state.players[pi], id = p.hand[handIndex];
+  if (!id || !isMonster(id)) return Infinity;
+  const R = state.rules;
+  const replacing = slot != null ? !!p.field[slot] : emptySlot(p) < 0;
+  return card(id).cost + (replacing ? R.replaceSummonCost : 0);
+}
+
+/** 指定スロットに召喚できるか（空きスロット／入れ替えの両方） */
+export function canSummonAt(state, pi, handIndex, slot) {
+  const p = state.players[pi], id = p.hand[handIndex], R = state.rules;
   if (!id || !isMonster(id)) return false;
-  if ((p.summons || 0) >= state.rules.summonsPerTurn) return false;
-  if (card(id).cost > p.cost) return false;
-  return emptySlot(p) >= 0;
+  if ((p.summons || 0) >= R.summonsPerTurn) return false;
+  if (slot == null || slot < 0 || slot >= p.field.length) return false;
+  if (p.field[slot] && !R.replaceSummon) return false;
+  return summonCostOf(state, pi, handIndex, slot) <= p.cost;
+}
+
+export function canSummon(state, pi, handIndex) {
+  const p = state.players[pi];
+  return p.field.some((_, i) => canSummonAt(state, pi, handIndex, i));
 }
 
 export function canForge(state, pi) {
@@ -378,16 +399,45 @@ export function forge(state, pi) {
 }
 
 export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
-  if (!canSummon(state, pi, handIndex)) return false;
-  const p = state.players[pi], id = p.hand.splice(handIndex, 1)[0];
-  p.cost -= card(id).cost;
+  const p = state.players[pi], R = state.rules;
+  const id = p.hand[handIndex];
+  if (!id || !isMonster(id)) return false;
+
+  // 置き場所を決める: 指定が無ければ空きスロット、空きが無ければ一番弱い自分のモンスターと入れ替える
+  let slot = wantSlot;
+  if (slot == null || slot < 0 || slot >= p.field.length) {
+    const e = emptySlot(p);
+    if (e >= 0) slot = e;
+    else {
+      const cands = fieldMonsters(p).sort((a, b) => (effAtk(a.m) + effDef(a.m)) - (effAtk(b.m) + effDef(b.m)));
+      slot = cands.length ? cands[0].i : -1;
+    }
+  }
+  if (!canSummonAt(state, pi, handIndex, slot)) return false;
+
+  const replacing = !!p.field[slot];
+  const cost = summonCostOf(state, pi, handIndex, slot);
+  p.hand.splice(handIndex, 1);
+  p.cost -= cost;
   p.summons = (p.summons || 0) + 1;
   p.summoned = true;
-  const slot = (wantSlot != null && p.field[wantSlot] === null) ? wantSlot : emptySlot(p);
+
+  if (replacing) {
+    log(state, 'info', `${card(p.field[slot].id).name} を墓地へ送って入れ替え召喚`, { p: pi });
+    destroyMonster(state, pi, slot, { ignoreFog: true, replaced: true });
+    // 断末魔で別のモンスターが出てきた場合に備えて置き場所を取り直す
+    if (p.field[slot]) {
+      const e2 = emptySlot(p);
+      if (e2 < 0) { p.grave.push(id); return true; }
+      slot = e2;
+    }
+  }
+
   const m = makeMonster(state, id, mode);
-  if (!state.rules.summonModeIsFree && mode === 'defense') m.modeChanged = true;
+  if (!R.summonModeIsFree && mode === 'defense') m.modeChanged = true;
   p.field[slot] = m;
-  log(state, 'summon', `${p.name} が ${card(id).name} を${mode === 'attack' ? '攻撃' : '防御'}モードで召喚`, { p: pi, cardId: id, mode });
+  log(state, 'summon', `${p.name} が ${card(id).name} を${mode === 'attack' ? '攻撃' : '防御'}モードで召喚`,
+    { p: pi, cardId: id, mode });
   const os = card(id).onSummon;
   if (os) runEffects(state, pi, os, { sourceName: card(id).name, target: state.pendingTarget || null });
   state.pendingTarget = null;
@@ -560,9 +610,15 @@ export function legalActions(state, pi) {
   const p = state.players[pi];
   p.hand.forEach((id, i) => {
     if (isMonster(id)) {
-      if (canSummon(state, pi, i)) {
-        acts.push({ type: 'summon', hand: i, mode: 'attack' });
-        acts.push({ type: 'summon', hand: i, mode: 'defense' });
+      const slots = p.field.map((_, k) => k).filter(k => canSummonAt(state, pi, i, k));
+      if (slots.length) {
+        const empties = slots.filter(k => !p.field[k]);
+        // 空きがあるなら1通りで十分。無いときだけ入れ替え先ごとに分ける
+        const targets = empties.length ? [empties[0]] : slots;
+        targets.forEach(k => {
+          acts.push({ type: 'summon', hand: i, mode: 'attack', slot: k });
+          acts.push({ type: 'summon', hand: i, mode: 'defense', slot: k });
+        });
       }
     } else if (canPlaySupport(state, pi, i)) {
       acts.push({ type: 'support', hand: i });

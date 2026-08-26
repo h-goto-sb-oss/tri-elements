@@ -13,6 +13,8 @@ export const DEFAULT_RULES = {
   supportSlots: 3,        // サポートゾーン
   maxCostCap: 10,         // 最大コストの上限（原案に無かったので追加）
   summonsPerTurn: 99,     // 1ターンの召喚回数（原案は1。コストが余って手詰まりになるため撤廃）
+  replaceSummon: true,    // 【入れ替え召喚】場が満杯でも、自分のモンスター1体を墓地へ送って召喚できる
+  replaceSummonCost: 1,   // そのときの追加コスト
   forgeCost: 2,           // 【鍛錬】コストを払ってカードを1枚引く
   forgePerTurn: 1,        // 鍛錬の回数/ターン（盤面が埋まってもコストの使い道を残す）
   firstPlayerNoDraw: true,// 先攻1ターン目はドローなし

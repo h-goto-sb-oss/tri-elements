@@ -20,6 +20,7 @@ const agg = {
   games: 0, turns: 0, summons: 0, defSummons: 0, modeChanges: 0,
   dmg: {}, attacks: 0, directAttacks: 0, destroys: 0,
   deckLeft: 0, discards: 0, p0wins: 0, deckout: 0, lifeSwingWin: 0,
+  turnsEnded: 0, wastedCost: 0, stuckTurns: 0, stuckWaste: 0,
   turnHist: {},
 };
 
@@ -39,6 +40,12 @@ function collect(s) {
       agg.dmg[src] = (agg.dmg[src] || 0) + e.v;
     }
     if (e.kind === 'info' && e.text.includes('手札上限')) agg.discards++;
+    if (e.kind === 'endturn') {
+      agg.turnsEnded++;
+      agg.wastedCost += e.leftCost;
+      // 「場が満杯・手札にモンスターあり・コストが2以上余った」= 手詰まりのターン
+      if (e.fieldFull && e.handMonsters > 0 && e.leftCost >= 2) { agg.stuckTurns++; agg.stuckWaste += e.leftCost; }
+    }
   }
 }
 
@@ -64,6 +71,11 @@ console.log(`モード変更/試合      : ${pg(agg.modeChanges)}`);
 console.log(`攻撃宣言/試合        : ${pg(agg.attacks)}   うち直接攻撃 ${(agg.directAttacks / agg.attacks * 100).toFixed(1)}%`);
 console.log(`モンスター破壊/試合   : ${pg(agg.destroys)}`);
 console.log(`手札上限で捨てた枚数  : ${pg(agg.discards)}`);
+console.log(`ターン終了時の余りコスト: 平均 ${(agg.wastedCost / agg.turnsEnded).toFixed(2)} / ターン`);
+console.log(`手詰まりターン（場が満杯・手札にモンスター有・コスト2以上余り）: `
+  + `${(agg.stuckTurns / agg.turnsEnded * 100).toFixed(1)}%  1試合あたり ${(agg.stuckTurns / agg.games).toFixed(2)}回`
+  + `  そのとき余ったコスト平均 ${(agg.stuckWaste / Math.max(1, agg.stuckTurns)).toFixed(1)}`);
+
 console.log('\n--- ライフダメージの内訳（1試合あたり） ---');
 const total = Object.values(agg.dmg).reduce((a, b) => a + b, 0);
 Object.entries(agg.dmg).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {

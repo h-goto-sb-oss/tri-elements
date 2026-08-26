@@ -124,10 +124,11 @@ export const AREAS = [
 // パックの中身は第2弾『嵐の来訪者』が中心。
 // 第1弾のカードも一定割合で出る（デッキの土台を厚くするため）。
 export const PACK_TYPES = {
+  // ブロンズは第1弾のみ。第2弾はシルバー（燃える丘クリア）から解禁する
   bronze: {
-    name: 'ブロンズパック', size: 5, set2Rate: 0.30,
+    name: 'ブロンズパック', size: 5, set2Rate: 0,
     weights: { common: 68, uncommon: 27, rare: 5, epic: 0 },
-    lastSlot: { common: 0, uncommon: 78, rare: 20, epic: 2 },
+    lastSlot: { common: 0, uncommon: 80, rare: 20, epic: 0 },
   },
   silver: {
     name: 'シルバーパック', size: 5, set2Rate: 0.55,
@@ -155,8 +156,13 @@ export function openPack(type, rand = Math.random) {
     // 最後の1枚は必ずアンコモン以上（当たり枠）
     const rarity = pickWeighted(i === t.size - 1 ? t.lastSlot : t.weights, rand);
     const wantSet2 = rand() < t.set2Rate;
-    let pool = ALL_CARDS.filter(c => c.rarity === rarity && (wantSet2 ? c.set === 2 : c.set === 1));
-    if (!pool.length) pool = ALL_CARDS.filter(c => c.rarity === rarity);
+    const wantSet = wantSet2 ? 2 : 1;
+    let pool = ALL_CARDS.filter(c => c.rarity === rarity && c.set === wantSet);
+    // その弾に該当レア度が無ければ、同じ弾の1段下のレア度へ落とす（弾の壁は越えない）
+    const order = ['epic', 'rare', 'uncommon', 'common'];
+    for (let k = order.indexOf(rarity) + 1; !pool.length && k < order.length; k++) {
+      pool = ALL_CARDS.filter(c => c.rarity === order[k] && c.set === wantSet);
+    }
     if (!pool.length) pool = ALL_CARDS.filter(c => c.rarity === 'common');
     out.push(pool[Math.floor(rand() * pool.length)].id);
   }

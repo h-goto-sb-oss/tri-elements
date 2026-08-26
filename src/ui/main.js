@@ -6,7 +6,7 @@ import { RARITY } from '../engine/rarity.js';
 import {
   createGame, mulligan, applyAction, legalAttackTargets, canSummon, canPlaySupport,
   canChangeMode, canAttack, supportNeedsTarget, fieldMonsters, effAtk, effDef,
-  isMonster, matchFilter, hasKw, emptySlot, canForge,
+  isMonster, matchFilter, hasKw, emptySlot, canForge, canSummonAt, summonCostOf,
 } from '../engine/game.js';
 import { aiChooseAction } from '../engine/ai.js';
 import { cardArtSvg } from './art.js';
@@ -320,7 +320,9 @@ function renderRules() {
       <h2 style="color:var(--gold);margin-bottom:10px">ルール</h2>
       <p><b>勝利条件</b>：相手のライフを0にする。または相手が山札切れでドローできなくなる。</p>
       <p><b>コスト</b>：毎ターン最大コストが1ずつ増える（上限10）。使い切っても次のターンに全回復。</p>
-      <p><b>召喚</b>：コストが払える限り何体でも召喚できる（場は3体まで）。召喚酔いは無く、出したターンに攻撃できる。</p>
+      <p><b>召喚</b>：コストが払える限り何体でも召喚できる。召喚酔いは無く、出したターンに攻撃できる。</p>
+      <p><b>入れ替え召喚</b>：場が3体で埋まっていても、自分のモンスター1体を墓地へ送れば召喚できる（コスト+1）。手札の大型が腐りません。</p>
+      <p><b>鍛錬</b>：1ターンに1回、2コストでカードを1枚引ける。余ったコストの使い道。</p>
       <p><b>攻撃モード（縦置き）</b>：⚔で戦う。攻撃モード同士なら⚔が高い方が勝ち、差はプレイヤーへのダメージ。負けた側のプレイヤーも差分を受ける。</p>
       <p><b>防御モード（横置き）</b>：🛡で受ける。相手の⚔が🛡を超えたら破壊され、<b>超えた分がプレイヤーへのダメージ</b>。🛡が⚔以上なら完全に防ぎ、両者とも場に残る。</p>
       <p><b>モード変更</b>：1体につき1ターン1回。ただし攻撃済みのモンスターは変更できない。</p>
@@ -407,7 +409,7 @@ function renderBattle() {
   if (app.drag && app.drag.from === 'hand') {
     const id = me.hand[app.drag.index];
     if (id && isMonster(id)) {
-      if (canSummon(g, 0, app.drag.index)) dropMonster = me.field.map((m, i) => (m ? null : i)).filter(i => i !== null);
+      dropMonster = me.field.map((_, i) => i).filter(i => canSummonAt(g, 0, app.drag.index, i));
     } else if (id) {
       const t = supportTargetSlots(g, app.drag.index);
       dropSelf = t.self; dropEnemy = t.enemy;
@@ -426,7 +428,7 @@ function renderBattle() {
       else if (myTurn && (canAttack(g, 0, i) || canChangeMode(g, 0, i))) cls = 'canact';
       if (dropSelf.includes(i)) cls += ' targetable';
     }
-    const drop = (!m && dropMonster.includes(i)) || (m && dropSelf.includes(i));
+    const drop = dropMonster.includes(i) || (m && dropSelf.includes(i));
     return `<div class="slot ${drop ? 'drop' : ''}" data-mslot="${i}">${m ? monsterHtml(m, 0, i, { cls }) : ''}</div>`;
   }).join('');
 
@@ -500,8 +502,12 @@ function popupHtml() {
   if (!p) return '';
   const style = `left:${p.x}px;top:${p.y}px`;
   if (p.type === 'mode') {
-    const c = card(app.game.players[0].hand[p.hand]);
+    const g = app.game;
+    const c = card(g.players[0].hand[p.hand]);
+    const victim = g.players[0].field[p.slot];
+    const cost = summonCostOf(g, 0, p.hand, p.slot);
     return `<div class="modepick" style="${style}">
+      ${victim ? `<div class="tip warn">${esc(card(victim.id).name)} を墓地へ送って入れ替え<br>コスト ${cost}（+${g.rules.replaceSummonCost}）</div>` : ''}
       <button class="mp-atk" data-summon="attack">⚔ 攻撃モード <b>${c.atk}</b></button>
       <button class="mp-def" data-summon="defense">🛡 防御モード <b>${c.def}</b></button>
       <div class="tip">攻撃モードは縦置き・殴れる／防御モードは横置き・🛡でダメージを受け止める</div>
@@ -826,9 +832,10 @@ document.addEventListener('pointerup', ev => {
     if (!id) { render(); return; }
     if (isMonster(id)) {
       const slotEl = elementUnder(x, y, '[data-mslot]');
-      if (slotEl && canSummon(g, 0, d.index)) {
+      if (slotEl) {
         const slot = Number(slotEl.dataset.mslot);
-        if (!g.players[0].field[slot]) { openModePick(d.index, slotEl); return; }
+        if (canSummonAt(g, 0, d.index, slot)) { openModePick(d.index, slotEl); return; }
+        if (g.players[0].field[slot]) toast('コストが足りません（入れ替え召喚は+1コスト）');
       }
       render(); return;
     }
@@ -986,9 +993,10 @@ function handleClick(ev) {
     const id = g.players[0].hand[i];
     if (!id) return;
     if (isMonster(id)) {
-      if (!canSummon(g, 0, i)) { toast('今は出せません（コスト不足／場が満杯）'); return; }
-      const slot = emptySlot(g.players[0]);
-      const slotEl = document.querySelector(`[data-mslot="${slot}"]`);
+      if (!canSummon(g, 0, i)) { toast('今は出せません（コストが足りません）'); return; }
+      const empty = emptySlot(g.players[0]);
+      if (empty < 0) { toast('場が満杯です。入れ替えたいモンスターにドラッグしてください'); return; }
+      const slotEl = document.querySelector(`[data-mslot="${empty}"]`);
       if (slotEl) return openModePick(i, slotEl);
     } else {
       if (!canPlaySupport(g, 0, i)) { toast('今は使えません'); return; }

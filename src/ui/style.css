@@ -111,6 +111,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   background:rgba(255,255,255,.014);transition:.12s}
 .slot.sup{width:118px;height:86px}
 .slot.drop{border-color:var(--gold);background:rgba(242,193,91,.13);box-shadow:0 0 12px #f2c15b33}
+.slot.drop:has(.mini){border-color:#ff9a4d;background:rgba(255,154,77,.16);box-shadow:0 0 12px #ff9a4d44}
 .slot.drop.hot{background:rgba(242,193,91,.28);transform:scale(1.04)}
 
 /* 攻撃=縦置き / 防御=横置き（枠の向きで表す。絵は起こしたまま） */
@@ -152,7 +153,9 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap;text-align:left}
 .modepick button:hover{border-color:var(--gold);background:#2a3648}
 .modepick .mp-atk{color:#ffb08a}.modepick .mp-def{color:#9ccdff}
-.modepick .tip{font-size:9.5px;color:var(--muted);max-width:142px;line-height:1.35}
+.modepick .tip{font-size:9.5px;color:var(--muted);max-width:150px;line-height:1.35}
+.modepick .tip.warn{color:#ffc07a;font-size:10.5px;font-weight:700;
+  background:#3a2410;border:1px solid #7a4a1c;border-radius:5px;padding:4px 6px}
 
 /* サポートゾーン */
 .sup{width:112px;height:80px;border-radius:7px;position:relative;overflow:hidden;cursor:pointer;
