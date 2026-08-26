@@ -202,7 +202,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .overlay{position:fixed;inset:0;background:#05080fdd;display:flex;align-items:center;justify-content:center;
   z-index:100;backdrop-filter:blur(3px)}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;
-  max-width:860px;max-height:88vh;overflow-y:auto;text-align:center;box-shadow:0 20px 60px #000}
+  max-width:900px;max-height:88vh;overflow-y:auto;text-align:center;box-shadow:0 20px 60px #000}
 .modal h2{font-size:24px;margin-bottom:8px;color:var(--gold)}
 .modal p{color:var(--muted);margin-bottom:12px;line-height:1.7;font-size:13px}
 .modal .row-btn{display:flex;gap:10px;justify-content:center;margin-top:12px}
@@ -345,3 +345,65 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 
 /* ドラッグ中の見た目 */
 .dragghost{position:fixed;pointer-events:none;z-index:300;opacity:.9;transform:translate(-50%,-50%) scale(.92)}
+
+/* ---------- プレイヤーアバター・設定 ---------- */
+.avfb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60%}
+.bar .face .avfb{font-size:17px}
+.bs-face .avfb{font-size:56px}
+.titleprof{display:flex;align-items:center;gap:12px;background:#141c28cc;border:1px solid var(--line);
+  border-radius:12px;padding:10px 18px}
+.tface{width:52px;height:52px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#18202c;flex:none}
+.tface img{width:100%;height:100%;object-fit:cover}
+.tface .avfb{font-size:26px}
+
+.tabs{display:flex;gap:8px}
+.tab{padding:7px 22px;border-radius:20px;font-size:13px;font-weight:800;border:1px solid var(--line);background:#161e2a;color:var(--muted)}
+.tab.on{background:linear-gradient(180deg,#d0a03a,#8f6415);color:#fff8e6;border-color:#e8c268}
+.setpanel{background:#141c28cc;border:1px solid var(--line);border-radius:14px;padding:20px 26px;
+  min-width:520px;display:flex;flex-direction:column;gap:16px}
+.setrow{display:flex;align-items:center;gap:14px;font-size:13.5px}
+.setrow.col{flex-direction:column;align-items:flex-start}
+.setrow label{min-width:110px;color:var(--muted)}
+.tinput{background:#0f1620;border:1px solid var(--line);border-radius:8px;color:var(--text);
+  padding:8px 12px;font-size:14px;font-family:inherit;width:220px}
+.tinput:focus{outline:none;border-color:var(--gold)}
+.avgrid{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:740px}
+.avpick{background:#0f1620;border:2px solid var(--line);border-radius:12px;padding:6px;width:112px}
+.avpick.on{border-color:var(--gold);box-shadow:0 0 14px #f2c15b55}
+.avpick .avimg{width:88px;height:88px;border-radius:9px;overflow:hidden;background:#18202c;margin:0 auto}
+.avpick .avimg img{width:100%;height:100%;object-fit:cover}
+.avpick .avimg .avfb{font-size:40px}
+.avpick .avname{font-size:11px;margin-top:5px;color:#c3d2e2}
+
+/* ---------- ルール説明 ---------- */
+.rules{gap:6px;padding:18px 24px 30px}
+.rtitle{color:var(--gold);font-size:26px;letter-spacing:.08em;margin-bottom:4px}
+.rsec{width:100%;max-width:880px;background:#131b26cc;border:1px solid var(--line);
+  border-radius:12px;padding:14px 20px;margin-bottom:10px}
+.rsec h3{font-size:15px;color:var(--gold);margin-bottom:8px}
+.rnote{font-size:13px;line-height:1.85;color:#c9d6e4;margin:4px 0}
+.rnote b{color:#fff}
+.rboard{display:flex;align-items:center;justify-content:center;gap:28px;margin:10px 0 14px;flex-wrap:wrap}
+.rside{display:flex;flex-direction:column;align-items:center;gap:6px}
+.rlabel{font-size:12px;font-weight:800;color:var(--gold)}
+.rcap{font-size:11.5px;color:var(--muted)}
+.rvs{font-size:22px;font-weight:900;color:var(--gold)}
+.rlist{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0}
+.rlist.center{justify-content:center}
+.ritem{display:flex;align-items:center;gap:12px;max-width:400px}
+.ritem.col{flex-direction:column;gap:6px}
+.ritext{font-size:12.5px;line-height:1.7;color:#c9d6e4}
+.ritext b{color:var(--gold)}
+.relem{display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0}
+.rarrow{font-size:12px;color:var(--gold);font-weight:800}
+
+/* ---------- フリーバトル ---------- */
+.dust{font-size:19px;font-weight:900;color:var(--gold);background:#141c28cc;border:1px solid var(--line);
+  border-radius:20px;padding:4px 16px}
+.freebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px}
+.freebar .tab{padding:5px 14px;font-size:12px}
+.adv-free::before{background:radial-gradient(circle at 50% 25%,#4a5a8a,#0e1020 72%)}
+.foes.scroll{max-height:100%;overflow-y:auto;align-content:flex-start;padding:6px 2px}
+.foe.free{width:210px}
+.foe.free .portrait{height:172px}
+.foe.free .fdesc{min-height:0;padding-bottom:4px}

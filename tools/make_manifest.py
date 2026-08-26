@@ -11,6 +11,7 @@ assets/enemies と assets/backgrounds を走査して src/ui/assets_map.js を�
 import os, re, json
 
 ENEMY_DIR = 'assets/enemies'
+PLAYER_DIR = 'assets/players'
 BG_DIR = 'assets/backgrounds'
 
 def scan_enemies():
@@ -39,14 +40,26 @@ def scan_backgrounds():
             out['common'] = f'/{BG_DIR}/{fn}'
     return out
 
+def scan_players():
+    """avatar-<番号>-<名前>.png → 番号でひける"""
+    out = {}
+    if not os.path.isdir(PLAYER_DIR):
+        return out
+    for fn in sorted(os.listdir(PLAYER_DIR)):
+        m = re.match(r'avatar-(\d+)-.*\.(png|jpg|jpeg|webp)$', fn, re.I)
+        if m:
+            out[str(int(m.group(1)))] = f'/{PLAYER_DIR}/{fn}'
+    return out
+
 def main():
-    enemies, bgs = scan_enemies(), scan_backgrounds()
+    enemies, bgs, players = scan_enemies(), scan_backgrounds(), scan_players()
     with open('src/ui/assets_map.js', 'w', encoding='utf-8') as f:
         f.write('// tools/make_manifest.py が自動生成。手で編集しない。\n')
         f.write('// assets/enemies と assets/backgrounds を走査した結果。\n')
         f.write('export const ENEMY_ART = ' + json.dumps(enemies, ensure_ascii=False, indent=2) + ';\n\n')
-        f.write('export const AREA_BG = ' + json.dumps(bgs, ensure_ascii=False, indent=2) + ';\n')
-    print(f'敵の立ち絵 {len(enemies)} 件 / 背景 {len(bgs)} 件')
+        f.write('export const AREA_BG = ' + json.dumps(bgs, ensure_ascii=False, indent=2) + ';\n\n')
+        f.write('export const PLAYER_ART = ' + json.dumps(players, ensure_ascii=False, indent=2) + ';\n')
+    print(f'敵の立ち絵 {len(enemies)} 件 / 背景 {len(bgs)} 件 / アバター {len(players)} 件')
 
 if __name__ == '__main__':
     main()

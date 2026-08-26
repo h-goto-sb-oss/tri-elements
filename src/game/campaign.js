@@ -170,17 +170,43 @@ export function openPack(type, rand = Math.random) {
 }
 
 // エリアクリア報酬
+// フリーバトルの難易度と、勝ったときにもらえる星屑
+export const FREE_DIFFICULTY = {
+  normal:  { name: 'ノーマル', life: 0, cost: 0, dust: 1, color: '#8fa0b6' },
+  hard:    { name: '強化',     life: 4, cost: 1, dust: 2, color: '#67b6ff' },
+  extreme: { name: '極',       life: 8, cost: 2, dust: 4, color: '#c58cff' },
+};
+
+// 星屑とパックの交換レート
+export const DUST_SHOP = [
+  { pack: 'bronze', cost: 3 },
+  { pack: 'silver', cost: 8 },
+  { pack: 'gold', cost: 18 },
+];
+
 export const REWARD = { a1: 'bronze', a2: 'silver', a3: 'silver', a4: 'gold', a5: 'gold' };
 
 // ---------- セーブ ----------
 const KEY = 'tri-elements-save-v1';
+export const AVATARS = [
+  { id: 1, name: '炎の見習い', emoji: '🔥', tint: '#a2492a' },
+  { id: 2, name: '水の巫女', emoji: '💧', tint: '#2a6ea8' },
+  { id: 3, name: '森の狩人', emoji: '🌿', tint: '#357f47' },
+  { id: 4, name: '旅の魔術師', emoji: '🔮', tint: '#6a4a8a' },
+  { id: 5, name: '竜騎士', emoji: '🐉', tint: '#8a5a2a' },
+  { id: 6, name: '星読みの少女', emoji: '✨', tint: '#7a6a3a' },
+];
+
 export function newSave() {
   return {
+    profile: null,      // { name, avatar } — 未設定なら初回の名前入力へ
     collection: { ...STARTER_COLLECTION },
     deck: [...STARTER_DECK],
     cleared: {},        // `${areaId}:${enemyIndex}` -> true
     packs: {},          // 未開封パック
     stats: { wins: 0, losses: 0 },
+    freeStats: {},      // フリーバトルの相手ごとの戦績 { 'a1:0': {w,l} }
+    stardust: 0,        // フリーバトルで貯まる交換用ポイント
   };
 }
 export function loadSave() {

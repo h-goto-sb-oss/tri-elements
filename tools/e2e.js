@@ -27,6 +27,13 @@ await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
 
+// 初回の名前入力を済ませる
+if (await page.$('[data-obstart]')) {
+  await page.fill('[data-obname]', 'テスター');
+  await page.click('[data-obstart]');
+  await page.waitForTimeout(300);
+}
+
 // --- 戦闘開始 ---
 await page.click('[data-go="adventure"]');
 await page.click('[data-fight="0:0"]');

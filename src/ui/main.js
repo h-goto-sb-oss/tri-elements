@@ -13,10 +13,12 @@ import { cardArtSvg } from './art.js';
 import { cardHtml, monsterHtml, supportHtml, detailHtml, esc } from './cardview.js';
 import {
   AREAS, REWARD, openPack, PACK_TYPES, loadSave, writeSave,
-  areaUnlocked, addCards, deckCurve, STARTER_DECK,
+  areaUnlocked, addCards, deckCurve, STARTER_DECK, AVATARS,
+  FREE_DIFFICULTY, DUST_SHOP,
 } from '../game/campaign.js';
 import * as Audio from './audio.js';
-import { ENEMY_ART, AREA_BG } from './assets_map.js';
+import { ENEMY_ART, AREA_BG, PLAYER_ART } from './assets_map.js';
+import { renderRulesPage } from './rules.js';
 
 const $app = document.getElementById('app');
 
@@ -33,6 +35,8 @@ const app = {
   hint: '', toast: '',
   aiTimer: null, result: null, packResult: null,
   deckDraft: null, poolSort: 'element',
+  free: null,           // フリーバトル中 { difficulty }
+  freeDiff: 'normal',
   logOpen: true,
   drag: null,           // ドラッグ中の情報
   audioInfo: null,
@@ -42,8 +46,8 @@ const app = {
 // 場面ごとの BGM
 // ============================================================
 const SCENE_BGM = {
-  title: 'bgm_menu', deck: 'bgm_menu', collection: 'bgm_menu', rules: 'bgm_menu', audio: 'bgm_menu',
-  adventure: 'bgm_map', battle: 'bgm_battle',
+  title: 'bgm_menu', deck: 'bgm_menu', collection: 'bgm_menu', rules: 'bgm_menu', settings: 'bgm_menu',
+  adventure: 'bgm_map', free: 'bgm_map', battle: 'bgm_battle',
 };
 function syncBgm() { Audio.playBgm(SCENE_BGM[app.screen] || 'bgm_menu'); }
 
@@ -143,6 +147,16 @@ function areaSceneSvg(id) {
   return '<svg class="scene" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice">' + (scenes[id] || '') + '</svg>';
 }
 
+/** プレイヤーのアバター。assets/players に画像があればそれを使う */
+export function avatarHtml(idx) {
+  const src = PLAYER_ART[String(idx)];
+  if (src) return `<img src="${src}" alt="">`;
+  const a = AVATARS.find(x => x.id === Number(idx)) || AVATARS[0];
+  return `<div class="avfb" style="background:radial-gradient(circle at 50% 34%, ${a.tint}, #0a0f18 76%)">${a.emoji}</div>`;
+}
+const myName = () => (app.save.profile?.name || 'あなた');
+const myAvatar = () => (app.save.profile?.avatar || 1);
+
 // ============================================================
 // タイトル
 // ============================================================
@@ -156,12 +170,16 @@ function renderTitle() {
     </div>
     <div class="menu">
       <button class="btn primary" data-go="adventure">冒険へ出る</button>
+      <button class="btn" data-go="free">フリーバトル</button>
       <button class="btn" data-go="deck">デッキ編集</button>
       <button class="btn" data-go="collection">カード図鑑</button>
       <button class="btn" data-go="rules">ルール説明</button>
-      <button class="btn" data-go="audio">サウンド設定</button>
+      <button class="btn" data-go="settings">設定</button>
     </div>
-    <div class="hint">${app.save.stats.wins}勝 ${app.save.stats.losses}敗 ／ 所持カード ${owned}枚 ／ 全${ALL_CARDS.length}種</div>
+    <div class="titleprof">
+      <div class="tface">${avatarHtml(myAvatar())}</div>
+      <div><b>${esc(myName())}</b><div class="hint" style="text-align:left">${app.save.stats.wins}勝 ${app.save.stats.losses}敗 ／ 所持カード ${owned}枚 ／ 全${ALL_CARDS.length}種</div></div>
+    </div>
   </div>`;
 }
 
@@ -218,6 +236,66 @@ function renderAdventure() {
     </div>
     <div class="adv-foot">
       ${packs}
+      <button class="btn" data-go="free">フリーバトル</button>
+      <button class="btn" data-go="deck">デッキ編集</button>
+      <button class="btn" data-go="title">タイトルへ</button>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// フリーバトル
+// ============================================================
+function renderFree() {
+  const beaten = [];
+  AREAS.forEach((a, ai) => a.enemies.forEach((e, ei) => {
+    if (app.save.cleared[`${a.id}:${ei}`]) beaten.push({ a, ai, e, ei, key: `${a.id}:${ei}` });
+  }));
+
+  const diffTabs = Object.entries(FREE_DIFFICULTY).map(([k, d]) => `
+    <button class="tab ${app.freeDiff === k ? 'on' : ''}" data-freediff="${k}">
+      ${d.name}${d.life ? `（敵ライフ+${d.life}・開始コスト+${d.cost}）` : ''}
+    </button>`).join('');
+
+  const shop = DUST_SHOP.map(x => {
+    const ok = (app.save.stardust || 0) >= x.cost;
+    return `<button class="btn small ${ok ? 'primary' : ''}" ${ok ? `data-buypack="${x.pack}"` : 'disabled'}>
+      ${PACK_TYPES[x.pack].name} ／ ✦${x.cost}</button>`;
+  }).join('');
+
+  const cards = beaten.map(({ a, ai, e, ei, key }) => {
+    const st = app.save.freeStats?.[key] || { w: 0, l: 0 };
+    return `<div class="foe free">
+      ${portraitHtml(a.id, ei, e)}
+      <div class="fname">${esc(e.name)}</div>
+      <div class="fdesc">${esc(a.name)}</div>
+      <div class="fmeta">
+        <span>${st.w}勝 ${st.l}敗</span>
+        ${e.weak ? `<span>${ELEMENTS[e.weak].icon}が有効</span>` : ''}
+      </div>
+      <button class="btn primary fbtn" data-freefight="${ai}:${ei}">戦う</button>
+    </div>`;
+  }).join('');
+
+  return `<div class="adventure">
+    <div class="adv-head">
+      <h2>フリーバトル</h2>
+      <div class="desc">一度倒した相手といつでも再戦できます。ここでの勝敗は冒険の戦績には影響しません。<br>
+        <span style="color:#9fb2c8">勝つと星屑 ✦ が貯まり、パックと交換できます。</span></div>
+      <div class="dust">✦ ${app.save.stardust || 0}</div>
+    </div>
+    <div class="freebar">
+      <span class="hint" style="min-height:0">難易度</span>
+      <div class="tabs">${diffTabs}</div>
+      <span style="margin-left:auto"></span>
+      <span class="hint" style="min-height:0">交換</span>
+      ${shop}
+    </div>
+    <div class="adv-stage adv-free" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
+      ${AREA_BG.common ? '<div class="stagebg"></div>' : ''}
+      <div class="foes scroll">${cards || '<div class="hint" style="font-size:14px">まだ誰も倒していません。冒険で1人倒すとここに並びます。</div>'}</div>
+    </div>
+    <div class="adv-foot">
       <button class="btn" data-go="deck">デッキ編集</button>
       <button class="btn" data-go="title">タイトルへ</button>
     </div>
@@ -314,58 +392,72 @@ function renderCollection() {
   return `<div class="screen">${html}<button class="btn" data-go="title">戻る</button></div>`;
 }
 
-function renderRules() {
-  return `<div class="screen">
-    <div style="max-width:780px;line-height:1.95;font-size:13.5px">
-      <h2 style="color:var(--gold);margin-bottom:10px">ルール</h2>
-      <p><b>勝利条件</b>：相手のライフを0にする。または相手が山札切れでドローできなくなる。</p>
-      <p><b>コスト</b>：毎ターン最大コストが1ずつ増える（上限10）。使い切っても次のターンに全回復。</p>
-      <p><b>召喚</b>：コストが払える限り何体でも召喚できる。召喚酔いは無く、出したターンに攻撃できる。</p>
-      <p><b>入れ替え召喚</b>：場が3体で埋まっていても、自分のモンスター1体を墓地へ送れば召喚できる（コスト+1）。手札の大型が腐りません。</p>
-      <p><b>鍛錬</b>：1ターンに1回、2コストでカードを1枚引ける。余ったコストの使い道。</p>
-      <p><b>攻撃モード（縦置き）</b>：⚔で戦う。攻撃モード同士なら⚔が高い方が勝ち、差はプレイヤーへのダメージ。負けた側のプレイヤーも差分を受ける。</p>
-      <p><b>防御モード（横置き）</b>：🛡で受ける。相手の⚔が🛡を超えたら破壊され、<b>超えた分がプレイヤーへのダメージ</b>。🛡が⚔以上なら完全に防ぎ、両者とも場に残る。</p>
-      <p><b>モード変更</b>：1体につき1ターン1回。ただし攻撃済みのモンスターは変更できない。</p>
-      <p><b>直接攻撃</b>：相手の場にモンスターが1体もいないとき、⚔分をそのままライフへ。</p>
-      <p><b>属性相性</b>：🔥→🌿→💧→🔥 の順に強い。有利な属性で攻撃すると戦闘時 <b>⚔+2</b>。</p>
-      <p><b>キーワード</b>：【守護】相手はまずこれを攻撃対象に選ぶ／【貫通】守護を無視できる／【連撃】1ターンに2回攻撃できる。</p>
-      <p><b>手札</b>：上限6枚。ターン終了時に超過分を捨てる。サポートはコストが続く限り何枚でも使える。</p>
-      <p><b>レア度</b>：${Object.values(RARITY).filter(r => r.key !== 'legend')
-        .map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' ＜ ')} ＜ <span style="color:#ffcf5a">レジェンド（未実装）</span></p>
+const renderRules = () => renderRulesPage();
+
+function renderSettings() {
+  const st = Audio.audioState;
+  const tab = app.settingsTab || 'player';
+  const avatars = AVATARS.map(a => `
+    <button class="avpick ${myAvatar() === a.id ? 'on' : ''}" data-avatar="${a.id}">
+      <div class="avimg">${avatarHtml(a.id)}</div>
+      <div class="avname">${esc(a.name)}</div>
+    </button>`).join('');
+
+  const player = `
+    <div class="setrow">
+      <label>プレイヤー名</label>
+      <input class="tinput" type="text" maxlength="12" value="${esc(myName())}" data-playername>
     </div>
+    <div class="setrow col">
+      <label>アバター</label>
+      <div class="avgrid">${avatars}</div>
+    </div>`;
+
+  const sound = `
+    <div class="setrow">
+      <label>ミュート</label>
+      <input type="checkbox" data-mute ${st.muted ? 'checked' : ''}>
+    </div>
+    <div class="setrow">
+      <label>BGM 音量</label>
+      <input type="range" min="0" max="100" value="${Math.round(st.bgmVol * 100)}" data-bgmvol>
+      <span class="hint" style="min-height:0">${Math.round(st.bgmVol * 100)}</span>
+    </div>
+    <div class="setrow">
+      <label>効果音 音量</label>
+      <input type="range" min="0" max="100" value="${Math.round(st.seVol * 100)}" data-sevol>
+      <span class="hint" style="min-height:0">${Math.round(st.seVol * 100)}</span>
+    </div>`;
+
+  return `<div class="screen">
+    <h2 style="color:var(--gold)">設定</h2>
+    <div class="tabs">
+      <button class="tab ${tab === 'player' ? 'on' : ''}" data-settab="player">プレイヤー</button>
+      <button class="tab ${tab === 'sound' ? 'on' : ''}" data-settab="sound">サウンド</button>
+    </div>
+    <div class="setpanel">${tab === 'player' ? player : sound}</div>
     <button class="btn" data-go="title">戻る</button>
   </div>`;
 }
 
-function renderAudioSettings() {
-  const f = app.audioInfo || {};
-  const rows = Audio.AUDIO_FILES.map(([k, label]) => {
-    const found = f[k];
-    return `<tr>
-      <td style="padding:5px 12px 5px 0"><code style="color:var(--gold)">assets/audio/${k}.mp3</code></td>
-      <td style="padding:5px 12px 5px 0;color:var(--muted)">${label}</td>
-      <td style="padding:5px 0;color:${found ? '#7fe0a0' : '#8fa0b6'}">${found ? '読み込み済み' : '未配置'}</td>
-    </tr>`;
-  }).join('');
-  const st = Audio.audioState;
-  return `<div class="screen">
-    <h2 style="color:var(--gold)">サウンド設定</h2>
-    <div style="max-width:640px;text-align:left;font-size:13px;line-height:1.8">
-      <p style="color:var(--muted)">下のファイル名で <code>assets/audio/</code> に置くと自動で鳴ります。
-      拡張子は .mp3 / .ogg / .m4a / .wav のいずれでも構いません。</p>
-      <table style="margin:12px 0;font-size:12.5px">${rows}</table>
-      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-        <label style="display:flex;gap:8px;align-items:center">
-          <input type="checkbox" data-mute ${st.muted ? 'checked' : ''}> ミュート</label>
-        <label style="display:flex;gap:8px;align-items:center">BGM
-          <input type="range" min="0" max="100" value="${Math.round(st.bgmVol * 100)}" data-bgmvol></label>
-        <label style="display:flex;gap:8px;align-items:center">効果音
-          <input type="range" min="0" max="100" value="${Math.round(st.seVol * 100)}" data-sevol></label>
-        <button class="btn small" data-rescan>再スキャン</button>
-      </div>
+/** 初回起動時：名前とアバターを決める */
+function onboardingOverlay() {
+  const draft = app.onboard || (app.onboard = { name: '', avatar: 1 });
+  const avatars = AVATARS.map(a => `
+    <button class="avpick ${draft.avatar === a.id ? 'on' : ''}" data-obavatar="${a.id}">
+      <div class="avimg">${avatarHtml(a.id)}</div>
+      <div class="avname">${esc(a.name)}</div>
+    </button>`).join('');
+  return `<div class="overlay"><div class="modal" style="max-width:800px">
+    <h2>ようこそ、三属の戦記へ</h2>
+    <p>あなたの名前とアバターを決めてください。<br>あとから設定でいつでも変えられます。</p>
+    <div class="setrow" style="justify-content:center">
+      <label>名前</label>
+      <input class="tinput" type="text" maxlength="12" placeholder="名前を入力" value="${esc(draft.name)}" data-obname>
     </div>
-    <button class="btn" data-go="title">戻る</button>
-  </div>`;
+    <div class="avgrid" style="margin:14px 0">${avatars}</div>
+    <div class="row-btn"><button class="btn primary" data-obstart>冒険をはじめる</button></div>
+  </div></div>`;
 }
 
 // ============================================================
@@ -450,7 +542,8 @@ function renderBattle() {
   const pips = n => Array.from({ length: maxPips }, (_, i) => `<div class="pip ${i < n ? 'on' : ''}"></div>`).join('');
   const logHtml = g.log.slice(-24).map(l => `<div class="l ${l.kind}">${esc(l.text)}</div>`).join('');
 
-  const bg = AREA_BG[AREAS[app.areaIndex]?.id] || AREA_BG.common;
+  const bg = app.free ? (AREA_BG.common || AREA_BG[AREAS[app.areaIndex]?.id])
+    : (AREA_BG[AREAS[app.areaIndex]?.id] || AREA_BG.common);
   return `<div class="battle" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
     <div class="bar">
       <div class="who"><div class="face">${(() => {
@@ -458,7 +551,7 @@ function renderBattle() {
         return src ? `<img src="${src}" alt="">` : (app.enemy ? app.enemy.icon : '🤖');
       })()}</div>${esc(op.name)}</div>
       <div class="lifebox"><span class="lifeval">${op.life}</span>
-        <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, op.life / (app.enemy?.life || 20) * 100))}%"></div></div></div>
+        <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, op.life / (app.enemyLifeMax || 20) * 100))}%"></div></div></div>
       <div class="costpips">${pips(op.cost)}</div>
       <span class="meta">手札 <b>${op.hand.length}</b></span>
       <span style="margin-left:auto"></span>
@@ -479,7 +572,7 @@ function renderBattle() {
     </div>
 
     <div class="bar">
-      <div class="who"><div class="face">🧙</div>あなた</div>
+      <div class="who"><div class="face">${avatarHtml(myAvatar())}</div>${esc(myName())}</div>
       <div class="lifebox"><span class="lifeval">${me.life}</span>
         <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, me.life / 20 * 100))}%"></div></div></div>
       <div class="costpips">${pips(me.cost)}</div>
@@ -559,8 +652,8 @@ function battleStartOverlay() {
     <div class="hint" style="margin-bottom:18px">${esc(AREAS[app.areaIndex].name)}</div>
     <div class="bs-vs">
       <div class="bs-side">
-        <div class="bs-face">🧙</div>
-        <div class="bs-name">あなた</div>
+        <div class="bs-face">${avatarHtml(myAvatar())}</div>
+        <div class="bs-name">${esc(myName())}</div>
         <div class="bs-desc">ライフ ${app.game.players[0].life}</div>
       </div>
       <div class="bs-vslabel">VS</div>
@@ -590,7 +683,7 @@ function graveOverlay() {
   const p = app.game.players[app.graveView];
   const cards = p.grave.map(id => cardHtml(card(id), { cls: 'selectable' })).join('');
   return `<div class="overlay" data-closegrave><div class="modal">
-    <h2>${app.graveView === 0 ? 'あなた' : esc(p.name)}の墓地（${p.grave.length}枚）</h2>
+    <h2>${app.graveView === 0 ? esc(myName()) : esc(p.name)}の墓地（${p.grave.length}枚）</h2>
     <div class="grid" style="max-width:760px;margin:10px 0">${cards || '<p>まだ何もありません。</p>'}</div>
     <div class="row-btn"><button class="btn" data-closegrave>閉じる</button></div>
   </div></div>`;
@@ -602,9 +695,10 @@ function resultOverlay() {
     <h2 style="font-size:30px">${r.win ? '勝利！' : '敗北…'}</h2>
     <p>${esc(r.reason)}</p>
     ${r.reward ? `<p style="color:var(--gold);font-size:15px">報酬: ${PACK_TYPES[r.reward].name} を1つ獲得！</p>` : ''}
+    ${r.dust ? `<p style="color:var(--gold);font-size:15px">星屑 ✦${r.dust} を獲得！（所持 ✦${app.save.stardust}）</p>` : ''}
     ${r.unlocked ? `<p style="color:#8fe0a8">「${esc(r.unlocked)}」が解放されました！</p>` : ''}
     <div class="row-btn">
-      <button class="btn primary" data-go="adventure">冒険へ戻る</button>
+      <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? 'フリーバトルへ戻る' : '冒険へ戻る'}</button>
       <button class="btn" data-rematch>もう一度</button>
     </div>
   </div></div>`;
@@ -627,14 +721,16 @@ function render() {
   let html;
   switch (app.screen) {
     case 'adventure': html = renderAdventure(); break;
+    case 'free': html = renderFree(); break;
     case 'deck': html = renderDeck(); break;
     case 'collection': html = renderCollection(); break;
     case 'rules': html = renderRules(); break;
-    case 'audio': html = renderAudioSettings(); break;
+    case 'settings': html = renderSettings(); break;
     case 'battle': html = renderBattle() + popupHtml(); break;
     default: html = renderTitle();
   }
   html += overlays();
+  if (!app.save.profile) html += onboardingOverlay();
   if (app.toast) html += `<div class="toast">${esc(app.toast)}</div>`;
   $app.innerHTML = html;
 }
@@ -642,8 +738,10 @@ function render() {
 // ============================================================
 // バトル進行
 // ============================================================
-function startBattle(areaIndex, enemyIndex) {
+function startBattle(areaIndex, enemyIndex, free = false) {
   const area = AREAS[areaIndex], enemy = area.enemies[enemyIndex];
+  const diff = free ? FREE_DIFFICULTY[app.freeDiff] : null;
+  app.free = free ? { difficulty: app.freeDiff } : null;
   app.areaIndex = areaIndex;
   app.enemy = enemy;
   app.enemyKey = `${area.id}:${enemyIndex}`;
@@ -651,10 +749,11 @@ function startBattle(areaIndex, enemyIndex) {
   const seed = (Math.random() * 1e9) | 0;
   app.game = createGame({
     decks: [[...app.save.deck], [...enemy.deck]],
-    seed, names: ['あなた', enemy.name],
-    startCost: [0, enemy.startCost || 0],
+    seed, names: [myName(), enemy.name],
+    startCost: [0, (enemy.startCost || 0) + (diff ? diff.cost : 0)],
   });
-  if (enemy.life) app.game.players[1].life = enemy.life;
+  app.game.players[1].life = (enemy.life || 20) + (diff ? diff.life : 0);
+  app.enemyLifeMax = app.game.players[1].life;
   app.phase = 'mulligan';
   app.screen = 'battle';
   syncBgm();
@@ -714,7 +813,22 @@ function finishGame() {
   const g = app.game;
   if (!g || g.winner === null || app.result) return;
   const win = g.winner === 0;
-  let reward = null, unlocked = null;
+  let reward = null, unlocked = null, dust = 0;
+
+  if (app.free) {
+    // フリーバトル: 戦績は別枠、勝てば星屑
+    const key = app.enemyKey;
+    app.save.freeStats = app.save.freeStats || {};
+    const st = app.save.freeStats[key] || { w: 0, l: 0 };
+    if (win) { st.w++; dust = FREE_DIFFICULTY[app.free.difficulty].dust; app.save.stardust = (app.save.stardust || 0) + dust; }
+    else st.l++;
+    app.save.freeStats[key] = st;
+    writeSave(app.save);
+    app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true };
+    Audio.playSe(win ? 'se_win' : 'se_lose');
+    return render();
+  }
+
   if (win) {
     app.save.stats.wins++;
     if (app.enemyKey && !app.save.cleared[app.enemyKey]) {
@@ -911,7 +1025,20 @@ function handleClick(ev) {
   const areaEl = hit('[data-area]');
   if (areaEl) { app.areaIndex = Number(areaEl.dataset.area); return render(); }
   const fightEl = hit('[data-fight]');
-  if (fightEl) { const [a, e] = fightEl.dataset.fight.split(':').map(Number); return startBattle(a, e); }
+  if (fightEl) { const [a, e] = fightEl.dataset.fight.split(':').map(Number); return startBattle(a, e, false); }
+  const freeEl = hit('[data-freefight]');
+  if (freeEl) { const [a, e] = freeEl.dataset.freefight.split(':').map(Number); return startBattle(a, e, true); }
+  const fd = hit('[data-freediff]');
+  if (fd) { app.freeDiff = fd.dataset.freediff; return render(); }
+  const bp = hit('[data-buypack]');
+  if (bp) {
+    const item = DUST_SHOP.find(x => x.pack === bp.dataset.buypack);
+    if (!item || (app.save.stardust || 0) < item.cost) return;
+    app.save.stardust -= item.cost;
+    app.packResult = openPack(item.pack);
+    addCards(app.save, app.packResult); writeSave(app.save);
+    return render();
+  }
   if (hit('[data-openpack]')) {
     const k = hit('[data-openpack]').dataset.openpack;
     if ((app.save.packs[k] || 0) <= 0) return;
@@ -921,11 +1048,29 @@ function handleClick(ev) {
     return render();
   }
   if (hit('[data-closepack]')) { app.packResult = null; return render(); }
-  if (hit('[data-rematch]')) { const [a, e] = app.enemyKey.split(':'); const ai = AREAS.findIndex(x => x.id === a); return startBattle(ai, Number(e)); }
+  if (hit('[data-rematch]')) {
+    const [a, e] = app.enemyKey.split(':');
+    const ai = AREAS.findIndex(x => x.id === a);
+    return startBattle(ai, Number(e), !!app.free);
+  }
 
-  // --- サウンド設定 ---
+  // --- 設定 ---
   if (t.matches('[data-mute]')) { Audio.setMuted(t.checked); return; }
-  if (hit('[data-rescan]')) { Audio.scanAudio().then(info => { app.audioInfo = info; toast('再スキャンしました'); }); return; }
+  const st = hit('[data-settab]');
+  if (st) { app.settingsTab = st.dataset.settab; return render(); }
+  const av = hit('[data-avatar]');
+  if (av) {
+    app.save.profile = { ...(app.save.profile || { name: 'あなた' }), avatar: Number(av.dataset.avatar) };
+    writeSave(app.save); return render();
+  }
+  // --- 初回の名前入力 ---
+  const oba = hit('[data-obavatar]');
+  if (oba) { app.onboard.avatar = Number(oba.dataset.obavatar); return render(); }
+  if (hit('[data-obstart]')) {
+    const nm = (document.querySelector('[data-obname]')?.value || '').trim();
+    app.save.profile = { name: nm || '名もなき挑戦者', avatar: app.onboard.avatar };
+    writeSave(app.save); app.onboard = null; toast('ようこそ！'); return render();
+  }
 
   // --- デッキ編集 ---
   if (app.screen === 'deck') {
@@ -955,7 +1100,7 @@ function handleClick(ev) {
   if (!g) return;
 
   if (hit('[data-toggle-log]')) { app.logOpen = !app.logOpen; return render(); }
-  if (hit('[data-surrender]')) { clearTimeout(app.aiTimer); return go('adventure'); }
+  if (hit('[data-surrender]')) { clearTimeout(app.aiTimer); return go(app.free ? 'free' : 'adventure'); }
   const gv = hit('[data-grave]');
   if (gv) { app.graveView = Number(gv.dataset.grave); return render(); }
 
@@ -1029,6 +1174,14 @@ function handleClick(ev) {
   if (sup) { app.detail = sup.dataset.card; return render(); }
 }
 
+document.addEventListener('input', ev => {
+  if (ev.target.matches('[data-playername]')) {
+    const v = ev.target.value.trim();
+    app.save.profile = { ...(app.save.profile || { avatar: 1 }), name: v || 'あなた' };
+    writeSave(app.save);
+  }
+  if (ev.target.matches('[data-obname]') && app.onboard) app.onboard.name = ev.target.value;
+});
 document.addEventListener('change', ev => {
   if (ev.target.matches('[data-poolsort]')) { app.poolSort = ev.target.value; render(); }
   if (ev.target.matches('[data-bgmvol]')) Audio.setBgmVolume(ev.target.value / 100);

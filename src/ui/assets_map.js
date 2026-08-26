@@ -26,3 +26,5 @@ export const AREA_BG = {
   "a5": "/assets/backgrounds/area-05-three-elements-peak.png",
   "common": "/assets/backgrounds/battle-common.png"
 };
+
+export const PLAYER_ART = {};
