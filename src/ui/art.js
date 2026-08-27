@@ -3,9 +3,7 @@
 // viewBox="0 0 100 70" のシンプルなシルエット。属性でパレットが変わる。
 // ============================================================
 import { ART_MAP } from './art_map.js';
-
-let ART_BASE = '';
-export function setArtBase(v) { ART_BASE = v; }
+import { withBase } from './base_url.js';
 
 const PALETTES = {
   fire:  { bg1: '#3a1206', bg2: '#7d2410', body: '#ff7a3c', body2: '#ffb46b', dark: '#5c1a08', accent: '#ffe08a' },
@@ -378,7 +376,7 @@ function shiftPalette(p, v) {
 
 /** カードに設定された原画ファイル。拡大表示などで使用する。 */
 export function cardArtSource(c) {
-  return c.img || ART_MAP[c.id] || '';
+  return withBase(c.img || ART_MAP[c.id] || '');
 }
 
 export function cardArtSvg(c) {

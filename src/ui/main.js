@@ -18,9 +18,20 @@ import {
   MAX_DECKS, ensureDecks,
 } from '../game/campaign.js';
 import * as Audio from './audio.js';
-import { ENEMY_ART, AREA_BG, PLAYER_ART } from './assets_map.js';
+import {
+  ENEMY_ART as _ENEMY_ART, AREA_BG as _AREA_BG, PLAYER_ART as _PLAYER_ART,
+} from './assets_map.js';
+import { withBase } from './base_url.js';
 import { renderRulesPage } from './rules.js';
 import * as Fx from './fx.js';
+
+// assets_map.js のパスはルート絶対（"/assets/..."）で保存されている。
+// GitHub Pages のサブパス配信（/tri-elements/ 配下）でも解決できるよう、
+// 使う前にここで一括して配信baseを付けておく。
+const withBaseMap = obj => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, withBase(v)]));
+const ENEMY_ART = withBaseMap(_ENEMY_ART);
+const AREA_BG = withBaseMap(_AREA_BG);
+const PLAYER_ART = withBaseMap(_PLAYER_ART);
 
 const $app = document.getElementById('app');
 
@@ -169,7 +180,7 @@ const myAvatar = () => (app.save.profile?.avatar || 1);
 function renderTitle() {
   const owned = Object.values(app.save.collection).reduce((a, b) => a + b, 0);
   return `<div class="screen title-screen">
-    <div class="title-bg" aria-hidden="true"></div>
+    <div class="title-bg" style="--titlebg:url(${withBase('/assets/backgrounds/title-bg.webp')})" aria-hidden="true"></div>
     <div class="title-shade" aria-hidden="true"></div>
     <div class="title-hero">
       <img class="title-logo" src="assets/ui/title-logo.svg" alt="TRI-ELEMENTS 三属の戦記">

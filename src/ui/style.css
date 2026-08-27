@@ -365,7 +365,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .screen{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
 .title-screen{position:relative;isolation:isolate;justify-content:center;min-height:100%;padding:clamp(14px,2.4vw,30px);
   gap:clamp(10px,2vh,22px);overflow-y:auto}
-.title-bg{position:fixed;inset:0;z-index:-3;background:url('/assets/backgrounds/title-bg.webp') center 48%/cover no-repeat;
+.title-bg{position:fixed;inset:0;z-index:-3;background:var(--titlebg) center 48%/cover no-repeat;
   transform:scale(1.015)}
 .title-shade{position:fixed;inset:0;z-index:-2;background:
   radial-gradient(circle at 50% 38%,transparent 0 28%,#05080f55 68%,#03050ae8 100%),
