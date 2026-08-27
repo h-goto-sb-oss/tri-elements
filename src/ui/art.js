@@ -259,12 +259,64 @@ const BACKDROP = {
     grass: { a: '#d6f08a', b: '#2c6b57', c: '#08201c' },
     none:  { a: '#ffeec4', b: '#6a4a6e', c: '#1e1024' },
   },
+  3: {   // 第3弾『星辰の門』: 星粒と金の軌道
+    fire:  { a: '#ffd78a', b: '#9c321d', c: '#230713' },
+    water: { a: '#d3ecff', b: '#315aa8', c: '#080d38' },
+    grass: { a: '#d9f5a2', b: '#36734f', c: '#071f20' },
+    none:  { a: '#fff0b0', b: '#66549a', c: '#100d2c' },
+  },
+};
+
+// ---- サポート専用の紋様 ----
+// サポートは「発動した術・置かれた道具」なので、立ち位置の影ではなく
+// 属性ごとの紋様を敷いて、モンスターと一目で区別できるようにする。
+const SIGIL = {
+  fire: a => `
+    <g opacity="0.34" fill="none" stroke="${a}" stroke-width="1.7" stroke-linecap="round">
+      <path d="M50 6 L50 21 M50 79 L50 94 M6 50 L21 50 M79 50 L94 50"/>
+      <path d="M19 19 L29 29 M81 19 L71 29 M19 81 L29 71 M81 81 L71 71" stroke-width="1.2"/>
+    </g>
+    <g opacity="0.55" fill="${a}">
+      <circle cx="24" cy="71" r="1.5"/><circle cx="77" cy="31" r="1.2"/>
+      <circle cx="65" cy="81" r="1"/><circle cx="33" cy="23" r="1.1"/>
+    </g>`,
+  water: a => `
+    <g opacity="0.32" fill="none" stroke="${a}">
+      <circle cx="50" cy="50" r="15" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="26" stroke-width="1.1"/>
+      <circle cx="50" cy="50" r="37" stroke-width="0.8"/>
+      <circle cx="50" cy="50" r="48" stroke-width="0.6"/>
+    </g>`,
+  grass: a => `
+    <g opacity="0.34" fill="none" stroke="${a}" stroke-width="1.6" stroke-linecap="round">
+      <path d="M10 98 q12 -38 32 -50"/><path d="M90 98 q-12 -38 -32 -50"/>
+      <path d="M50 100 q-5 -32 0 -50"/>
+    </g>
+    <g opacity="0.45" fill="${a}">
+      <ellipse cx="29" cy="59" rx="4.5" ry="2.1" transform="rotate(-38 29 59)"/>
+      <ellipse cx="71" cy="55" rx="4.5" ry="2.1" transform="rotate(38 71 55)"/>
+      <ellipse cx="50" cy="34" rx="3.6" ry="1.8"/>
+    </g>`,
+  none: a => `
+    <g opacity="0.3" fill="none" stroke="${a}" stroke-width="1.3">
+      <polygon points="50,13 82,31.5 82,68.5 50,87 18,68.5 18,31.5"/>
+      <circle cx="50" cy="50" r="30" stroke-width="0.8"/>
+      <circle cx="50" cy="50" r="12" stroke-width="0.8"/>
+    </g>`,
 };
 
 function backdropSvg(c, uid) {
-  const set = c.set === 2 ? 2 : 1;
+  const set = c.set === 3 ? 3 : (c.set === 2 ? 2 : 1);
   const p = (BACKDROP[set] || BACKDROP[1])[c.element] || BACKDROP[1].none;
-  const storm = set === 2 ? `
+  const isSup = c.type === 'support';
+  const atmosphere = set === 3 ? `
+    <g opacity="0.72">
+      <circle cx="18" cy="18" r="1.4" fill="#fff8d0"/><circle cx="78" cy="13" r="1" fill="#fff"/>
+      <circle cx="88" cy="38" r="1.5" fill="#ffe7a0"/><circle cx="25" cy="55" r="1" fill="#fff"/>
+      <circle cx="68" cy="63" r="1.2" fill="#fff8d0"/>
+      <ellipse cx="50" cy="43" rx="31" ry="25" fill="none" stroke="#f5d36f" stroke-width="1.1" transform="rotate(-18 50 43)"/>
+      <ellipse cx="50" cy="43" rx="20" ry="34" fill="none" stroke="#fff2ae" stroke-width=".7" transform="rotate(28 50 43)"/>
+    </g>` : set === 2 ? `
     <g opacity="0.30">
       <path d="M-20 30 L40 -20 M0 40 L60 -10 M20 50 L80 0 M40 60 L100 10 M60 70 L120 20"
         stroke="${p.a}" stroke-width="2.5" fill="none" opacity="0.5"/>
@@ -275,7 +327,7 @@ function backdropSvg(c, uid) {
       <path d="M56 -10 L82 100 L72 100 L48 -10z" fill="${p.a}" opacity="0.22"/>
     </g>`;
   return `<defs>
-      <radialGradient id="bg${uid}" cx="50%" cy="38%" r="72%">
+      <radialGradient id="bg${uid}" cx="50%" cy="${isSup ? 50 : 38}%" r="72%">
         <stop offset="0%" stop-color="${p.a}"/>
         <stop offset="52%" stop-color="${p.b}"/>
         <stop offset="100%" stop-color="${p.c}"/>
@@ -286,8 +338,9 @@ function backdropSvg(c, uid) {
       </radialGradient>
     </defs>
     <rect width="100" height="100" fill="url(#bg${uid})"/>
-    ${storm}
-    <ellipse cx="50" cy="62" rx="34" ry="9" fill="#000" opacity="0.28"/>`;
+    ${isSup
+      ? `${(SIGIL[c.element] || SIGIL.none)(p.a)}<g opacity="0.5">${atmosphere}</g>`
+      : `${atmosphere}<ellipse cx="50" cy="62" rx="34" ry="9" fill="#000" opacity="0.28"/>`}`;
 }
 
 // ---- カードごとに絵を少しずつ変える（手続き生成の絵のみ） ----
@@ -323,9 +376,14 @@ function shiftPalette(p, v) {
   return { ...p, body: sh(p.body), body2: sh(p.body2), dark: sh(p.dark) };
 }
 
+/** カードに設定された原画ファイル。拡大表示などで使用する。 */
+export function cardArtSource(c) {
+  return c.img || ART_MAP[c.id] || '';
+}
+
 export function cardArtSvg(c) {
   const uid = c.id.replace(/[^\w]/g, '');
-  const src = c.img || ART_MAP[c.id];
+  const src = cardArtSource(c);
   if (src) {
     // 透過イラスト + 弾ごとの背景
     return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">

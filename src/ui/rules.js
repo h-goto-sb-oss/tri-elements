@@ -37,17 +37,22 @@ export function renderRulesPage() {
     </div>`;
 
   const kwCards = [
-    ['w08', 'guard'], ['f08', 'pierce'], ['x_f4', 'double'],
-  ].map(([id, kw]) => `
+    ['w08', 'guard', ''],
+    ['f08', 'pierce', ''],
+    ['x_f4', 'double', ''],
+    ['z_f4', 'accelerate', '出すだけで次のターンが1コスト早くなります。重ねるほど大型が早く着地します。'],
+    ['z_g4', 'observe', '3枚から選べるので、欲しい1枚を引き当てやすくなります。'],
+  ].map(([id, kw, extra]) => `
     <div class="ritem">
       ${cardHtml(card(id), {})}
-      <div class="ritext"><b>【${KEYWORDS[kw].name}】</b><br>${esc(KEYWORDS[kw].desc)}</div>
+      <div class="ritext"><b>【${KEYWORDS[kw].name}】</b><br>${esc(KEYWORDS[kw].desc)}${
+        extra ? `<br><span class="rsub">${esc(extra)}</span>` : ''}</div>
     </div>`).join('');
 
   const elemCards = ['f09', 'g07', 'w09'].map(id => cardHtml(card(id), {})).join(
     '<div class="rarrow">▶ 強い</div>');
 
-  const rarityCards = ['f01', 'w05', 'f09', 'x_w6'].map(id => {
+  const rarityCards = ['f01', 'w05', 'f09', 'x_w6', 'z_lf1'].map(id => {
     const c = card(id);
     const r = RARITY[c.rarity];
     return `<div class="ritem col">
@@ -78,11 +83,13 @@ export function renderRulesPage() {
         ② カードを1枚引く<br>
         ③ 好きな順に：召喚 ／ サポート使用 ／ 攻撃 ／ モード変更 ／ 鍛錬<br>
         ④ ターン終了（手札が6枚を超えていたら捨てる）`)}
-      ${note('先攻の1ターン目はドローなし。後攻は初期手札が1枚多く、最初のターンだけコストが1多い。')}`)}
+      ${note('先攻の1ターン目はドローなし。後攻は初期手札が1枚多く、最初のターンだけコストが1多い。')}
+      ${note('対戦の最初に<b>【マリガン】</b>があります。配られた手札が気に入らなければ、1回だけ引き直せます。')}`)}
 
     ${sec('モンスターの2つのモード', battleDemo + `
       ${note('<b>攻撃モード同士</b>：⚔ が高い方が勝ち、負けた方は破壊。差はプレイヤーへのダメージ。負けた側のプレイヤーも差分を受けます。')}
-      ${note('<b>防御モードを攻撃</b>：⚔ が 🛡 を超えたら破壊され、<b>超えた分がプレイヤーへのダメージ</b>。🛡 が ⚔ 以上なら完全に防ぎ、両者とも場に残ります。')}
+      ${note('<b>防御モードを攻撃</b>：⚔ が 🛡 を超えたら破壊されますが、<b>プレイヤーが受けるのは超えた分の半分だけ</b>（切り上げ）。🛡 が ⚔ 以上なら完全に防ぎ、両者とも場に残ります。')}
+      ${note('つまり<b>防御モードは受けるダメージを減らせます</b>。攻撃モードで負けると差分をそのまま受けるので、殴り返せない相手には伏せておくのが有効です。<br>ただし【落とし穴】のように、防御モードだけを狙い撃つカードもあります。')}
       ${note('モード変更は1体につき1ターン1回。ただし<b>攻撃したモンスターは変更できません</b>。')}`)}
 
     ${sec('召喚', `
@@ -104,7 +111,9 @@ export function renderRulesPage() {
       ${note('コストが続く限り1ターンに何枚でも使えます。装備はサポートゾーン（3枠）に残ります。')}`)}
 
     ${sec('レア度', `<div class="rlist center">${rarityCards}</div>
-      ${note('枠の光り方でレア度が分かります。パックから出る確率も変わります。<br>レジェンドは第3弾で登場予定です。')}`)}
+      ${note('枠の光り方でレア度が分かります。パックから出る確率も変わります。')}
+      ${note(`<b style="color:${RARITY.legend.color}">レジェンド</b>は第3弾『星辰の門』で登場した最上位のレア度です。
+        1枚で盤面をひっくり返す力がある代わりにコストが重く、パックからもごく稀にしか出ません。`)}`)}
 
     <button class="btn" data-go="title">戻る</button>
   </div>`;

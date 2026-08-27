@@ -7,13 +7,19 @@
 //     bgm_battle … 戦闘画面
 //     se_win     … 勝利
 //     se_lose    … 敗北
-//   拡張子は .mp3 / .ogg / .m4a / .wav のどれでも可（この順に探します）。
+//   拡張子は .wav / .mp3 / .ogg / .m4a のどれでも可（この順に探します）。
 //   例: assets/audio/bgm_battle.mp3
 // ============================================================
 
-const EXTS = ['mp3', 'ogg', 'm4a', 'wav'];
+const EXTS = ['wav', 'mp3', 'ogg', 'm4a'];
 const BGM_KEYS = ['bgm_menu', 'bgm_map', 'bgm_battle'];
-const SE_KEYS = ['se_win', 'se_lose'];
+const SE_KEYS = [
+  'se_click', 'se_confirm', 'se_error', 'se_draw', 'se_summon', 'se_support', 'se_equip',
+  'se_attack', 'se_direct', 'se_hit', 'se_destroy', 'se_heal', 'se_buff',
+  'se_mode', 'se_forge', 'se_turn', 'se_battle', 'se_pack', 'se_reveal',
+  'se_rare', 'se_win', 'se_lose',
+  'se_back', 'se_guard', 'se_effect',
+];
 
 const state = {
   found: {},            // key -> url | null（見つからなければ null）
@@ -121,7 +127,13 @@ export function stopBgm() {
 }
 
 let seNodes = [];
-export async function playSe(key) {
+const lastPlayed = {};
+export async function playSe(key, opts = {}) {
+  if (state.muted) return;
+  const now = performance.now();
+  const gap = opts.gap ?? 60;                 // 同じ音の連打を間引く
+  if (lastPlayed[key] && now - lastPlayed[key] < gap) return;
+  lastPlayed[key] = now;
   const url = await locate(key);
   if (!url || state.muted) return;
   const a = new Audio(url);
@@ -160,6 +172,29 @@ export const AUDIO_FILES = [
   ['bgm_menu', 'タイトル・デッキ編集・カード図鑑・ルール説明'],
   ['bgm_map', '冒険（エリア画面）'],
   ['bgm_battle', '戦闘画面'],
-  ['se_win', '勝利SE'],
-  ['se_lose', '敗北SE'],
+  ['se_click', 'カード・タブを選ぶ'],
+  ['se_confirm', '決定・開始・保存'],
+  ['se_error', '使えない操作'],
+  ['se_draw', 'カードを引く'],
+  ['se_summon', 'モンスターを召喚'],
+  ['se_support', 'サポートを使う'],
+  ['se_equip', '装備をつける'],
+  ['se_attack', 'モンスターへの攻撃'],
+  ['se_direct', '直接攻撃'],
+  ['se_hit', 'ライフにダメージ'],
+  ['se_destroy', 'モンスターが破壊される'],
+  ['se_heal', 'ライフ回復'],
+  ['se_buff', 'モンスターの強化'],
+  ['se_mode', '攻撃／防御モードの切り替え'],
+  ['se_forge', '鍛錬'],
+  ['se_turn', 'ターン開始'],
+  ['se_battle', 'バトル開始'],
+  ['se_pack', 'パックを開ける'],
+  ['se_reveal', 'カードがめくれる'],
+  ['se_rare', 'レア以上が出た'],
+  ['se_win', '勝利'],
+  ['se_lose', '敗北'],
+  ['se_back', '戻る・画面を閉じる'],
+  ['se_guard', '防御モードが攻撃を耐えた'],
+  ['se_effect', 'カード効果の発動・属性有利'],
 ];

@@ -7,3 +7,7 @@ shots/
 assets/sheet1/
 assets/sheet2/
 assets/sheet3/
+
+# tools/optimize_assets.py が作る配信用WebP。dist/ に取り込まれるのでここでは追わない。
+# 素材を差し替えたら `python tools/optimize_assets.py` で作り直す。
+public/

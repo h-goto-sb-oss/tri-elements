@@ -4,7 +4,7 @@
 //   uncommon アンコモン … 中コスト・役割のある効果
 //   rare     レア       … 各属性の看板・切り札級（第1弾はここまで）
 //   epic     エピック   … 第2弾の切り札。1枚で盤面がひっくり返る
-//   legend   レジェンド … 未実装（第3弾以降）
+//   legend   レジェンド … 第3弾の構築制限つき切り札
 // ============================================================
 
 export const RARITY = {
@@ -50,6 +50,22 @@ export const RARITY_OF = {
   x_g6: 'epic', x_sg2: 'epic',
   // 汎用
   x_sn2: 'uncommon', x_sn1: 'rare',
+
+  // ---------------- 第3弾『星辰の門』 ----------------
+  // 炎
+  z_f3: 'uncommon', z_f4: 'uncommon',
+  z_f5: 'rare', z_f6: 'rare', z_sf2: 'rare',
+  z_sf3: 'epic',
+  // 水
+  z_w3: 'uncommon', z_w4: 'uncommon', z_sw1: 'uncommon', z_sw2: 'uncommon',
+  z_w5: 'rare', z_w6: 'rare', z_sw3: 'epic',
+  // 草
+  z_g3: 'uncommon', z_g4: 'uncommon',
+  z_g5: 'rare', z_g6: 'rare', z_sg2: 'rare', z_sg3: 'epic',
+  // 汎用
+  z_sn1: 'uncommon', z_sn3: 'uncommon',
+  // レジェンド
+  z_lf1: 'legend', z_lw1: 'legend', z_lg1: 'legend', z_ln1: 'legend',
 };
 
 export const rarityOf = id => RARITY_OF[id] || 'common';

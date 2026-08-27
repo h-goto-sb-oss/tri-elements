@@ -6,6 +6,7 @@
 // ============================================================
 import { M, S } from './cardbuild.js';
 import { SET2 } from './cards_set2.js';
+import { SET3 } from './cards_set3.js';
 import { rarityOf } from './rarity.js';
 
 export const ELEMENTS = {
@@ -22,6 +23,8 @@ export const KEYWORDS = {
   guard:  { name: '守護', desc: '相手はまず守護モンスターを攻撃対象に選ぶ。' },
   pierce: { name: '貫通', desc: '【守護】を無視して攻撃対象を選べる。' },
   double: { name: '連撃', desc: '1ターンに2回攻撃できる。' },
+  accelerate: { name: '加速', desc: '召喚したとき、自分の最大コストを1増やす（上限10）。' },
+  observe: { name: '観測', desc: '登場時、山札の上から3枚を見て1枚を手札に加え、残りを山札の底へ戻す。' },
 };
 
 // ------------------------------------------------------------
@@ -38,11 +41,11 @@ const FIRE_MONSTERS = [
     tier: 1, text: '【断末魔】相手プレイヤーに2ダメージ。',
     onDeath: [{ op: 'damageFace', side: 'enemy', v: 2 }], flavor: '死してなお爆ぜる。',
   }),
-  M('f05', '灼熱の剣士', 'fire', 3, 5, 4, 'humanoid', { tier: 1, flavor: '刃はいつも赤い。' }),
+  M('f05', 'ブレイズナイト', 'fire', 3, 5, 4, 'humanoid', { tier: 1, flavor: '刃はいつも赤い。' }),
   M('f06', 'マグマゴーレム', 'fire', 3, 4, 5, 'golem', {
     tier: 2, keywords: ['pierce'], text: '【貫通】', flavor: '歩いた跡が溶岩の川になる。',
   }),
-  M('f07', '灰かぶりの魔女', 'fire', 3, 3, 2, 'witch', {
+  M('f07', 'シンダーウィッチ', 'fire', 3, 3, 2, 'witch', {
     tier: 2, text: '【登場時】相手プレイヤーに3ダメージ。',
     onSummon: [{ op: 'damageFace', side: 'enemy', v: 3 }], flavor: '灰の中から呪いを掬う。',
   }),
@@ -73,7 +76,7 @@ const WATER_MONSTERS = [
   M('w05', '氷結の番人', 'water', 3, 3, 4, 'golem', {
     tier: 1, keywords: ['guard'], text: '【守護】', flavor: '門は凍りついたまま千年。',
   }),
-  M('w06', '深海の伝令', 'water', 3, 3, 3, 'fish', {
+  M('w06', 'アビスヘラルド', 'water', 3, 3, 3, 'fish', {
     tier: 2, text: '【登場時】相手モンスター1体を防御モードにする。',
     onSummon: [{ op: 'setMode', side: 'enemy', mode: 'defense', target: 'one' }],
     flavor: '深海の命令に逆らえる者はいない。',
@@ -106,7 +109,7 @@ const GRASS_MONSTERS = [
     tier: 1, keywords: ['guard'], text: '【守護】', flavor: '通りたければ痛い思いをしろ。',
   }),
   M('g03', 'キノコ戦士', 'grass', 2, 3, 4, 'plant', { tier: 1, flavor: '胞子まみれの小さな盾。' }),
-  M('g04', '蔦絡みの精霊', 'grass', 2, 2, 3, 'spirit', {
+  M('g04', '蔦絡みの精霊', 'grass', 2, 3, 3, 'spirit', {
     tier: 1, text: '【登場時】自分のモンスター1体を+1/+1する。',
     onSummon: [{ op: 'buff', side: 'self', target: 'one', atk: 1, def: 1, duration: 'permanent' }],
     flavor: '絡まれた者は、なぜか強くなる。',
@@ -114,7 +117,7 @@ const GRASS_MONSTERS = [
   M('g05', '森羅の守り手', 'grass', 3, 2, 4, 'treant', {
     tier: 1, keywords: ['guard'], text: '【守護】', flavor: '森の外周はいつも静かだ。',
   }),
-  M('g06', '花咲く癒し手', 'grass', 3, 4, 3, 'spirit', {
+  M('g06', 'ブルームヒーラー', 'grass', 3, 4, 3, 'spirit', {
     tier: 2, text: '【ターン開始時】自分のライフを1回復。',
     onTurnStart: [{ op: 'heal', side: 'self', v: 1 }], flavor: '咲くたびに誰かの傷が閉じる。',
   }),
@@ -174,7 +177,7 @@ const SUPPORTS = [
     tier: 2, text: '相手モンスター1体を持ち主の手札に戻す。',
     effects: [{ op: 'bounce', side: 'enemy', target: 'one' }], flavor: '海はいつでも返品を受け付ける。',
   }),
-  S('sw5', '深淵の予言', 'water', 3, 'eye', {
+  S('sw5', '深海の啓示', 'water', 3, 'eye', {
     tier: 3, text: 'カードを2枚引き、ライフを2回復する。',
     effects: [{ op: 'draw', side: 'self', n: 2 }, { op: 'heal', side: 'self', v: 2 }], flavor: '深いほどよく見える。',
   }),
@@ -189,7 +192,7 @@ const SUPPORTS = [
     tier: 1, equip: true, text: '装備：自分の草モンスター1体を+1/+3する。場に残る。',
     effects: [{ op: 'equip', atk: 1, def: 3, filter: { element: 'grass' } }], flavor: '守りながら、少し刺す。',
   }),
-  S('sg3', '森の加護', 'grass', 2, 'ward', {
+  S('sg3', '木漏れ日の加護', 'grass', 2, 'ward', {
     tier: 2, text: '次の相手ターンが終わるまで、自分の草モンスターは戦闘で破壊されない。',
     effects: [{ op: 'invuln', side: 'self', element: 'grass' }], flavor: '森が味方をしている間は、誰も倒れない。',
   }),
@@ -248,9 +251,10 @@ const SUPPORTS = [
   }),
 ];
 
-export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS, ...SET2]
+export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS, ...SET2, ...SET3]
   .map(c => ({ ...c, rarity: rarityOf(c.id) }));
 export const SET1_CARDS = ALL_CARDS.filter(c => c.set === 1);
 export const SET2_CARDS = ALL_CARDS.filter(c => c.set === 2);
+export const SET3_CARDS = ALL_CARDS.filter(c => c.set === 3);
 export const CARD_MAP = Object.fromEntries(ALL_CARDS.map(c => [c.id, c]));
 export const card = id => CARD_MAP[id];

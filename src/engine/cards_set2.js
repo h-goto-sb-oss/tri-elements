@@ -21,7 +21,7 @@ export const SET2 = [
     onTurnStart: [{ op: 'damageFace', side: 'enemy', v: 1 }],
     flavor: '祈るたび、山が少し目を覚ます。',
   }),
-  M('x_f4', '灼熱の双子', 'fire', 4, 4, 3, 'oni', {
+  M('x_f4', 'ツインフレイム', 'fire', 4, 4, 3, 'oni', {
     set: 2, tier: 2, keywords: ['double'], text: '【連撃】',
     flavor: '片方が斬り、もう片方が焼く。',
   }),
@@ -42,19 +42,19 @@ export const SET2 = [
     effects: [{ op: 'buff', side: 'self', target: 'one', atk: 3, def: 0, duration: 'turn', filter: { element: 'fire' } }],
     flavor: '合図はひとつ。前へ。',
   }),
-  S('x_sf3', '炎の共鳴', 'fire', 2, 'banner', {
+  S('x_sf3', '炎の共鳴', 'fire', 3, 'banner', {
     set: 2, tier: 2, text: 'このターン、自分の炎モンスター全てを+3/+0する。',
     effects: [{ op: 'buff', side: 'self', target: 'all', atk: 3, def: 0, duration: 'turn', filter: { element: 'fire' } }],
     flavor: '火は、火に呼ばれてさらに燃える。',
   }),
-  S('x_sf2', '炎の雨', 'fire', 4, 'meteor', {
+  S('x_sf2', '炎の雨', 'fire', 3, 'meteor', {
     set: 2, tier: 3, text: '防御力3以下の相手モンスターを全て破壊する。',
     effects: [{ op: 'destroyAllFiltered', side: 'enemy', filter: { maxDef: 3 } }],
     flavor: '空が割れて、赤が落ちてきた。',
   }),
 
   // ---------- 水 8 ----------
-  M('x_w1', '深淵の触手', 'water', 2, 2, 3, 'kraken', {
+  M('x_w1', 'テンタクルス', 'water', 2, 2, 3, 'kraken', {
     set: 2, tier: 2, text: '【登場時】相手モンスター1体の攻撃力を-2する。',
     onSummon: [{ op: 'buff', side: 'enemy', target: 'one', atk: -2, def: 0, duration: 'permanent' }],
     flavor: '掴まれた腕は、二度と上がらない。',
@@ -64,12 +64,12 @@ export const SET2 = [
     onDeath: [{ op: 'draw', side: 'self', n: 1 }, { op: 'heal', side: 'self', v: 1 }],
     flavor: '割れる音まで芸のうち。',
   }),
-  M('x_w3', '潮汐の守護者', 'water', 3, 2, 5, 'golem', {
+  M('x_w3', '潮騒の守護者', 'water', 3, 2, 5, 'golem', {
     set: 2, tier: 2, keywords: ['guard'], text: '【守護】【ターン開始時】自分のライフを1回復。',
     onTurnStart: [{ op: 'heal', side: 'self', v: 1 }],
     flavor: '満ち引きのあいだ、ずっと立っている。',
   }),
-  M('x_w4', '氷結の魔女', 'water', 4, 3, 4, 'witch', {
+  M('x_w4', 'フロストウィッチ', 'water', 4, 3, 4, 'witch', {
     set: 2, tier: 3, text: '【登場時】攻撃力3以下の相手モンスター1体を破壊する。',
     onSummon: [{ op: 'destroy', side: 'enemy', target: 'one', filter: { maxAtk: 3 } }],
     flavor: '息を吐くだけで足が止まる。',
@@ -88,7 +88,7 @@ export const SET2 = [
     effects: [{ op: 'draw', side: 'self', n: 1 }, { op: 'heal', side: 'self', v: 2 }],
     flavor: '波がないときほど、深い。',
   }),
-  S('x_sw2', '深海の渦', 'water', 4, 'wave', {
+  S('x_sw2', '大渦のうねり', 'water', 4, 'wave', {
     set: 2, tier: 3, text: '相手モンスターを全て持ち主の手札に戻す。',
     effects: [{ op: 'bounce', side: 'enemy', target: 'all' }],
     flavor: '海はいちど、全部やり直させる。',
@@ -104,7 +104,7 @@ export const SET2 = [
     effects: [{ op: 'buff', side: 'self', target: 'all', atk: 1, def: 2, duration: 'permanent', filter: { element: 'water' } }],
     flavor: '一滴ずつが、同じ流れになる。',
   }),
-  S('x_sw3', '深海の忘却', 'water', 2, 'eye', {
+  S('x_sw3', '静寂の海溝', 'water', 2, 'eye', {
     set: 2, tier: 2, text: '相手の山札を上から4枚 墓地へ送る。',
     effects: [{ op: 'mill', side: 'enemy', n: 4 }],
     flavor: '深く沈んだものは、もう戻らない。',
@@ -121,12 +121,12 @@ export const SET2 = [
     onDeath: [{ op: 'draw', side: 'self', n: 1 }],
     flavor: '踏まれた場所から芽が出る。',
   }),
-  M('x_g2', '若木の戦士', 'grass', 2, 4, 3, 'plant', {
+  M('x_g2', '若木の戦士', 'grass', 2, 3, 3, 'plant', {
     set: 2, tier: 2, text: '【登場時】自分のモンスター1体を+0/+2する。',
     onSummon: [{ op: 'buff', side: 'self', target: 'one', atk: 0, def: 2, duration: 'permanent' }],
     flavor: 'まだ細いが、折れない。',
   }),
-  M('x_g3', '花吹雪の舞手', 'grass', 3, 5, 3, 'spirit', {
+  M('x_g3', 'ペタルダンサー', 'grass', 3, 5, 3, 'spirit', {
     set: 2, tier: 2, text: '【断末魔】自分のモンスター全てを+1/+1する。',
     onDeath: [{ op: 'buff', side: 'self', target: 'all', atk: 1, def: 1, duration: 'permanent' }],
     flavor: '散り際がいちばん美しい。',
@@ -149,7 +149,7 @@ export const SET2 = [
     effects: [{ op: 'buff', side: 'self', target: 'one', atk: 2, def: 4, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: '包まれると、少し強くなる。',
   }),
-  S('x_sg5', '森の砦', 'grass', 3, 'armor', {
+  S('x_sg5', '樹皮の砦', 'grass', 3, 'armor', {
     set: 2, tier: 2, text: '自分の草モンスター全てを+0/+3する。',
     effects: [{ op: 'buff', side: 'self', target: 'all', atk: 0, def: 3, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: '木々が並ぶだけで、そこは砦になる。',
@@ -164,7 +164,7 @@ export const SET2 = [
     effects: [{ op: 'buff', side: 'self', target: 'all', atk: 2, def: 2, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: '根がつながっている限り、一緒に育つ。',
   }),
-  S('x_sg2', '森の再生', 'grass', 4, 'sprout', {
+  S('x_sg2', '甦りの森', 'grass', 4, 'sprout', {
     set: 2, tier: 3, text: '自分の墓地からコスト5以下の草モンスターを2体まで場に出す。',
     effects: [{ op: 'revive', maxCost: 5, element: 'grass' }, { op: 'revive', maxCost: 5, element: 'grass' }],
     flavor: '倒れた木の上に、次の森が育つ。',

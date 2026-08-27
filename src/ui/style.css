@@ -80,66 +80,144 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .card.big .body{font-size:10.4px;height:56px;padding:5px 7px}
 .card.big .stats{height:26px;font-size:15px}
 .card.big .kw,.card.big .rarity{top:31px;font-size:9.5px}
+.card.big.zoomable .art{cursor:zoom-in;overflow:hidden}
+.card.big.zoomable .art::after{content:'🔍';position:absolute;right:6px;bottom:6px;width:26px;height:26px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;background:#08111ddd;
+  border:1px solid #f2c15b;color:#fff;font-size:13px;box-shadow:0 3px 10px #000a;
+  opacity:.82;transition:transform .16s,opacity .16s}
+.card.big.zoomable .art:hover::after{transform:scale(1.12);opacity:1}
 
 /* ============================================================
    バトル画面
    ============================================================ */
-.battle{display:flex;flex-direction:column;width:1440px;height:876px;padding:4px 10px 2px;gap:2px;
+.battle{display:flex;flex-direction:column;width:1440px;height:900px;padding:4px 10px 6px;gap:4px;
   position:absolute;top:0;left:0;transform-origin:top left;isolation:isolate}
 .battle::before{content:'';position:absolute;inset:0;z-index:-2;background-image:var(--bgimg);
   background-size:cover;background-position:center 42%;opacity:.62}
 .battle::after{content:'';position:absolute;inset:0;z-index:-1;
   background:linear-gradient(180deg,#050810e8 0%,#05081088 22%,#05081066 50%,#05081088 78%,#050810ee 100%)}
-.bar{display:flex;align-items:center;gap:12px;padding:2px 4px;min-height:36px}
-.bar .who{display:flex;align-items:center;gap:7px;font-weight:800;font-size:14px}
+.bar{display:flex;align-items:center;gap:14px;padding:4px 6px;min-height:44px;flex:none}
+.battle-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:none}
+.enemybar{position:relative;min-height:100px;padding:2px 8px;gap:16px;flex:none}
+.enemybar .battle-actions{margin-left:auto}
+.enemybar .who{font-size:21px;min-width:0;text-shadow:0 2px 5px #000}
+.playerbar{position:relative;z-index:12;min-height:58px;flex:none;
+  padding:6px 12px;background:linear-gradient(90deg,#07101eef 0%,#07101ec9 55%,#07101e44 88%,transparent 100%);
+  border-top:1px solid #53627a;border-radius:10px}
+.bar .who{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px}
 .bar .face{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
   font-size:19px;background:#1d2634;border:1px solid var(--line);overflow:hidden}
 .bar .face img{width:100%;height:100%;object-fit:cover}
+.bar.enemybar .face{position:relative;left:auto;top:auto;width:96px;height:96px;border-radius:14px;flex:none;
+  border:2px solid #d5b45f;box-shadow:0 6px 22px #000c,0 0 18px #f2c15b44;background:#111927}
+.bar.enemybar .face img{object-position:center 24%}
+.playerbar .face{width:46px;height:46px;border-radius:11px;font-size:28px}
 .lifebox{display:flex;align-items:center;gap:6px}
-.lifeval{font-size:22px;font-weight:900;color:#ff8a8a;text-shadow:0 0 8px #f004;min-width:34px;text-align:right}
-.lifebar{width:150px;height:8px;background:#2a1a1e;border-radius:4px;overflow:hidden;border:1px solid #4a2a30}
+.lifeval{font-size:30px;font-weight:900;color:#ff8a8a;text-shadow:0 0 8px #f004;min-width:44px;text-align:right}
+.lifebar{width:180px;height:12px;background:#2a1a1e;border-radius:6px;overflow:hidden;border:1px solid #4a2a30}
 .lifebar>div{height:100%;background:linear-gradient(90deg,#ff4f63,#ffa07a);transition:width .35s}
-.costpips{display:flex;gap:3px;flex-wrap:wrap;max-width:158px}
-.pip{width:12px;height:12px;border-radius:50%;background:#242e3d;border:1px solid #3b485c}
+.costpips{display:flex;gap:4px;flex-wrap:wrap;max-width:190px}
+.pip{width:15px;height:15px;border-radius:50%;background:#242e3d;border:1px solid #3b485c}
 .pip.on{background:radial-gradient(circle at 35% 30%,#ffe9a8,#c9922f);border-color:#e0b258;box-shadow:0 0 5px #f2c15b88}
-.meta{font-size:12px;color:var(--muted)}
+.meta{font-size:16px;color:#c1cede}
 .meta b{color:var(--text)}
+.battle .btn{font-size:16px;padding:9px 16px}
+.battle .btn.small{font-size:15px;padding:7px 14px}
+.battle .btn.tiny{font-size:14px;padding:5px 11px}
 
+/* ============================================================
+   縦長の画面（スマホ縦持ちなど）
+   設計を 520x980 に切り替えて、横に並べていたカード情報とログは
+   盤面に重ねる引き出しにする。倍率が上がるぶん文字が読める。
+   ============================================================ */
+.battle.portrait{width:520px;height:980px;padding:4px 6px 6px}
+.battle.portrait .mid{position:relative;gap:0;overflow:hidden}   /* 畳んだ引き出しがはみ出さないように */
+.battle.portrait .sidecol{position:absolute;top:0;bottom:0;z-index:30;width:300px;
+  transition:transform .22s ease}
+.battle.portrait .sidecol.left{left:0}
+.battle.portrait .sidecol.left.closed{transform:translateX(calc(-100% - 14px))}
+.battle.portrait .sidecol.right{right:0;width:320px}
+.battle.portrait .sidecol.right:empty{display:none}
+.battle.portrait .ipanel,.battle.portrait .logpane{box-shadow:0 10px 40px #000d}
+.battle.portrait .field{width:100%}
+.battle.portrait .row{gap:6px}
+.battle.portrait .slot{width:148px;height:148px}
+.battle.portrait .slot.sup{width:96px;height:70px}
+.battle.portrait .mini{width:112px;height:142px}
+.battle.portrait .mini.defense{width:142px;height:112px}
+.battle.portrait .pile{width:66px}
+
+/* 手札は横スクロール。1枚を小さくするより、めくって見える方が読める */
+.battle.portrait .hand{height:200px;justify-content:flex-start;overflow-x:auto;
+  overflow-y:hidden;padding:3px 6px;gap:7px;scrollbar-width:thin}
+.battle.portrait .hand .card{width:134px;height:206px;flex:none}
+.battle.portrait .hand .card .art{height:96px}
+.battle.portrait .hand .card .cname{font-size:16px;height:32px;padding:3px 28px 2px 6px}
+.battle.portrait .hand .card .cost{width:27px;height:27px;font-size:18px}
+.battle.portrait .hand .card .body{height:50px;font-size:14.5px;line-height:1.28;padding:4px 6px}
+.battle.portrait .hand .card .stats{height:25px;font-size:19px}
+.battle.portrait .hand .card .kw,.battle.portrait .hand .card .rarity{top:31px;font-size:11px}
+.battle.portrait .hand .card.selectable:hover{transform:none}
+
+.battle.portrait .enemybar{min-height:92px;gap:9px}
+.battle.portrait .bar.enemybar .face{width:84px;height:84px}
+.battle.portrait .enemybar .who{font-size:16px}
+.battle.portrait .lifeval{font-size:24px;min-width:34px}
+.battle.portrait .lifebar{width:104px;height:10px}
+.battle.portrait .costpips{max-width:112px;gap:3px}
+.battle.portrait .pip{width:12px;height:12px}
+.battle.portrait .meta{font-size:13px}
+/* 操作ボタンは1行に収まらないので折り返す */
+.battle.portrait .playerbar{min-height:52px;padding:5px 9px;flex-wrap:wrap;row-gap:5px}
+.battle.portrait .playerbar .face{width:36px;height:36px;font-size:20px}
+.battle.portrait .playerbar .who{font-size:15px}
+.battle.portrait .playerbar .meta{display:none}
+.battle.portrait .battle-actions{gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.battle.portrait .btn.small,.battle.portrait .btn.tiny{font-size:13px;padding:5px 10px}
+.battle.portrait .btn.primary{font-size:14px;padding:6px 13px}
+.battle.portrait .turnlabel{font-size:16px}
+.battle.portrait .battle .hint{font-size:13px}
+
+.mid{flex:1;display:flex;gap:10px;min-height:0}
+.sidecol{flex:none;min-height:0;display:flex;flex-direction:column}
+.sidecol.left{width:246px}
+.sidecol.right{width:270px}
 .field{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:0}
 .row{display:flex;gap:9px;justify-content:center;align-items:center}
-.slot{width:158px;height:158px;border-radius:9px;border:1.5px dashed #2f3d52;
+.slot{width:146px;height:142px;border-radius:9px;border:1.5px dashed #2f3d52;
   display:flex;align-items:center;justify-content:center;position:relative;flex:none;
   background:rgba(255,255,255,.014);transition:.12s}
-.slot.sup{width:118px;height:86px}
+.slot.sup{width:112px;height:76px}
 .slot.drop{border-color:var(--gold);background:rgba(242,193,91,.13);box-shadow:0 0 12px #f2c15b33}
 .slot.drop:has(.mini){border-color:#ff9a4d;background:rgba(255,154,77,.16);box-shadow:0 0 12px #ff9a4d44}
 .slot.drop.hot{background:rgba(242,193,91,.28);transform:scale(1.04)}
 
 /* 攻撃=縦置き / 防御=横置き（枠の向きで表す。絵は起こしたまま） */
-.mini{width:118px;height:152px;border-radius:8px;position:relative;overflow:hidden;cursor:pointer;
+.mini{width:110px;height:140px;border-radius:8px;position:relative;overflow:hidden;cursor:pointer;
   border:2px solid #3a4657;background:#0c1119;transition:width .18s,height .18s,box-shadow .12s,transform .12s}
-.mini.defense{width:152px;height:118px}
+.mini.defense{width:140px;height:110px}
 .mini.fire{border-color:#a2492a}.mini.water{border-color:#2a6ea8}
 .mini.grass{border-color:#357f47}.mini.none{border-color:#7d6c3f}
 .mini.r-rare{box-shadow:0 0 0 1px #5aa8ff66,0 0 9px #5aa8ff2b}
 .mini.r-epic{box-shadow:0 0 0 1px #b579ff88,0 0 13px #b579ff44}
 .mini .inner{position:absolute;inset:0}
 .mini .mart{position:absolute;inset:0}
-.mini .mname{position:absolute;top:0;left:0;right:0;font-size:9.5px;font-weight:800;padding:2px 4px;
+.mini .mname{position:absolute;top:0;left:0;right:0;font-size:12px;font-weight:900;padding:3px 5px;
   background:linear-gradient(180deg,#000d,transparent);text-shadow:0 1px 2px #000;z-index:2}
 .mini .mstat{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;
-  padding:1px 6px 2px;font-size:15px;font-weight:900;background:linear-gradient(0deg,#000e,transparent);z-index:2}
+  padding:2px 7px 3px;font-size:19px;font-weight:900;background:linear-gradient(0deg,#000e,transparent);z-index:2}
 .mini .mstat .atk{color:#ff9c6b}.mini .mstat .def{color:#7fc4ff}
 .mini .mstat.buffed{text-shadow:0 0 7px #ffd76a}
-.mini .modetag{position:absolute;top:16px;right:3px;font-size:10px;font-weight:900;
+.mini .modetag{position:absolute;top:21px;right:3px;font-size:12px;font-weight:900;
   padding:1px 5px;border-radius:4px;z-index:3}
 .mini.attackmode .modetag{background:#c34a26dd;color:#ffe3d6}
 .mini.defense .modetag{background:#2b6bc4dd;color:#dceaff}
 .mini.defense{box-shadow:inset 0 0 0 1px #2b6bc466}
-.mini .gmark{position:absolute;top:16px;left:3px;font-size:9px;background:#1c4f8add;
+.mini .gmark{position:absolute;top:21px;left:3px;font-size:11px;background:#1c4f8add;
   padding:1px 4px;border-radius:3px;z-index:3}
-.mini .gmark.pierce{background:#8a3a1cdd;top:32px}
-.mini .gmark.dbl{background:#7a2f7add;top:32px}
+.mini .gmark.pierce{background:#8a3a1cdd;top:40px}
+.mini .gmark.dbl{background:#7a2f7add;top:40px}
+.mini .gmark.stunned{background:#445a86dd;left:auto;right:3px;top:40px;color:#e9f1ff}
 .mini.canact{box-shadow:0 0 0 2px #f2c15baa,0 0 12px #f2c15b44}
 .mini.attacking{box-shadow:0 0 0 3px var(--gold),0 0 16px #f2c15b88;transform:translateY(-5px)}
 .mini.targetable{box-shadow:0 0 0 3px var(--danger),0 0 14px #ff556688;cursor:crosshair}
@@ -159,39 +237,49 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   background:#3a2410;border:1px solid #7a4a1c;border-radius:5px;padding:4px 6px}
 
 /* サポートゾーン */
-.sup{width:112px;height:80px;border-radius:7px;position:relative;overflow:hidden;cursor:pointer;
+.sup{width:110px;height:72px;border-radius:7px;position:relative;overflow:hidden;cursor:pointer;
   border:2px solid #4b5468;background:#0c1119}
 .sup.fire{border-color:#8c3a1c}.sup.water{border-color:#1c5b8c}
 .sup.grass{border-color:#2a6b39}.sup.none{border-color:#6b5c34}
 .sup .sart{position:absolute;inset:0}
-.sup .sname{position:absolute;bottom:0;left:0;right:0;font-size:9px;font-weight:800;padding:1px 3px;
+.sup .sname{position:absolute;bottom:0;left:0;right:0;font-size:12px;font-weight:900;padding:2px 4px;
   background:linear-gradient(0deg,#000e,transparent);text-shadow:0 1px 2px #000}
 
 /* 山札・墓地 */
 .pile{width:74px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;
-  font-size:11px;font-weight:800;color:#b8c7d8;cursor:pointer}
-.pile .stack{width:52px;height:70px;position:relative}
+  font-size:14px;font-weight:900;color:#d5e0ec;cursor:pointer}
+.pile .stack{width:50px;height:58px;position:relative}
 .pile .stack i{position:absolute;inset:0;border-radius:6px;border:1.5px solid #43536b;
   background:repeating-linear-gradient(135deg,#1b2635 0 5px,#223050 5px 10px);box-shadow:0 2px 5px #0008}
 .pile .stack i:nth-child(2){transform:translate(2px,-2px)}
 .pile .stack i:nth-child(3){transform:translate(4px,-4px)}
 .pile.grave .stack i{background:repeating-linear-gradient(135deg,#241d20 0 5px,#33242b 5px 10px);border-color:#5a4048}
-.pile .n{font-size:14px;color:#fff}
+.pile .n{font-size:18px;color:#fff}
 .pile.empty .stack i{opacity:.22}
 .pile:hover{color:var(--gold)}
 
-.center{display:flex;align-items:center;justify-content:center;gap:14px;padding:1px 0;min-height:26px;
+.center{display:flex;align-items:center;justify-content:center;gap:14px;padding:2px 0;min-height:34px;
   border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.035),transparent)}
-.turnlabel{font-weight:900;font-size:13px;letter-spacing:.05em;color:var(--gold)}
+.turnlabel{font-weight:900;font-size:18px;letter-spacing:.05em;color:#ffd874;text-shadow:0 2px 4px #000}
+.battle .hint{font-size:15px;min-height:20px}
 
-.hand{display:flex;gap:7px;justify-content:center;align-items:flex-end;height:180px;padding:3px 0}
+.hand{display:flex;gap:9px;justify-content:center;align-items:flex-end;height:214px;padding:3px 0;flex:none;
+  position:relative;z-index:4}
 .hand .card{cursor:grab}
+.hand .card{width:132px;height:208px;transform:none;transform-origin:bottom center;margin:0}
+.hand .card .cname{font-size:14.5px;height:32px;padding:4px 31px 2px 7px}
+.hand .card .cost{width:28px;height:28px;font-size:18px}
+.hand .card .art{height:102px}
+.hand .card .body{height:52px;padding:5px 7px;font-size:13px;line-height:1.27;color:#e0e8f2}
+.hand .card .stats{height:25px;padding:0 8px;font-size:18px}
+.hand .card .kw,.hand .card .rarity{top:33px;font-size:11px}
+.hand .card.selectable:hover{transform:translateY(-10px)}
 .hand .card:active{cursor:grabbing}
 
 /* ログ */
-.logpane{position:fixed;right:8px;top:46px;width:212px;max-height:38vh;overflow-y:auto;
-  background:#0b1119ee;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:11px;line-height:1.5;z-index:20}
+.logpane{position:relative;right:auto;top:auto;width:100%;flex:1;min-height:0;overflow-y:auto;
+  background:#0b1119ee;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:14px;line-height:1.55;z-index:20}
 .logpane .l{color:var(--muted);border-bottom:1px solid #1a222e;padding:1px 0}
 .logpane .l.turn{color:var(--gold);font-weight:800;margin-top:3px}
 .logpane .l.damage{color:#ff8f9a}.logpane .l.destroy{color:#ffb27a}
@@ -216,6 +304,34 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .d-kw{font-size:11.5px;color:#a8bdd4;line-height:1.7;background:#111a24;padding:6px 9px;border-radius:7px;margin-bottom:8px}
 .d-kw b{color:var(--gold)}
 .d-flavor{font-size:11.5px;color:#7b8ca1;font-style:italic}
+.zoom-open{margin-top:12px;padding:7px 13px;border-radius:18px;border:1px solid #d7a83d;
+  background:linear-gradient(180deg,#2b2417,#17130d);color:#f8d477;font-family:inherit;
+  font-size:12px;font-weight:800;cursor:pointer}
+.zoom-open:hover{border-color:#ffe09a;box-shadow:0 0 14px #f2c15b44;transform:translateY(-1px)}
+.zoom-locked{margin-top:12px;padding:7px 13px;border-radius:18px;border:1px dashed #4a5567;
+  background:#141b26;color:var(--muted);font-size:12.5px;font-weight:700;display:inline-block}
+
+/* 図鑑：原画の拡大表示 */
+.artzoom-overlay{z-index:130;background:#03060bec;cursor:zoom-out}
+.artzoom-modal{position:relative;display:flex;flex-direction:column;align-items:center;gap:9px;
+  max-width:94vw;max-height:94vh;cursor:default}
+.artzoom-name{font-size:20px;font-weight:900;color:#fff4d0;text-shadow:0 2px 12px #000;
+  letter-spacing:.04em}
+.artzoom-stage{width:min(76vmin,720px);height:min(76vmin,720px);position:relative;overflow:hidden;
+  border:2px solid #d6ae52;border-radius:18px;box-shadow:0 20px 70px #000,0 0 28px #f2c15b26;
+  display:flex;align-items:center;justify-content:center}
+.artzoom-stage.fire{background:radial-gradient(circle at 50% 42%,#6b2618,#24100d 62%,#090707)}
+.artzoom-stage.water{background:radial-gradient(circle at 50% 42%,#174e72,#0c263d 62%,#06090d)}
+.artzoom-stage.grass{background:radial-gradient(circle at 50% 42%,#315c2d,#142d1b 62%,#070a08)}
+.artzoom-stage.none{background:radial-gradient(circle at 50% 42%,#66552d,#292316 62%,#090806)}
+.artzoom-stage img{width:96%;height:96%;object-fit:contain;display:block;
+  filter:drop-shadow(0 12px 15px #0009)}
+.artzoom-stage .card-art-svg{width:100%;height:100%}
+.artzoom-close{position:absolute;right:-13px;top:-8px;z-index:2;width:38px;height:38px;
+  border-radius:50%;border:1px solid #e5c16b;background:#101722ee;color:#fff;font-size:25px;
+  line-height:1;cursor:pointer;box-shadow:0 4px 16px #000b}
+.artzoom-close:hover{background:#3a2b16;border-color:#ffe09a}
+.artzoom-hint{font-size:11.5px;color:#9fb0c2}
 
 /* バトル開始演出 */
 .battlestart{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;
@@ -238,18 +354,48 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 
 /* マリガン */
 .mull-hand{display:flex;gap:10px;justify-content:center;margin:14px 0}
+.observe-modal{max-width:760px}
+.observe-list{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.observe-card{border:0;background:none;padding:0;border-radius:12px}
+.observe-card:hover .card{transform:translateY(-9px);border-color:var(--gold);box-shadow:0 14px 28px #000c,0 0 18px #f2c15b44}
 
 /* ============================================================
    タイトル・図鑑
    ============================================================ */
 .screen{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
-.title-hero{text-align:center;margin-top:5vh}
-.title-hero h1{font-size:54px;letter-spacing:.16em;font-weight:900;
-  background:linear-gradient(180deg,#fff2cf,#e0a93c 60%,#a2701a);-webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow:0 4px 28px #0008}
-.title-hero p{color:var(--muted);margin-top:6px;letter-spacing:.32em;font-size:13px}
-.elemrow{display:flex;gap:26px;justify-content:center;margin:20px 0;font-size:34px}
-.menu{display:flex;flex-direction:column;gap:10px;width:264px}
+.title-screen{position:relative;isolation:isolate;justify-content:center;min-height:100%;padding:clamp(14px,2.4vw,30px);
+  gap:clamp(10px,2vh,22px);overflow-y:auto}
+.title-bg{position:fixed;inset:0;z-index:-3;background:url('/assets/backgrounds/title-bg.webp') center 48%/cover no-repeat;
+  transform:scale(1.015)}
+.title-shade{position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(circle at 50% 38%,transparent 0 28%,#05080f55 68%,#03050ae8 100%),
+  linear-gradient(180deg,#07101c30 0%,#05081122 42%,#03050bd4 100%)}
+.title-hero{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;z-index:1}
+.title-logo{display:block;width:min(720px,88vw);height:auto;filter:drop-shadow(0 12px 18px #000c)}
+.title-tagline{margin-top:-14px;color:#f4eddc;font-size:clamp(12px,1.3vw,16px);font-weight:700;
+  letter-spacing:.13em;text-shadow:0 2px 8px #000,0 0 18px #000}
+.title-elements{display:flex;gap:9px;justify-content:center;margin-top:13px}
+.title-elements span{font-size:11.5px;font-weight:900;padding:4px 12px;border-radius:18px;
+  border:1px solid #ffffff42;background:#07101bcc;box-shadow:0 4px 14px #0008;backdrop-filter:blur(4px)}
+.title-elements .fire{color:#ffc1a4;border-color:#ff704d88}.title-elements .water{color:#bdeaff;border-color:#48b9ff88}
+.title-elements .grass{color:#c9f7bd;border-color:#64d27288}
+.title-panel{position:relative;z-index:1;width:min(560px,94vw);padding:12px;border-radius:20px;
+  background:linear-gradient(145deg,#121c2bea,#08101ae8);border:1px solid #dfb85f66;
+  box-shadow:0 18px 60px #000b, inset 0 1px #ffffff12;backdrop-filter:blur(10px)}
+.title-panel .titleprof{padding:5px 7px 10px;background:none;border:0;border-radius:0;border-bottom:1px solid #ffffff18}
+.titleprof-text{min-width:0;line-height:1.35}.titleprof-text b{display:block;font-size:14px;color:#fff4d4}
+.titleprof-text div{font-size:10.5px;color:#aebdd0}.titleprof-text span{color:#e4c477}
+.title-menu{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.title-action{min-height:58px;border-radius:12px;border:1px solid #41516a;background:linear-gradient(180deg,#243247ee,#131d2cee);
+  display:flex;align-items:center;gap:10px;padding:8px 13px;text-align:left;transition:transform .14s,border-color .14s,box-shadow .14s;
+  box-shadow:inset 0 1px #ffffff10,0 5px 14px #0006}
+.title-action:hover{transform:translateY(-2px);border-color:#e7c36f;box-shadow:0 9px 22px #0009,0 0 15px #e7c36f22}
+.title-action.main{grid-column:1/-1;min-height:68px;background:linear-gradient(135deg,#b8741d,#e0ad3e 50%,#8f5615);
+  border-color:#ffe095;color:#fffaf0;box-shadow:inset 0 1px #fff6bd99,0 8px 22px #0008,0 0 18px #f5c75e33}
+.title-action.quiet{grid-column:1/-1;min-height:45px;background:#101a28d9}
+.title-action .ta-icon{font-size:24px;width:31px;text-align:center;filter:drop-shadow(0 2px 3px #0008)}
+.title-action b{display:block;font-size:14px;line-height:1.2}.title-action small{display:block;margin-top:3px;color:#aebdd0;font-size:10px}
+.title-action.main b{font-size:17px}.title-action.main small{color:#fff0c7}.title-action.quiet .ta-icon{font-size:20px}
 .grid{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:1240px}
 
 /* ============================================================
@@ -309,6 +455,26 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .deckwrap{flex:1;display:flex;gap:14px;min-height:0;padding:10px 14px}
 .deckcol{width:336px;flex:none;display:flex;flex-direction:column;gap:8px;min-height:0}
 .deckcol h3{font-size:15px;color:var(--gold)}
+
+/* デッキスロット */
+.dslots{display:flex;flex-wrap:wrap;gap:4px;flex:none}
+.dslot{display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#151d29;
+  color:#c1cede;cursor:pointer;line-height:1.15;max-width:104px;transition:.12s}
+.dslot b{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
+.dslot small{font-size:10px;color:var(--muted)}
+.dslot:hover{border-color:var(--gold);background:#1e2836}
+.dslot.on{border-color:var(--gold);background:#2b2415;color:var(--gold);box-shadow:0 0 8px #f2c15b33}
+.dslot.on small{color:#d8bd77}
+.dslot.warn{border-color:#e08a3c;box-shadow:0 0 9px #e08a3c66}
+.dslot.add{justify-content:center;align-items:center;font-size:16px;font-weight:900;
+  color:var(--gold);min-width:34px;padding:4px 9px}
+
+.dnamerow{display:flex;align-items:center;gap:7px;flex:none}
+.dname{flex:1;min-width:0;background:#0e1522;border:1px solid var(--line);border-radius:6px;
+  padding:5px 9px;color:var(--text);font-size:14px;font-weight:800;font-family:inherit}
+.dname:focus{outline:none;border-color:var(--gold)}
+.dcount{font-size:15px;font-weight:900;flex:none}
 .curve{display:flex;gap:5px;align-items:flex-end;height:70px;padding:16px 2px 0;margin-bottom:18px}
 .curve .bar{width:30px;background:linear-gradient(180deg,#6ea8ff,#2f5fa8);border-radius:3px 3px 0 0;position:relative}
 .curve .bar span{position:absolute;top:-14px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
@@ -334,7 +500,37 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   padding:0 6px;font-size:10.5px;font-weight:800;z-index:6}
 .poolcard.full .card{filter:grayscale(.65) brightness(.6)}
 
+/* デッキ編集：クリックは出し入れなので、効果はこのボタンから見る */
+.cinfo{position:absolute;top:2px;left:2px;z-index:3;width:17px;height:17px;padding:0;
+  border-radius:50%;border:1px solid #7d8da0;background:#0d1420cc;
+  color:#cfdae8;font-size:11px;font-weight:900;font-family:inherit;line-height:1;
+  cursor:help;opacity:.5;transition:.12s}
+.cinfo:hover{opacity:1;border-color:var(--gold);color:var(--gold);background:#141d2b;transform:scale(1.15)}
+.dcard .cinfo{width:15px;height:15px;font-size:10px}
+
 /* 図鑑 */
+.collection-screen{padding:0;align-items:stretch;gap:0;background:
+  radial-gradient(circle at 50% -10%,#20334d,#0b1018 56%);scroll-behavior:smooth}
+.dexsticky{position:sticky;top:0;z-index:20;background:#0b121deb;border-bottom:1px solid #34445b;
+  box-shadow:0 8px 24px #0009;backdrop-filter:blur(12px)}
+.dexhead{min-height:64px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;
+  width:min(1280px,100%);margin:auto;padding:9px 20px 6px}
+.dexback{border:1px solid #56657a;background:#182332e8;border-radius:20px;padding:7px 12px;color:#dce7f4;
+  font-size:12px;font-weight:800}.dexback:hover{border-color:var(--gold);color:#fff4cf}
+.dextitle h2{font-size:21px;line-height:1.15;color:#fff3cf;letter-spacing:.06em}.dextitle p{font-size:10.5px;color:#91a5bc;margin-top:3px}
+.dexsummary{text-align:right;font-size:11px;color:#9fb0c4;white-space:nowrap}.dexsummary b{font-size:21px;color:var(--gold)}
+.dexsummary small{display:block;font-size:9.5px;color:#73869c}
+.dexsets{display:flex;gap:7px;width:min(1280px,100%);margin:auto;padding:0 20px 9px;overflow-x:auto;scrollbar-width:none}
+.dexsets::-webkit-scrollbar{display:none}
+.dexset{min-width:168px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 12px;
+  border-radius:9px;border:1px solid #35465d;background:#121c2a;color:#9fb0c4;text-align:left;white-space:nowrap}
+.dexset b{font-size:13px;color:#dce6f2}.dexset small{font-size:9.5px}.dexset.on{border-color:#e3bd64;
+  background:linear-gradient(180deg,#5a421c,#2b2418);box-shadow:0 0 14px #f2c15b25}.dexset.on b{color:#ffe4a1}
+.dexcontent{width:min(1280px,100%);margin:0 auto;padding:18px 22px 34px;display:flex;flex-direction:column;gap:18px}
+.dexgroup{background:#111a26b8;border:1px solid #28384d;border-radius:14px;padding:13px 14px 18px;box-shadow:0 9px 26px #0005}
+.dexgroup-head{display:flex;align-items:center;justify-content:space-between;padding:0 2px 11px;margin-bottom:12px;
+  border-bottom:1px solid #2a394c}.dexgroup-head h3{color:var(--gold);font-size:16px}.dexgroup-head span{font-size:11px;color:#8fa0b6}
+.dexgrid{justify-content:flex-start;gap:13px}
 .dexbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px}
 .sel{background:#1b2432;border:1px solid var(--line);border-radius:7px;color:var(--text);
   padding:5px 9px;font-size:12px;font-family:inherit}
@@ -395,6 +591,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .ritem.col{flex-direction:column;gap:6px}
 .ritext{font-size:12.5px;line-height:1.7;color:#c9d6e4}
 .ritext b{color:var(--gold)}
+.rsub{color:var(--muted);font-size:11.5px}
 .relem{display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0}
 .rarrow{font-size:12px;color:var(--gold);font-weight:800}
 
@@ -474,6 +671,208 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 @keyframes fxbin{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes fxbout{0%{opacity:1}100%{opacity:0;transform:translate(-50%,-64%) scale(1.05)}}
 
+/* ---- 属性有利 ---- */
+.fxelem{position:absolute;transform:translate(-50%,-50%);animation:fxelem .9s ease-out forwards}
+.fxelem span{display:block;font-size:17px;font-weight:900;letter-spacing:.14em;color:var(--fxc);
+  text-shadow:0 2px 8px #000,0 0 18px var(--fxc);white-space:nowrap}
+@keyframes fxelem{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}
+  22%{opacity:1;transform:translate(-50%,-64%) scale(1.18)}
+  70%{opacity:1;transform:translate(-50%,-72%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-92%) scale(.96)}}
+.fxelemring{position:absolute;width:110px;height:110px;transform:translate(-50%,-50%);
+  border-radius:50%;border:3px solid var(--fxc);animation:fxelemring .74s ease-out forwards}
+@keyframes fxelemring{0%{opacity:.85;transform:translate(-50%,-50%) scale(.3)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
+
+/* ---- 守りきった ---- */
+.fxguard{position:absolute;width:120px;height:120px;transform:translate(-50%,-50%);
+  display:grid;place-items:center;border-radius:50%;
+  border:3px solid #8fc9ff;background:radial-gradient(circle,#2b6bc455,transparent 68%);
+  animation:fxguard .76s ease-out forwards}
+.fxguard span{font-size:15px;font-weight:900;letter-spacing:.1em;color:#dceaff;
+  text-shadow:0 2px 8px #000,0 0 14px #4f9fe8}
+@keyframes fxguard{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}
+  25%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+  70%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}
+
+/* ---- 強化 ---- */
+.fxbuff{position:absolute;transform:translate(-50%,-50%);font-size:17px;font-weight:900;
+  letter-spacing:.06em;color:#ffe6a0;white-space:nowrap;
+  text-shadow:0 2px 8px #000,0 0 16px #f2c15b;animation:fxbuff .9s ease-out forwards}
+@keyframes fxbuff{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}
+  25%{opacity:1;transform:translate(-50%,-62%) scale(1.14)}
+  100%{opacity:0;transform:translate(-50%,-120%) scale(1)}}
+.fxbuffglow{position:absolute;border-radius:9px;
+  box-shadow:inset 0 0 18px #ffd76a,0 0 20px #f2c15b88;animation:fxhit .7s ease-out forwards}
+.fxmote{position:absolute;width:7px;height:7px;border-radius:50%;
+  background:radial-gradient(circle,#fff3c4,#f2c15b);animation:fxmote .9s ease-out forwards}
+.fxmote.heal{background:radial-gradient(circle,#dcffe8,#5fd48a)}
+@keyframes fxmote{0%{opacity:0;transform:translate(-50%,0) scale(.5)}
+  20%{opacity:1}100%{opacity:0;transform:translate(-50%,-64px) scale(1.1)}}
+
+/* ---- ドロー ---- */
+.fxdrawcard{position:absolute;border-radius:6px;border:1.5px solid #6f86ab;
+  background:repeating-linear-gradient(135deg,#1b2635 0 5px,#223050 5px 10px);
+  box-shadow:0 4px 14px #000a}
+
+/* ---- サポート発動 ---- */
+.fxcast{position:absolute;left:50%;top:44%;width:150px;
+  filter:drop-shadow(0 0 22px var(--fxc)) drop-shadow(0 10px 26px #000c)}
+.fxcast .card{width:150px;height:246px}
+
+/* ---- キーワード ---- */
+.fxkw{position:absolute;transform:translate(-50%,-100%);font-size:14px;font-weight:900;
+  letter-spacing:.12em;color:var(--fxc);white-space:nowrap;padding:2px 9px;border-radius:5px;
+  background:#0b1119dd;border:1px solid var(--fxc);
+  text-shadow:0 1px 4px #000;animation:fxkw .78s ease-out forwards}
+@keyframes fxkw{0%{opacity:0;transform:translate(-50%,-70%) scale(.75)}
+  22%{opacity:1;transform:translate(-50%,-118%) scale(1.06)}
+  72%{opacity:1;transform:translate(-50%,-124%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-150%) scale(1)}}
+
+/* ---- とどめ ---- */
+.fxlethal{position:absolute;inset:0;background:#fff;animation:fxlethal .56s ease-out forwards}
+@keyframes fxlethal{0%{opacity:0}10%{opacity:.62}100%{opacity:0}}
+
+.fxring.mode{border-color:#9ccdff;width:96px;height:96px}
+
+/* 動きを減らす設定のときは、飾りだけ消して情報（数字とラベル）は残す */
+@media (prefers-reduced-motion:reduce){
+  .fxburst,.fxshatter,.fxpiece,.fxelemring,.fxmote,.fxcard,.fxdrawcard,
+  .fxslash,.fxring,.fxbuffglow,.fxhit,.fxlethal{display:none}
+  .fxnum,.fxelem,.fxguard,.fxbuff,.fxkw,.fxbanner{animation-duration:.01ms!important;
+    animation-fill-mode:forwards!important;opacity:1}
+}
+
 /* 墓地から選ぶモーダル */
 .gpick{cursor:pointer;transition:.12s}
 .gpick:hover{transform:translateY(-6px)}
+
+/* ============================================================
+   レスポンシブ：タイトル・図鑑
+   ============================================================ */
+@media (min-width:900px) and (min-height:650px){
+  .title-screen{flex-direction:row;align-items:center;justify-content:center;gap:clamp(18px,3vw,54px)}
+  .title-hero{width:min(55vw,720px);flex:none}
+  .title-logo{width:100%}
+  .title-panel{width:min(40vw,540px)}
+}
+
+@media (max-width:680px){
+  .screen{padding:12px}
+  .title-screen{padding:8px 10px 14px;justify-content:flex-start;gap:5px}
+  .title-bg{background-position:50% center}
+  .title-shade{background:linear-gradient(180deg,#03070c22 0%,#03070c66 32%,#03060bec 76%,#03050b 100%)}
+  .title-hero{width:100%;margin-top:0}
+  .title-logo{width:min(96vw,520px)}
+  .title-tagline{margin-top:-16px;font-size:10.5px;letter-spacing:.06em}
+  .title-elements{margin-top:9px;gap:5px}
+  .title-elements span{font-size:10px;padding:3px 8px}
+  .title-panel{width:100%;padding:9px;border-radius:15px}
+  .title-panel .titleprof{padding:3px 5px 8px}
+  .title-panel .tface{width:40px;height:40px}.title-panel .tface .avfb{font-size:21px}
+  .titleprof-text b{font-size:12.5px}.titleprof-text div{font-size:9.5px}
+  .title-menu{gap:6px;margin-top:8px}
+  .title-action{min-height:53px;padding:7px 9px;gap:7px;border-radius:10px}
+  .title-action.main{min-height:61px}.title-action.quiet{min-height:41px}
+  .title-action .ta-icon{font-size:20px;width:25px}.title-action b{font-size:12px}.title-action small{font-size:8.8px}
+  .title-action.main b{font-size:15px}
+
+  .collection-screen{padding:0}
+  .dexhead{min-height:58px;gap:8px;padding:8px 10px 5px}
+  .dexback{width:38px;height:34px;padding:0;border-radius:17px;font-size:17px}.dexback span{display:none}
+  .dextitle h2{font-size:17px}.dextitle p{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dexsummary{font-size:9.5px}.dexsummary b{font-size:17px}.dexsummary small{font-size:8.5px}
+  .dexsets{padding:0 10px 8px;gap:6px}
+  .dexset{min-width:148px;padding:6px 9px}.dexset b{font-size:12px}.dexset small{font-size:8.5px}
+  .dexcontent{padding:10px 9px 28px;gap:12px}
+  .dexgroup{padding:10px 7px 14px;border-radius:11px}
+  .dexgroup-head{margin:0 4px 10px;padding-bottom:8px}.dexgroup-head h3{font-size:14px}
+  .dexgrid{justify-content:center;gap:10px 7px}
+}
+
+@media (max-height:680px) and (min-width:681px){
+  .title-screen{padding:9px 18px;gap:14px}
+  .title-logo{width:min(49vw,560px)}
+  .title-tagline{margin-top:-18px;font-size:11px}.title-elements{margin-top:8px}
+  .title-panel{padding:9px}.title-action{min-height:50px}.title-action.main{min-height:58px}
+  .title-panel .titleprof{padding:2px 6px 7px}
+}
+
+/* ---------- パック開封 ---------- */
+.packcard{position:relative;width:150px;height:246px;perspective:900px}
+.packcard .pcback,.packcard .pcfront{position:absolute;inset:0;backface-visibility:hidden}
+.packcard .pcback{border-radius:10px;border:2px solid #43536b;
+  background:repeating-linear-gradient(135deg,#1b2635 0 8px,#223050 8px 16px);
+  box-shadow:0 4px 14px #0009;display:flex;align-items:center;justify-content:center}
+.packcard .pcback::after{content:'✦';font-size:44px;color:#f2c15b66}
+.packcard .pcfront{transform:rotateY(180deg)}
+.packcard.facedown .pcback{transform:rotateY(0)}
+.packcard.facedown .pcfront{transform:rotateY(180deg)}
+.packcard.open .pcback{display:none}
+.packcard.open .pcfront{transform:rotateY(0);animation:pcflip .44s cubic-bezier(.3,.9,.3,1) both}
+@keyframes pcflip{0%{transform:rotateY(-90deg) scale(.92)}60%{transform:rotateY(8deg) scale(1.03)}100%{transform:rotateY(0) scale(1)}}
+.packcard.shinein::after{content:'';position:absolute;inset:-14px;border-radius:16px;pointer-events:none;
+  background:radial-gradient(circle,#ffe9a877,transparent 68%);animation:pcshine .9s ease-out forwards}
+@keyframes pcshine{0%{opacity:0;transform:scale(.6)}35%{opacity:1}100%{opacity:0;transform:scale(1.25)}}
+
+/* ---------- 左カラム：カード情報 ---------- */
+.ipanel{background:#0d1420d9;border:1px solid var(--line);border-radius:12px;padding:12px;
+  display:flex;flex-direction:column;gap:7px;overflow-y:auto;height:100%}
+.ipanel .ip-card{display:flex;justify-content:center}
+/* 相手が出したカードを見せているとき */
+.ipanel.enemyplay{border-color:#c9683c;box-shadow:0 0 0 1px #c9683c44,0 0 18px #c9683c33;
+  animation:ipin .28s cubic-bezier(.2,1.3,.4,1)}
+@keyframes ipin{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:none}}
+.ip-banner{font-size:12.5px;font-weight:900;letter-spacing:.04em;color:#ffcaa8;text-align:center;
+  background:#3a1c10;border:1px solid #c9683c;border-radius:7px;padding:4px 8px;line-height:1.4}
+.ip-title{font-size:14px;font-weight:800;color:var(--gold)}
+.ip-hint{font-size:11.5px;color:var(--muted);line-height:1.6}
+.ip-legend{display:flex;flex-direction:column;gap:10px;margin-top:6px;font-size:11.5px;line-height:1.65;color:#c3d2e2}
+.ip-legend b{display:block;margin-bottom:2px}
+.atkc{color:#ff9c6b}.defc{color:#7fc4ff}.gold{color:var(--gold)}
+.ip-name{font-size:15px;font-weight:900;text-align:center}
+.ip-meta{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;font-size:11px;color:var(--muted)}
+.ip-text{font-size:12px;line-height:1.7;color:#d3dfec;background:#101a26;border-radius:8px;padding:7px 9px}
+.ip-kw{font-size:11px;line-height:1.6;color:#a8bdd4;background:#111a24;border-radius:8px;padding:6px 8px}
+.ip-kw b{color:var(--gold)}
+.ip-flavor{font-size:11px;color:#7b8ca1;font-style:italic;text-align:center}
+
+/* ============================================================
+   狭い画面（スマホ縦持ちなど）
+   戦闘画面は .battle.portrait で別設計にしてあるので、ここは
+   通常のHTMLで組んでいる画面（タイトル・冒険・デッキ編集・図鑑など）向け。
+   ============================================================ */
+@media (max-width: 720px) {
+  .screen{padding:14px 10px}
+  .screen h2{font-size:20px}
+
+  /* デッキ編集：横2列だと入らないので縦に積む */
+  .deckwrap{flex-direction:column;padding:8px 10px;gap:10px;overflow-y:auto}
+  .deckcol{width:100%;flex:none}
+  .decklist{max-height:240px;flex:none}
+  .poolcol{width:100%;flex:1;min-height:300px}
+  .dslot{max-width:none;flex:1;min-width:88px}
+  .pooltools{flex-wrap:wrap}
+
+  /* 図鑑：弾のタブを横スクロールにして、カードは詰める */
+  .dexsets{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+  .dexset{flex:none}
+  .grid,.dexgrid{justify-content:flex-start;gap:6px}
+
+  /* 設定：min-width:520px が効いているので外して画面幅に合わせる */
+  .setpanel{min-width:0;width:100%;max-width:100%;padding:14px 13px}
+  .setrow{flex-wrap:wrap;gap:8px}
+  .setrow label{min-width:0}
+  .avgrid{max-width:100%;justify-content:flex-start}
+
+  /* 冒険：立ち絵を縦に並べる */
+  .adventure{padding:8px 10px}
+  .adv-head h2{font-size:19px}
+  .adv-stage .foes{gap:12px}
+
+  /* タイトルの装飾が画面をはみ出さないように */
+  .title-bg{background-position:center 42%}
+}

@@ -59,7 +59,7 @@ export function makeMonster(state, id, mode = 'attack') {
   return {
     uid: state.uid++, id, atk: c.atk, def: c.def, mode,
     hasAttacked: false, attacks: 0, modeChanged: false, tempAtk: 0, tempDef: 0,
-    equips: [], grants: [],
+    equips: [], grants: [], stunnedUntil: -1,
   };
 }
 export const eff = m => ({ atk: Math.max(0, m.atk + m.tempAtk), def: Math.max(0, m.def + m.tempDef) });
@@ -181,6 +181,33 @@ function applyOp(state, pi, op, ctx) {
     case 'drawIfLowLife':
       if (me.life <= op.threshold) draw(state, pi, op.n);
       break;
+    case 'increaseMaxCost': {
+      const before = me.maxCost;
+      me.maxCost = Math.min(state.rules.maxCostCap, me.maxCost + (op.n || 1));
+      log(state, 'buff', `${me.name} の最大コストが ${before} → ${me.maxCost} になった`, { p: pi });
+      break;
+    }
+    case 'observe': {
+      const seen = [];
+      for (let k = 0; k < (op.n || 3) && me.deck.length; k++) seen.push(me.deck.pop());
+      if (!seen.length) break;
+      if (pi === 1 || ctx.auto) {
+        let best = 0, score = -Infinity;
+        seen.forEach((id, i) => {
+          const c = card(id);
+          const v = c.cost * 2 + (c.type === 'monster' ? c.atk + c.def : 5) + (c.rarity === 'legend' ? 8 : 0);
+          if (v > score) { score = v; best = i; }
+        });
+        const [chosen] = seen.splice(best, 1);
+        me.hand.push(chosen);
+        me.deck.unshift(...seen);
+        log(state, 'draw', `${me.name} が【観測】で ${card(chosen).name} を手札に加えた`, { p: pi, cardId: chosen });
+      } else {
+        state.pendingChoice = { type: 'observe', pi, cards: seen };
+        log(state, 'info', `${me.name} が山札の上から ${seen.length} 枚を観測している`);
+      }
+      break;
+    }
     case 'setMode': {
       const tps = resolveSide(pi, op.side), tp = state.players[tps];
       const list = op.target === 'all'
@@ -202,7 +229,8 @@ function applyOp(state, pi, op, ctx) {
         const m = tp.field[sl]; if (!m) return;
         if (op.duration === 'turn') { m.tempAtk += op.atk; m.tempDef += op.def; }
         else { m.atk += op.atk; m.def += op.def; }
-        log(state, 'buff', `${card(m.id).name} が +${op.atk}/+${op.def}`, { p: tps });
+        log(state, 'buff', `${card(m.id).name} が +${op.atk}/+${op.def}`,
+          { p: tps, slot: sl, atk: op.atk, def: op.def });
       });
       break;
     }
@@ -239,6 +267,14 @@ function applyOp(state, pi, op, ctx) {
       tp.field.forEach((m, i) => { if (m && matchFilter(m, op.filter)) destroyMonster(state, tps, i); });
       break;
     }
+    case 'destroyAllDamage': {
+      const tps = resolveSide(pi, op.side), tp = state.players[tps];
+      const slots = fieldMonsters(tp).map(x => x.i);
+      const count = slots.length;
+      slots.forEach(sl => tp.field[sl] && destroyMonster(state, tps, sl));
+      if (count) damagePlayer(state, tps, count * (op.multiplier || 1), ctx.sourceName);
+      break;
+    }
     case 'bounce': {
       const tps = resolveSide(pi, op.side), tp = state.players[tps];
       const slots = op.target === 'all'
@@ -251,6 +287,26 @@ function applyOp(state, pi, op, ctx) {
         tp.hand.push(m.id);
         log(state, 'info', `${card(m.id).name} が手札に戻った`);
       });
+      break;
+    }
+    case 'topdeck': {
+      const tps = resolveSide(pi, op.side), tp = state.players[tps];
+      const sl = pickSlot(state, pi, op, ctx);
+      if (sl == null) break;
+      const m = tp.field[sl]; if (!m) break;
+      tp.field[sl] = null;
+      tp.supports.forEach((s, si) => { if (s && s.attachedTo === m.uid) { tp.grave.push(s.id); tp.supports[si] = null; } });
+      tp.deck.push(m.id);
+      log(state, 'info', `${card(m.id).name} が山札の一番上に戻った`);
+      break;
+    }
+    case 'stun': {
+      const tps = resolveSide(pi, op.side), tp = state.players[tps];
+      const sl = pickSlot(state, pi, op, ctx);
+      if (sl == null) break;
+      const m = tp.field[sl]; if (!m) break;
+      m.stunnedUntil = Math.max(m.stunnedUntil || -1, state.turn + 1);
+      log(state, 'info', `${card(m.id).name} は次の自分のターンに攻撃できない`);
       break;
     }
     case 'invuln':
@@ -279,6 +335,48 @@ function applyOp(state, pi, op, ctx) {
       const id = me.grave[gi]; if (!id || isMonster(id)) break;
       me.grave.splice(gi, 1); me.hand.push(id);
       log(state, 'info', `${card(id).name} を手札に戻した`);
+      break;
+    }
+    case 'recallMonster': {
+      const gi = ctx.target && ctx.target.grave != null ? ctx.target.grave : autoGraveMonster(me, 99);
+      if (gi == null) break;
+      const id = me.grave[gi]; if (!id || !isMonster(id)) break;
+      me.grave.splice(gi, 1); me.hand.push(id);
+      log(state, 'info', `${card(id).name} を墓地から手札に戻した`);
+      break;
+    }
+    case 'reviveMany': {
+      let count = 0;
+      while (count < (op.count || 1) && emptySlot(me) >= 0) {
+        const gi = autoGraveMonster(me, op.maxCost, op.element);
+        if (gi == null) break;
+        const id = me.grave.splice(gi, 1)[0];
+        const slot = emptySlot(me);
+        me.field[slot] = makeMonster(state, id, 'attack');
+        count++;
+        log(state, 'summon', `${card(id).name} が墓地から蘇った`, { p: pi, cardId: id });
+        const os = card(id).onSummon;
+        if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name });
+      }
+      break;
+    }
+    case 'shuffleGrave': {
+      const n = me.grave.length;
+      if (n) {
+        me.deck.push(...me.grave.splice(0));
+        shuffle(state, me.deck);
+      }
+      log(state, 'info', `${me.name} は墓地のカード ${n} 枚を山札に戻した`);
+      break;
+    }
+    case 'balanceHand': {
+      const target = op.n || 4;
+      [me, opp].forEach((p, sideIndex) => {
+        const pIndex = sideIndex === 0 ? pi : other(pi);
+        if (p.hand.length < target) draw(state, pIndex, target - p.hand.length);
+        while (state.winner === null && p.hand.length > target) p.grave.push(p.hand.pop());
+      });
+      log(state, 'info', `お互いの手札を ${target} 枚に揃えた`);
       break;
     }
     case 'sacrificeBurn': {
@@ -328,7 +426,11 @@ export function startTurn(state) {
   p.cost = p.maxCost;
   if (R.secondPlayerBonusCost && pi === 1 && state.turn === 2) p.cost += R.secondPlayerBonusCost;
   p.summoned = false; p.summons = 0; p.forges = 0;
-  p.field.forEach(m => { if (m) { m.hasAttacked = false; m.attacks = 0; m.modeChanged = false; m.tempAtk = 0; m.tempDef = 0; } });
+  p.field.forEach(m => {
+    if (!m) return;
+    m.hasAttacked = false; m.attacks = 0; m.modeChanged = false; m.tempAtk = 0; m.tempDef = 0;
+    if (m.stunnedUntil != null && state.turn > m.stunnedUntil) m.stunnedUntil = -1;
+  });
   log(state, 'turn', `── ${p.name} のターン ${state.turn}（コスト ${p.cost}）`, { p: pi });
 
   // ターン開始時トリガー
@@ -456,7 +558,8 @@ export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
 export function supportNeedsTarget(id) {
   const c = card(id);
   if (c.type !== 'support') return false;
-  return c.effects.some(e => e.op === 'equip' || (e.target === 'one') || e.op === 'revive' || e.op === 'recallSupport');
+  return c.effects.some(e => e.op === 'equip' || (e.target === 'one') || e.op === 'revive'
+    || e.op === 'recallSupport' || e.op === 'recallMonster');
 }
 
 /** そのモンスターに装備を付けられるか（1体につき equipPerMonster 枚まで） */
@@ -489,6 +592,7 @@ export function canPlaySupport(state, pi, handIndex) {
         && (!e.element || card(gid).element === e.element))) return false;
     }
     if (e.op === 'recallSupport' && !p.grave.some(gid => !isMonster(gid))) return false;
+    if (e.op === 'recallMonster' && !p.grave.some(gid => isMonster(gid))) return false;
   }
   return true;
 }
@@ -513,7 +617,8 @@ export function playSupport(state, pi, handIndex, target = null) {
     if (e.grants) { m.grants = [...(m.grants || []), ...e.grants]; }
     const si = p.supports.findIndex(s => s === null);
     p.supports[si] = { uid: state.uid++, id, attachedTo: m.uid, slot: si };
-    log(state, 'buff', `${card(m.id).name} に ${c.name} を装備 (+${e.atk}/+${e.def})`, { p: pi });
+    log(state, 'buff', `${card(m.id).name} に ${c.name} を装備 (+${e.atk}/+${e.def})`,
+      { p: pi, slot, atk: e.atk, def: e.def, equip: true });
   } else {
     runEffects(state, pi, c.effects, { target, sourceName: c.name });
     p.grave.push(id);
@@ -533,7 +638,8 @@ export function changeMode(state, pi, slot) {
   const m = state.players[pi].field[slot];
   m.mode = m.mode === 'attack' ? 'defense' : 'attack';
   m.modeChanged = true;
-  log(state, 'mode', `${card(m.id).name} を${m.mode === 'attack' ? '攻撃' : '防御'}モードに変更`, { p: pi, mode: m.mode });
+  log(state, 'mode', `${card(m.id).name} を${m.mode === 'attack' ? '攻撃' : '防御'}モードに変更`,
+    { p: pi, slot, mode: m.mode });
   return true;
 }
 
@@ -549,7 +655,8 @@ export function legalAttackTargets(state, pi, attackerSlot = null) {
 
 export function canAttack(state, pi, slot) {
   const m = state.players[pi].field[slot];
-  return !!m && m.mode === 'attack' && (m.attacks || 0) < maxAttacks(m);
+  return !!m && m.mode === 'attack' && (m.attacks || 0) < maxAttacks(m)
+    && (m.stunnedUntil == null || state.turn > m.stunnedUntil);
 }
 
 export function attack(state, pi, slot, target) {
@@ -563,7 +670,7 @@ export function attack(state, pi, slot, target) {
 
   if (target === 'face') {
     const dmg = effAtk(A);
-    log(state, 'attack', `${card(A.id).name} が直接攻撃！`, { p: pi, direct: true });
+    log(state, 'attack', `${card(A.id).name} が直接攻撃！`, { p: pi, slot, direct: true });
     damagePlayer(state, oi, dmg, card(A.id).name);
     return true;
   }
@@ -574,7 +681,8 @@ export function attack(state, pi, slot, target) {
   const aAtk = effAtk(A) + (dmgMode ? 0 : bonus);
   // ダメージ計算に使う攻撃力（常にボーナス込み）
   const aDmg = effAtk(A) + bonus;
-  log(state, 'attack', `${card(A.id).name}(${aAtk}${bonus ? ' 属性有利' : ''}) → ${card(D.id).name}`, { p: pi });
+  log(state, 'attack', `${card(A.id).name}(${aAtk}${bonus ? ' 属性有利' : ''}) → ${card(D.id).name}`,
+    { p: pi, slot, target, bonus, element: card(A.id).element });
 
   if (D.mode === 'attack') {
     const dAtk = effAtk(D);
@@ -598,7 +706,7 @@ export function attack(state, pi, slot, target) {
       else if (mode) damagePlayer(state, oi, exc, '守備貫通');
       else if (hasKw(A, 'pierce2')) damagePlayer(state, oi, exc, '貫通');
     } else {
-      log(state, 'info', `${card(D.id).name} は耐えた（防御 ${dDef}）`);
+      log(state, 'guard', `${card(D.id).name} は耐えた（防御 ${dDef}）`, { p: oi, slot: target });
       if (R.defenseKillsAttacker) {
         destroyMonster(state, pi, slot, { byCombat: true });
         log(state, 'info', `${card(A.id).name} は跳ね返された`);
@@ -664,6 +772,18 @@ export function applyAction(state, pi, act) {
     case 'forge': return forge(state, pi);
     case 'end': return endTurn(state);
     case 'discard': discardCard(state, act.hand); return true;
+    case 'observe': {
+      const choice = state.pendingChoice;
+      if (!choice || choice.type !== 'observe' || choice.pi !== pi) return false;
+      const index = Math.max(0, Math.min(choice.cards.length - 1, Number(act.index) || 0));
+      const cards = [...choice.cards];
+      const [chosen] = cards.splice(index, 1);
+      state.players[pi].hand.push(chosen);
+      state.players[pi].deck.unshift(...cards);
+      state.pendingChoice = null;
+      log(state, 'draw', `${state.players[pi].name} が【観測】で ${card(chosen).name} を手札に加えた`, { p: pi, cardId: chosen });
+      return true;
+    }
     default: return false;
   }
 }

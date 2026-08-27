@@ -97,7 +97,8 @@ export function evaluate(state, pi, w = PROFILES.balanced) {
 function targetedOp(state, pi, id) {
   const c = card(id);
   const ops = c.type === 'monster' ? (c.onSummon || []) : c.effects;
-  return ops.find(e => e.op === 'equip' || e.target === 'one' || e.op === 'revive' || e.op === 'recallSupport');
+  return ops.find(e => e.op === 'equip' || e.target === 'one' || e.op === 'revive'
+    || e.op === 'recallSupport' || e.op === 'recallMonster');
 }
 
 export function expandTargets(state, pi, act) {
@@ -116,6 +117,9 @@ export function expandTargets(state, pi, act) {
   if (e.op === 'recallSupport') {
     return p.grave.map((gid, i) => (!isMonster(gid) ? { ...act, target: { grave: i } } : null)).filter(Boolean);
   }
+  if (e.op === 'recallMonster') {
+    return p.grave.map((gid, i) => (isMonster(gid) ? { ...act, target: { grave: i } } : null)).filter(Boolean);
+  }
   // target: 'one'
   const side = e.side === 'enemy' ? other(pi) : pi;
   const tp = state.players[side];
@@ -131,6 +135,15 @@ export function aiChooseAction(state, pi, opts = {}) {
   const rand = opts.rand ?? Math.random;
   const w = PROFILES[opts.profile || 'balanced'] || PROFILES.balanced;
   if (state.winner !== null || state.active !== pi || state.phase !== 'main') return null;
+  if (state.pendingChoice?.type === 'observe' && state.pendingChoice.pi === pi) {
+    let best = 0, score = -Infinity;
+    state.pendingChoice.cards.forEach((id, i) => {
+      const c = card(id);
+      const v = c.cost * 2 + (c.type === 'monster' ? c.atk + c.def : 5);
+      if (v > score) { score = v; best = i; }
+    });
+    return { type: 'observe', index: best };
+  }
   const acts = [];
   for (const a of legalActions(state, pi)) {
     if (a.type === 'end') continue;

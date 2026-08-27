@@ -22,7 +22,7 @@ export function cardHtml(c, opts = {}) {
     <div class="shine"></div>
     <div class="cost">${c.cost}</div>
     <div class="cname">${esc(c.name)}</div>
-    <div class="art">${cardArtSvg(c)}<div class="elem">${ELEMENTS[c.element].icon}</div></div>
+    <div class="art" ${opts.artAttr || ''}>${cardArtSvg(c)}<div class="elem">${ELEMENTS[c.element].icon}</div></div>
     ${kw}
     <div class="rarity" style="color:${r.color};border-color:${r.color}66">${r.short}</div>
     <div class="body">${esc(c.text || c.flavor)}</div>
@@ -48,6 +48,7 @@ export function monsterHtml(m, side, slot, opts = {}) {
       ${hasKw(m, 'guard') ? '<div class="gmark">守護</div>' : ''}
       ${hasKw(m, 'pierce') ? '<div class="gmark pierce">貫通</div>' : ''}
       ${hasKw(m, 'double') ? '<div class="gmark dbl">連撃</div>' : ''}
+      ${(m.stunnedUntil || -1) >= 0 ? '<div class="gmark stunned">停止</div>' : ''}
       <div class="mstat ${buffed ? 'buffed' : ''}">
         <span class="atk">⚔${effAtk(m)}</span><span class="def">🛡${effDef(m)}</span>
       </div>
@@ -66,13 +67,19 @@ export function supportHtml(s) {
 }
 
 /** クリックしたときに出す詳細パネル */
-export function detailHtml(c, extra = '') {
+export function detailHtml(c, extra = '', opts = {}) {
   const r = RARITY[c.rarity || 'common'];
+  const zoomable = Boolean(opts.zoomable);
   const kw = c.keywords?.length
     ? `<div class="d-kw">${c.keywords.map(k =>
         `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>` : '';
   return `<div class="detail">
-    ${cardHtml(c, { cls: 'big' })}
+    ${cardHtml(c, {
+      cls: `big ${zoomable ? 'zoomable' : ''}`,
+      artAttr: zoomable
+        ? `data-artzoom="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.name)}のイラストを拡大"`
+        : '',
+    })}
     <div class="d-body">
       <div class="d-name">${esc(c.name)}</div>
       <div class="d-meta">
@@ -80,7 +87,7 @@ export function detailHtml(c, extra = '') {
         <span>コスト ${c.cost}</span>
         ${c.type === 'monster' ? `<span class="atk">⚔ ${c.atk}</span><span class="def">🛡 ${c.def}</span>` : '<span>サポート</span>'}
         <span style="color:${r.color}">${r.name}</span>
-        <span>${c.set === 2 ? '第2弾' : '第1弾'}</span>
+        <span>第${c.set || 1}弾</span>
       </div>
       <div class="d-text">${esc(c.text || 'このカードに効果はありません（バニラ）。')}</div>
       ${kw}

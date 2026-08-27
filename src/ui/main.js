@@ -9,12 +9,13 @@ import {
   isMonster, matchFilter, hasKw, emptySlot, canForge, canSummonAt, summonCostOf, canEquipTo,
 } from '../engine/game.js';
 import { aiChooseAction } from '../engine/ai.js';
-import { cardArtSvg } from './art.js';
+import { cardArtSource, cardArtSvg } from './art.js';
 import { cardHtml, monsterHtml, supportHtml, detailHtml, esc } from './cardview.js';
 import {
   AREAS, REWARD, openPack, PACK_TYPES, loadSave, writeSave,
   areaUnlocked, addCards, deckCurve, STARTER_DECK, AVATARS,
-  FREE_DIFFICULTY, DUST_SHOP, REWARD_LIMIT,
+  FREE_DIFFICULTY, DUST_SHOP, REWARD_LIMIT, prismUnlocked,
+  MAX_DECKS, ensureDecks,
 } from '../game/campaign.js';
 import * as Audio from './audio.js';
 import { ENEMY_ART, AREA_BG, PLAYER_ART } from './assets_map.js';
@@ -32,10 +33,12 @@ const app = {
   sel: null,            // {kind:'attack', slot} 攻撃対象選択中
   popup: null,          // {type, x, y, ...} 盤面の小ポップアップ
   detail: null,         // 詳細表示中のカードID
+  artZoom: null,        // 図鑑で拡大表示中のカードID
   graveView: null,      // 0|1 墓地を見ている
   hint: '', toast: '',
   aiTimer: null, result: null, packResult: null,
   deckDraft: null, poolSort: 'element',
+  collectionSet: 1,
   free: null,           // フリーバトル中 { difficulty }
   freeDiff: 'normal',
   logOpen: true,
@@ -55,12 +58,13 @@ function syncBgm() { Audio.playBgm(SCENE_BGM[app.screen] || 'bgm_menu'); }
 function go(screen) {
   clearTimeout(app.aiTimer);
   Audio.stopSe();
-  app.screen = screen; app.result = null; app.popup = null; app.sel = null; app.detail = null;
+  app.screen = screen; app.result = null; app.popup = null; app.sel = null; app.detail = null; app.artZoom = null;
   if (screen === 'deck') app.deckDraft = [...app.save.deck];
-  syncBgm(); render();
+  syncBgm(); render({ resetScroll: true });   // 画面を変えたときは先頭から
 }
 
 function toast(msg, ms = 1700) {
+  Audio.playSe('se_error', { gap: 300 });
   app.toast = msg; render();
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { app.toast = ''; render(); }, ms);
@@ -164,23 +168,29 @@ const myAvatar = () => (app.save.profile?.avatar || 1);
 // ============================================================
 function renderTitle() {
   const owned = Object.values(app.save.collection).reduce((a, b) => a + b, 0);
-  return `<div class="screen">
+  return `<div class="screen title-screen">
+    <div class="title-bg" aria-hidden="true"></div>
+    <div class="title-shade" aria-hidden="true"></div>
     <div class="title-hero">
-      <h1>TRI-ELEMENTS</h1>
-      <p>三 属 の 戦 記</p>
-      <div class="elemrow"><span>🔥</span><span>💧</span><span>🌿</span></div>
+      <img class="title-logo" src="assets/ui/title-logo.svg" alt="TRI-ELEMENTS 三属の戦記">
+      <p class="title-tagline">三つの力を束ね、まだ見ぬカードと世界へ。</p>
+      <div class="title-elements" aria-label="炎・水・草の三属性">
+        <span class="fire">🔥 炎</span><span class="water">💧 水</span><span class="grass">🌿 草</span>
+      </div>
     </div>
-    <div class="menu">
-      <button class="btn primary" data-go="adventure">冒険へ出る</button>
-      <button class="btn" data-go="free">フリーバトル</button>
-      <button class="btn" data-go="deck">デッキ編集</button>
-      <button class="btn" data-go="collection">カード図鑑</button>
-      <button class="btn" data-go="rules">ルール説明</button>
-      <button class="btn" data-go="settings">設定</button>
-    </div>
-    <div class="titleprof">
-      <div class="tface">${avatarHtml(myAvatar())}</div>
-      <div><b>${esc(myName())}</b><div class="hint" style="text-align:left">${app.save.stats.wins}勝 ${app.save.stats.losses}敗 ／ 所持カード ${owned}枚 ／ 全${ALL_CARDS.length}種</div></div>
+    <div class="title-panel">
+      <div class="titleprof">
+        <div class="tface">${avatarHtml(myAvatar())}</div>
+        <div class="titleprof-text"><b>${esc(myName())}</b><div>${app.save.stats.wins}勝 ${app.save.stats.losses}敗　<span>所持 ${owned}枚</span></div></div>
+      </div>
+      <div class="title-menu">
+        <button class="title-action main" data-go="adventure"><span class="ta-icon">⚔️</span><span><b>冒険へ出る</b><small>物語を進める</small></span></button>
+        <button class="title-action" data-go="free"><span class="ta-icon">🏟️</span><span><b>フリーバトル</b><small>好きな相手と対戦</small></span></button>
+        <button class="title-action" data-go="deck"><span class="ta-icon">🃏</span><span><b>デッキ編集</b><small>30枚を編成</small></span></button>
+        <button class="title-action" data-go="collection"><span class="ta-icon">📖</span><span><b>カード図鑑</b><small>全${ALL_CARDS.length}種を眺める</small></span></button>
+        <button class="title-action" data-go="rules"><span class="ta-icon">📜</span><span><b>ルール説明</b><small>遊び方を確認</small></span></button>
+        <button class="title-action quiet" data-go="settings"><span class="ta-icon">⚙️</span><span><b>設定</b><small>音量・プロフィール</small></span></button>
+      </div>
     </div>
   </div>`;
 }
@@ -262,9 +272,10 @@ function renderFree() {
     </button>`).join('');
 
   const shop = DUST_SHOP.map(x => {
-    const ok = (app.save.stardust || 0) >= x.cost;
+    const unlocked = !x.unlockAfter || prismUnlocked(app.save);
+    const ok = unlocked && (app.save.stardust || 0) >= x.cost;
     return `<button class="btn small ${ok ? 'primary' : ''}" ${ok ? `data-buypack="${x.pack}"` : 'disabled'}>
-      ${PACK_TYPES[x.pack].name} ／ ✦${x.cost}</button>`;
+      ${unlocked ? PACK_TYPES[x.pack].name : '🔒 プリズム（エリア5クリア）'} ／ ✦${x.cost}</button>`;
   }).join('');
 
   const cards = beaten.map(({ a, ai, e, ei, key }) => {
@@ -321,6 +332,32 @@ function sortPool(cards) {
   });
 }
 
+/** 編集中の内容が、選択中スロットの保存内容と違うか */
+function deckDirty() {
+  const saved = app.save.decks[app.save.activeDeck];
+  if (!saved || !app.deckDraft) return false;
+  const a = [...app.deckDraft].sort().join(',');
+  const b = [...saved.list].sort().join(',');
+  return a !== b;
+}
+
+/** スロットを切り替える。未保存なら1度目は警告して止める。 */
+function switchDeckSlot(i) {
+  if (i === app.save.activeDeck) return;
+  if (deckDirty() && app.pendingSlot !== i) {
+    app.pendingSlot = i;
+    render();
+    return toast('未保存の変更があります。もう一度押すと破棄して切り替えます');
+  }
+  app.pendingSlot = null;
+  app.save.activeDeck = i;
+  app.save.deck = [...app.save.decks[i].list];
+  app.deckDraft = [...app.save.decks[i].list];
+  writeSave(app.save);
+  Audio.playSe('se_click');
+  render();
+}
+
 function renderDeck() {
   const draft = app.deckDraft || (app.deckDraft = [...app.save.deck]);
   const counts = {};
@@ -335,6 +372,7 @@ function renderDeck() {
     .sort((a, b) => a.cost - b.cost || a.element.localeCompare(b.element) || a.id.localeCompare(b.id))
     .map(c => `<div class="dcard" data-deckcard="${c.id}" draggable="false">
         ${cardHtml(c, {})}<div class="cnt">×${counts[c.id]}</div>
+        <button class="cinfo" data-cardinfo="${c.id}" title="カードの効果を見る" aria-label="${esc(c.name)}の詳細">i</button>
       </div>`).join('');
 
   const owned = Object.keys(app.save.collection).filter(id => app.save.collection[id] > 0).map(id => card(id));
@@ -345,14 +383,30 @@ function renderDeck() {
     return `<div class="poolcard ${full ? 'full' : ''}" data-poolcard="${c.id}">
       ${cardHtml(c, { cls: full ? '' : 'selectable' })}
       <div class="own">${inDeck}/${Math.min(3, own)}</div>
+      <button class="cinfo" data-cardinfo="${c.id}" title="カードの効果を見る" aria-label="${esc(c.name)}の詳細">i</button>
     </div>`;
   }).join('');
 
+  const decks = app.save.decks;
+  const active = app.save.activeDeck;
+  const slots = decks.map((d, i) => `
+    <button class="dslot ${i === active ? 'on' : ''} ${app.pendingSlot === i ? 'warn' : ''}" data-deckslot="${i}">
+      <b>${esc(d.name)}</b><small>${d.list.length}/30</small>
+    </button>`).join('')
+    + (decks.length < MAX_DECKS
+      ? `<button class="dslot add" data-deckadd title="新しいデッキを作る">＋</button>` : '');
+
   return `<div class="deckwrap">
     <div class="deckcol">
-      <h3>デッキ <span style="color:${draft.length === 30 ? '#7fe0a0' : '#ff9a9a'}">${draft.length}</span>/30</h3>
+      <div class="dslots">${slots}</div>
+      <div class="dnamerow">
+        <input class="dname" data-deckname maxlength="14" value="${esc(decks[active].name)}"
+          aria-label="デッキ名">
+        <span class="dcount" style="color:${draft.length === 30 ? '#7fe0a0' : '#ff9a9a'}">${draft.length}/30</span>
+        ${decks.length > 1 ? '<button class="btn tiny" data-deckdel>削除</button>' : ''}
+      </div>
       <div class="curve">${bars}</div>
-      <div style="height:16px"></div>
+      <div style="height:10px"></div>
       <div class="decklist" data-decklist>${deckCards || '<div class="hint" style="width:100%;padding-top:30px">ここにカードをドラッグ</div>'}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn primary small" data-savedeck ${draft.length === 30 ? '' : 'disabled'}>保存</button>
@@ -360,7 +414,8 @@ function renderDeck() {
         <button class="btn small" data-cleardeck>全部外す</button>
         <button class="btn small" data-go="title">戻る</button>
       </div>
-      <div class="hint">カードをドラッグして出し入れ／クリックでも増減</div>
+      <div class="hint">カードをドラッグして出し入れ／クリックでも増減${
+        deckDirty() ? '　<b style="color:#ffc07a">未保存の変更があります</b>' : ''}</div>
     </div>
     <div class="poolcol">
       <div class="pooltools">
@@ -382,18 +437,49 @@ function renderDeck() {
 // 図鑑・ルール・サウンド
 // ============================================================
 function renderCollection() {
+  const setInfo = {
+    1: { name: '第1弾', sub: '三属の目覚め' },
+    2: { name: '第2弾', sub: '嵐の来訪者' },
+    3: { name: '第3弾', sub: '星辰の門' },
+  };
+  const sets = [...new Set(ALL_CARDS.map(c => c.set || 1))].sort((a, b) => a - b);
+  const activeSet = sets.includes(app.collectionSet) ? app.collectionSet : sets[0];
+  const setCards = ALL_CARDS.filter(c => (c.set || 1) === activeSet);
+  const setHave = setCards.filter(c => app.save.collection[c.id]).length;
+  const copies = setCards.reduce((n, c) => n + (app.save.collection[c.id] || 0), 0);
+  const tabs = sets.map(s => {
+    const cards = ALL_CARDS.filter(c => (c.set || 1) === s);
+    const have = cards.filter(c => app.save.collection[c.id]).length;
+    const info = setInfo[s] || { name: `第${s}弾`, sub: '' };
+    return `<button class="dexset ${s === activeSet ? 'on' : ''}" data-collectionset="${s}">
+      <b>${info.name}</b><small>${esc(info.sub)}　${have}/${cards.length}</small>
+    </button>`;
+  }).join('');
   const groups = [['fire', '🔥 炎'], ['water', '💧 水'], ['grass', '🌿 草'], ['none', '✦ 汎用']];
   const html = groups.map(([el, label]) => {
-    const cs = ALL_CARDS.filter(c => c.element === el);
+    const cs = setCards.filter(c => c.element === el);
+    if (!cs.length) return '';
     const have = cs.filter(c => app.save.collection[c.id]).length;
-    return `<h3 style="color:var(--gold);align-self:flex-start">${label}　${have}/${cs.length}種</h3>
-      <div class="grid">${cs.map(c => {
+    return `<section class="dexgroup">
+      <div class="dexgroup-head"><h3>${label}</h3><span>${have}/${cs.length}種</span></div>
+      <div class="grid dexgrid">${cs.map(c => {
         const own = app.save.collection[c.id] || 0;
         return `<div class="poolcard">${cardHtml(c, { cls: own ? 'selectable' : 'disabled' })}
           <div class="own">${own ? '×' + own : '未所持'}</div></div>`;
-      }).join('')}</div>`;
+      }).join('')}</div></section>`;
   }).join('');
-  return `<div class="screen">${html}<button class="btn" data-go="title">戻る</button></div>`;
+  const info = setInfo[activeSet] || { name: `第${activeSet}弾`, sub: '' };
+  return `<div class="screen collection-screen">
+    <div class="dexsticky">
+      <div class="dexhead">
+        <button class="dexback" data-go="title" aria-label="タイトルへ戻る">← <span>タイトルへ</span></button>
+        <div class="dextitle"><h2>カード図鑑</h2><p>${info.name}「${esc(info.sub)}」</p></div>
+        <div class="dexsummary"><b>${setHave}</b> / ${setCards.length}種<small>所持 ${copies}枚</small></div>
+      </div>
+      <div class="dexsets">${tabs}</div>
+    </div>
+    <div class="dexcontent">${html}</div>
+  </div>`;
 }
 
 const renderRules = () => renderRulesPage();
@@ -505,6 +591,80 @@ function supportTargetSlots(g, handIndex) {
   return res;
 }
 
+/** 左カラム：いま見ているカードの情報 */
+function inspectPanelHtml() {
+  // 相手が直前に出したカードを優先して見せる。
+  // 盤面から消えるサポートは、これが無いと何をされたのか分からない。
+  if (app.lastPlay) {
+    const lc = card(app.lastPlay.id);
+    if (lc) {
+      const lr = RARITY[lc.rarity || 'common'];
+      const lkw = lc.keywords?.length
+        ? `<div class="ip-kw">${lc.keywords.map(k => `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
+        : '';
+      return `<div class="ipanel enemyplay">
+        <div class="ip-banner">${esc(app.enemy?.name || '相手')} が${esc(app.lastPlay.verb)}</div>
+        <div class="ip-card">${cardHtml(lc, { cls: 'big' })}</div>
+        <div class="ip-name">${esc(lc.name)}</div>
+        <div class="ip-meta">
+          <span>${ELEMENTS[lc.element].icon} ${ELEMENTS[lc.element].name}</span>
+          <span>コスト ${lc.cost}</span>
+          ${lc.type === 'monster' ? `<span class="atkc">⚔ ${lc.atk}</span><span class="defc">🛡 ${lc.def}</span>` : '<span>サポート</span>'}
+          <span style="color:${lr.color}">${lr.name}</span>
+        </div>
+        <div class="ip-text">${esc(lc.text || 'このカードに効果はありません（バニラ）。')}</div>
+        ${lkw}
+      </div>`;
+    }
+  }
+  const id = app.inspect;
+  const c = id ? card(id) : null;
+  if (!c) {
+    return `<div class="ipanel empty">
+      <div class="ip-title">カード情報</div>
+      <div class="ip-hint">カードにカーソルを合わせると、ここに詳しい内容が出ます。</div>
+      <div class="ip-legend">
+        <div><b class="atkc">⚔ 攻撃モード</b>（縦置き）<br>殴れる。相手の攻撃モンスターとぶつかると弱い方が破壊。</div>
+        <div><b class="defc">🛡 防御モード</b>（横置き）<br>攻撃できないが、🛡の分だけダメージを受け止める。</div>
+        <div><b class="gold">属性相性</b><br>🔥→🌿→💧→🔥 有利な属性で攻撃すると ⚔+2。</div>
+      </div>
+    </div>`;
+  }
+  const r = RARITY[c.rarity || 'common'];
+  const kw = c.keywords?.length
+    ? `<div class="ip-kw">${c.keywords.map(k => `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
+    : '';
+  return `<div class="ipanel">
+    <div class="ip-card">${cardHtml(c, { cls: 'big' })}</div>
+    <div class="ip-name">${esc(c.name)}</div>
+    <div class="ip-meta">
+      <span>${ELEMENTS[c.element].icon} ${ELEMENTS[c.element].name}</span>
+      <span>コスト ${c.cost}</span>
+      ${c.type === 'monster' ? `<span class="atkc">⚔ ${c.atk}</span><span class="defc">🛡 ${c.def}</span>` : '<span>サポート</span>'}
+      <span style="color:${r.color}">${r.name}</span>
+    </div>
+    <div class="ip-text">${esc(c.text || 'このカードに効果はありません（バニラ）。')}</div>
+    ${kw}
+    <div class="ip-flavor">${esc(c.flavor)}</div>
+  </div>`;
+}
+
+/** ホバーしたカードを左パネルに出す（全体を描き直さずパネルだけ差し替える） */
+function setInspect(id) {
+  if (app.inspect === id) return;
+  app.inspect = id;
+  const el = document.querySelector('[data-inspectpanel]');
+  if (el) el.innerHTML = inspectPanelHtml();
+}
+document.addEventListener('pointerover', ev => {
+  if (app.screen !== 'battle') return;
+  const el = ev.target.closest('[data-card]');
+  if (el && el.dataset.card) {
+    app.lastPlay = null;      // 自分で見に行ったらそちらを優先する
+    setInspect(el.dataset.card);
+  }
+});
+
 function renderBattle() {
   const g = app.game;
   const me = g.players[0], op = g.players[1];
@@ -560,12 +720,15 @@ function renderBattle() {
 
   const maxPips = Math.max(op.maxCost, me.maxCost, 1);
   const pips = n => Array.from({ length: maxPips }, (_, i) => `<div class="pip ${i < n ? 'on' : ''}"></div>`).join('');
-  const logHtml = g.log.slice(-24).map(l => `<div class="l ${l.kind}">${esc(l.text)}</div>`).join('');
+  const logHtml = g.log.slice(-60).map(l => `<div class="l ${l.kind}">${esc(l.text)}</div>`).join('');
 
   const bg = app.free ? (AREA_BG.common || AREA_BG[AREAS[app.areaIndex]?.id])
     : (AREA_BG[AREAS[app.areaIndex]?.id] || AREA_BG.common);
+  // 縦持ちではカード情報が盤面に重なるので、既定は畳んでおく
+  const portrait = battleLayout() === 'portrait';
+  const infoClosed = portrait ? app.infoOpen !== true : app.infoOpen === false;
   return `<div class="battle" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
-    <div class="bar">
+    <div class="bar enemybar">
       <div class="who"><div class="face">${(() => {
         const src = ENEMY_ART[`${AREAS[app.areaIndex]?.id}:${Number((app.enemyKey || ':0').split(':')[1])}`];
         return src ? `<img src="${src}" alt="">` : (app.enemy ? app.enemy.icon : '🤖');
@@ -574,38 +737,48 @@ function renderBattle() {
         <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, op.life / (app.enemyLifeMax || 20) * 100))}%"></div></div></div>
       <div class="costpips">${pips(op.cost)}</div>
       <span class="meta">手札 <b>${op.hand.length}</b></span>
-      <span style="margin-left:auto"></span>
-      <button class="btn tiny" data-toggle-log>${app.logOpen ? 'ログ非表示' : 'ログ'}</button>
-      <button class="btn tiny" data-surrender>投了</button>
-    </div>
-
-    <div class="field">
-      <div class="row">${pileHtml('grave', op.grave.length, 1)}${supRow(op)}${pileHtml('deck', op.deck.length, 1)}</div>
-      <div class="row">${enemyMon}</div>
-      <div class="center">
-        <span class="turnlabel">ターン ${g.turn}　${g.active === 0 ? 'あなたの番' : '相手の番'}</span>
-        ${faceTargetable ? '<button class="btn danger small" data-attackface>▶ 直接攻撃！</button>' : ''}
-        <span class="hint">${esc(app.hint)}</span>
+      <div class="battle-actions">
+        ${portrait ? `<button class="btn tiny" data-toggle-info>${infoClosed ? 'カード情報' : '情報を隠す'}</button>` : ''}
+        <button class="btn tiny" data-toggle-log>${app.logOpen ? 'ログ非表示' : 'ログ'}</button>
+        <button class="btn tiny" data-surrender>投了</button>
       </div>
-      <div class="row">${myMon}</div>
-      <div class="row">${pileHtml('grave', me.grave.length, 0)}${supRow(me)}${pileHtml('deck', me.deck.length, 0)}</div>
     </div>
 
-    <div class="bar">
+    <div class="mid">
+      <div class="sidecol left ${infoClosed ? 'closed' : ''}" data-inspectpanel>${inspectPanelHtml()}</div>
+
+      <div class="field">
+        <div class="row">${pileHtml('grave', op.grave.length, 1)}${supRow(op)}${pileHtml('deck', op.deck.length, 1)}</div>
+        <div class="row">${enemyMon}</div>
+        <div class="center">
+          <span class="turnlabel">ターン ${g.turn}　${g.active === 0 ? 'あなたの番' : '相手の番'}</span>
+          ${faceTargetable ? '<button class="btn danger small" data-attackface>▶ 直接攻撃！</button>' : ''}
+          <span class="hint">${esc(app.hint)}</span>
+        </div>
+        <div class="row">${myMon}</div>
+        <div class="row">${pileHtml('grave', me.grave.length, 0)}${supRow(me)}${pileHtml('deck', me.deck.length, 0)}</div>
+      </div>
+
+      <div class="sidecol right">
+        ${app.logOpen ? `<div class="logpane" data-logpane>${logHtml}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="bar playerbar">
       <div class="who"><div class="face">${avatarHtml(myAvatar())}</div>${esc(myName())}</div>
       <div class="lifebox"><span class="lifeval">${me.life}</span>
         <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, me.life / 20 * 100))}%"></div></div></div>
       <div class="costpips">${pips(me.cost)}</div>
       <span class="meta">コスト <b>${me.cost}/${me.maxCost}</b></span>
-      <span style="margin-left:auto"></span>
-      ${discardMode ? '<span class="hint" style="color:var(--gold)">手札が多すぎます。捨てるカードを選んでください</span>' : ''}
-      ${app.sel ? '<button class="btn small" data-cancel>選択解除</button>' : ''}
-      <button class="btn small" data-forge ${myTurn && g.phase === 'main' && canForge(g, 0) ? '' : 'disabled'}
-        title="余ったコストでカードを引く">🔨 鍛錬（${g.rules.forgeCost}コスト→1ドロー）</button>
-      <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>ターン終了</button>
+      <div class="battle-actions">
+        ${discardMode ? '<span class="hint" style="color:var(--gold)">手札が多すぎます。捨てるカードを選んでください</span>' : ''}
+        ${app.sel ? '<button class="btn small" data-cancel>選択解除</button>' : ''}
+        <button class="btn small" data-forge ${myTurn && g.phase === 'main' && canForge(g, 0) ? '' : 'disabled'}
+          title="余ったコストでカードを1枚引く">🔨 鍛錬 ${g.rules.forgeCost}→1枚</button>
+        <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>ターン終了</button>
+      </div>
     </div>
     <div class="hand">${hand}</div>
-    ${app.logOpen ? `<div class="logpane">${logHtml}</div>` : ''}
   </div>`;
 }
 
@@ -645,8 +818,10 @@ function overlays() {
   if (app.phase === 'mulligan') h += mulliganOverlay();
   if (app.phase === 'start') h += battleStartOverlay();
   if (app.detail) h += detailOverlay();
+  if (app.artZoom) h += artZoomOverlay();
   if (app.graveView !== null) h += graveOverlay();
   if (app.gravePick) h += gravePickOverlay();
+  if (app.game?.pendingChoice?.type === 'observe') h += observeOverlay();
   if (app.result) h += resultOverlay();
   if (app.packResult) h += packOverlay();
   return h;
@@ -694,10 +869,47 @@ function battleStartOverlay() {
 function detailOverlay() {
   const c = card(app.detail);
   if (!c) return '';
+  // 拡大できるのは入手済みのカードだけ（集める動機になるように）
+  const owned = (app.save.collection[c.id] || 0) > 0;
+  const zoomable = app.screen === 'collection' && owned;
+  const extra = app.screen !== 'collection' ? ''
+    : owned
+      ? `<button class="zoom-open" data-artzoom="${esc(c.id)}">🔍 イラストを拡大</button>`
+      : '<div class="zoom-locked">🔒 入手するとイラストを拡大できます</div>';
   return `<div class="overlay" data-closedetail><div class="modal">
-    ${detailHtml(c)}
+    ${detailHtml(c, extra, { zoomable })}
     <div class="row-btn"><button class="btn" data-closedetail>閉じる</button></div>
   </div></div>`;
+}
+
+function observeOverlay() {
+  const choice = app.game?.pendingChoice;
+  if (!choice || choice.type !== 'observe' || choice.pi !== 0) return '';
+  const cards = choice.cards.map((id, i) =>
+    `<button class="observe-card" data-observe="${i}">${cardHtml(card(id), { cls: 'big selectable' })}</button>`).join('');
+  return `<div class="overlay"><div class="modal observe-modal">
+    <h2>【観測】</h2>
+    <p>山札の上から見えたカードです。手札に加える1枚を選んでください。<br>
+      <span style="color:#9fb2c8">残りは山札の底へ戻ります。</span></p>
+    <div class="observe-list">${cards}</div>
+  </div></div>`;
+}
+
+function artZoomOverlay() {
+  const c = card(app.artZoom);
+  if (!c) return '';
+  const src = cardArtSource(c);
+  const art = src
+    ? `<img src="${src}" alt="${esc(c.name)}">`
+    : cardArtSvg(c);
+  return `<div class="overlay artzoom-overlay" data-closeartzoom>
+    <div class="artzoom-modal" role="dialog" aria-modal="true" aria-label="${esc(c.name)}のイラスト">
+      <button class="artzoom-close" data-closeartzoom aria-label="拡大表示を閉じる">×</button>
+      <div class="artzoom-name">${esc(c.name)}</div>
+      <div class="artzoom-stage ${c.element}">${art}</div>
+      <div class="artzoom-hint">画面をクリック、または Esc で閉じる</div>
+    </div>
+  </div>`;
 }
 
 function gravePickOverlay() {
@@ -740,9 +952,39 @@ function resultOverlay() {
   </div></div>`;
 }
 
+/** パックを1枚ずつめくる演出（描き直しに強いよう、めくった枚数を状態で持つ） */
+function startPackReveal() {
+  if (!app.packResult || app.packRevealing) return;
+  app.packRevealing = true;
+  app.packRevealed = 0;
+  Audio.playSe('se_pack');
+  const ids = [...app.packResult];
+  const step = i => {
+    if (!app.packResult || app.packResult !== ids && app.packResult.join() !== ids.join()) return;
+    app.packRevealed = i + 1;
+    const r = card(ids[i]).rarity;
+    Audio.playSe('se_reveal', { gap: 0 });
+    if (r === 'rare' || r === 'epic' || r === 'legend') {
+      setTimeout(() => Audio.playSe('se_rare', { gap: 0 }), 150);
+    }
+    render();
+    if (i + 1 < ids.length) setTimeout(() => step(i + 1), 430);
+    else app.packRevealing = false;
+  };
+  setTimeout(() => step(0), 260);
+}
+
 function packOverlay() {
-  const cards = app.packResult.map((id, i) =>
-    `<div style="animation:bspop .4s ${i * 0.12}s both">${cardHtml(card(id), { cls: 'big' })}</div>`).join('');
+  const shown = app.packRevealed || 0;
+  const cards = app.packResult.map((id, i) => {
+    const open = i < shown;
+    const r = card(id).rarity;
+    const glow = open && (r === 'rare' || r === 'epic' || r === 'legend') ? 'shinein' : '';
+    return `<div class="packcard ${open ? 'open' : 'facedown'} ${glow}" data-packidx="${i}">
+      <div class="pcback"></div>
+      <div class="pcfront">${cardHtml(card(id), { cls: 'big' })}</div>
+    </div>`;
+  }).join('');
   return `<div class="overlay"><div class="modal" style="max-width:880px">
     <h2>パック開封！</h2>
     <div class="grid" style="margin:14px 0">${cards}</div>
@@ -753,18 +995,51 @@ function packOverlay() {
 // ============================================================
 // 描画
 // ============================================================
-/** 戦闘画面は固定サイズで作って、ウィンドウに合わせて縮小する */
+/** 戦闘画面は16:9の固定レイアウトで作り、画面幅いっぱいまで拡大する */
+// 戦闘画面は固定サイズで組んで丸ごと拡大縮小する。
+// 横長の画面と縦長の画面では入る形が違うので、設計サイズを2つ持つ。
+const BATTLE_SIZE = {
+  wide:     { w: 1440, h: 900 },
+  portrait: { w: 520, h: 980 },
+};
+/** いまの画面の形に合う方を選ぶ */
+function battleLayout() {
+  return window.innerWidth / window.innerHeight < 0.95 ? 'portrait' : 'wide';
+}
+
 function applyBattleScale() {
   const el = document.querySelector('.battle');
   if (!el) return;
-  const DW = 1440, DH = 876;
-  const s = Math.min(1, window.innerWidth / DW, window.innerHeight / DH);
+  const mode = battleLayout();
+  const { w: DW, h: DH } = BATTLE_SIZE[mode];
+  el.classList.toggle('portrait', mode === 'portrait');
+  const s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
   el.style.transform = `scale(${s})`;
   el.style.left = `${Math.max(0, (window.innerWidth - DW * s) / 2)}px`;
+  el.style.top = `${Math.max(0, (window.innerHeight - DH * s) / 2)}px`;
 }
-window.addEventListener('resize', () => { applyBattleScale(); });
+let resizeTimer = 0;
+window.addEventListener('resize', () => {
+  applyBattleScale();
+  // 縦横が入れ替わったら組み直す（横のカラムが引き出しに変わるため）
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (app.screen === 'battle' && app.battleMode !== battleLayout()) render();
+  }, 160);
+});
 
-function render() {
+// innerHTML を丸ごと差し替えるので、スクロール位置は自前で持ち越す。
+// （デッキ編集で1枚足すたびに所持カード一覧が先頭へ戻るのを防ぐ）
+const SCROLL_KEEP = ['[data-pool]', '[data-decklist]'];
+
+function render(opts = {}) {
+  const keep = {};
+  if (!opts.resetScroll) {
+    SCROLL_KEEP.forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) keep[sel] = el.scrollTop;
+    });
+  }
   let html;
   switch (app.screen) {
     case 'adventure': html = renderAdventure(); break;
@@ -780,13 +1055,29 @@ function render() {
   if (!app.save.profile) html += onboardingOverlay();
   if (app.toast) html += `<div class="toast">${esc(app.toast)}</div>`;
   $app.innerHTML = html;
-  if (app.screen === 'battle') applyBattleScale();
+  Object.entries(keep).forEach(([sel, top]) => {
+    const el = document.querySelector(sel);
+    if (el) el.scrollTop = top;
+  });
+  if (app.screen === 'battle') {
+    app.battleMode = battleLayout();
+    applyBattleScale();
+    const lp = document.querySelector('[data-logpane]');
+    if (lp) lp.scrollTop = lp.scrollHeight;   // 常に最新のログを表示
+  }
+  if (app.packResult) startPackReveal();
 }
 
 // ============================================================
 // バトル進行
 // ============================================================
 function startBattle(areaIndex, enemyIndex, free = false) {
+  // 複数スロットのせいで、30枚に満たないデッキを選んだまま挑めてしまわないように
+  if (app.save.deck.length !== 30) {
+    const d = app.save.decks[app.save.activeDeck];
+    toast(`「${d ? d.name : 'デッキ'}」は${app.save.deck.length}枚です。30枚にしてください`);
+    return go('deck');
+  }
   const area = AREAS[areaIndex], enemy = area.enemies[enemyIndex];
   const diff = free ? FREE_DIFFICULTY[app.freeDiff] : null;
   app.free = free ? { difficulty: app.freeDiff } : null;
@@ -822,6 +1113,7 @@ function beginPlay() {
   app.phase = 'play';
   render();
   lastBannerTurn = app.game.turn;
+  Audio.playSe('se_battle');
   Fx.fxBanner(app.game.active === 0 ? 'あなたのターン' : `${esc(app.enemy.name)} のターン`, '', 750);
   if (app.game.active === 1) scheduleAi();
 }
@@ -832,6 +1124,7 @@ function maybeTurnBanner() {
   if (!g || g.winner !== null || app.phase !== 'play') return;
   if (g.turn === lastBannerTurn) return;
   lastBannerTurn = g.turn;
+  Audio.playSe('se_turn');
   Fx.fxBanner(g.active === 0 ? 'あなたのターン' : `${esc(app.enemy?.name || '相手')} のターン`,
     `ターン ${g.turn}`, 700);
 }
@@ -844,6 +1137,35 @@ async function actWithFx(pi, action) {
   const g = app.game;
   if (!g || app.fxBusy) return false;
   app.fxBusy = true;
+  try {
+    return await runActionFx(g, pi, action);
+  } finally {
+    // 演出が途中で転んでも盤面を操作不能のままにしない
+    app.fxBusy = false;
+  }
+}
+
+/**
+ * 相手が出したカードを左カラムに出す。
+ * 次の行動まで残し、自分の番になったら消える。
+ */
+function showEnemyPlay(id, verb) {
+  app.lastPlay = { id, verb };
+  clearTimeout(showEnemyPlay._t);
+  const el = document.querySelector('[data-inspectpanel]');
+  if (el) el.innerHTML = inspectPanelHtml();
+}
+function clearEnemyPlay() {
+  if (!app.lastPlay) return;
+  app.lastPlay = null;
+  const el = document.querySelector('[data-inspectpanel]');
+  if (el) el.innerHTML = inspectPanelHtml();
+}
+
+async function runActionFx(g, pi, action) {
+  // 相手の行動表示は自分の番が始まっても残しておく（直前に何をされたか読めるように）。
+  // 自分が動いた時点で用済みなので片付ける。
+  if (pi === 0) app.lastPlay = null;
   const snap = Fx.snapshotRects();
   const from = action.type === 'attack' ? snap.mons[`${pi}:${action.slot}`] : null;
   const target = action.type === 'attack'
@@ -851,14 +1173,49 @@ async function actWithFx(pi, action) {
     : null;
   const attackerHtml = action.type === 'attack'
     ? (() => { const m = g.players[pi].field[action.slot]; return m ? cardHtml(card(m.id), {}) : ''; })() : '';
+  // サポートは使うと手札から消えるので、先に控えておく
+  const supCard = action.type === 'support' ? card(g.players[pi].hand[action.hand]) : null;
+  const sumCard = action.type === 'summon' ? card(g.players[pi].hand[action.hand]) : null;
+  const attacker = action.type === 'attack' ? g.players[pi].field[action.slot] : null;
   const mark = g.log.length;
+
+  // 相手が出したカードは左のカード情報欄に残す
+  if (pi === 1) {
+    if (supCard) showEnemyPlay(supCard.id, supCard.equip ? '装備' : 'サポートを使用');
+    else if (sumCard) showEnemyPlay(sumCard.id, 'を召喚');
+    else if (attacker) showEnemyPlay(attacker.id, 'で攻撃');
+  }
+
+  // 行動そのものの音
+  if (action.type === 'attack') Audio.playSe(action.target === 'face' ? 'se_direct' : 'se_attack');
+  else if (action.type === 'summon') Audio.playSe('se_summon');
+  else if (action.type === 'support') Audio.playSe(supCard && supCard.equip ? 'se_equip' : 'se_support');
+  else if (action.type === 'mode') Audio.playSe('se_mode');
+  else if (action.type === 'forge') Audio.playSe('se_forge');
+
+  // サポートは発動そのものを見せてから結果を出す
+  if (action.type === 'support' && supCard && !supCard.equip) {
+    await Fx.fxSupportCast(cardHtml(supCard, {}), supCard.element);
+  }
 
   const ok = applyAction(g, pi, action);
   const entries = g.log.slice(mark);
   render();
 
-  // 攻撃の突進
+  // 攻撃の突進。属性有利なら踏み込む前に見せる
   if (action.type === 'attack') {
+    const atkLog = entries.find(e => e.kind === 'attack');
+    if (atkLog && atkLog.bonus) {
+      Audio.playSe('se_effect');
+      Fx.fxElementBonus(target, atkLog.element);
+      await Fx.wait(320);
+    }
+    if (attacker) {
+      const kws = [];
+      if (hasKw(attacker, 'pierce') && action.target !== 'face') kws.push(['貫通', '#ff9a6b']);
+      if (hasKw(attacker, 'double')) kws.push(['連撃', '#e79aff']);
+      kws.forEach(([label, color], i) => setTimeout(() => Fx.fxKeyword(from, label, color), i * 130));
+    }
     if (action.target === 'face') Fx.fxSlash(target);
     await Fx.fxLunge(from, target, attackerHtml);
   }
@@ -866,25 +1223,55 @@ async function actWithFx(pi, action) {
     const slot = g.players[pi].field.findIndex(m => m && m.uid === Math.max(
       ...g.players[pi].field.filter(Boolean).map(x => x.uid)));
     if (slot >= 0) Fx.fxSummon(pi, slot);
+    // 【登場時】が仕事をしたら効果音を足す
+    if (entries.some(e => e.kind !== 'summon' && e.kind !== 'endturn')) {
+      Audio.playSe('se_effect', { gap: 120 });
+    }
+  }
+  if (action.type === 'forge') {
+    Fx.fxDraw(snap.pile[`deck:${pi}`], snap.hand);
   }
 
   // ログを順に演出へ
   let shook = 0;
   for (const e of entries) {
     if (e.kind === 'destroy') {
+      Audio.playSe('se_destroy');
       Fx.fxBurst(snap.mons[`${e.p}:${e.slot}`] || snap.mons[`${e.p}:0`]);
       await Fx.wait(90);
+    } else if (e.kind === 'guard') {
+      Audio.playSe('se_guard');
+      Fx.fxGuard(snap.mons[`${e.p}:${e.slot}`]);
+      await Fx.wait(180);
     } else if (e.kind === 'damage') {
+      Audio.playSe('se_hit');
       Fx.fxNumber(snap.bar[e.p], e.v, 'damage');
       Fx.fxHit(e.p, snap);
       if (e.v >= 4 && !shook) { Fx.fxShake(e.v / 3); shook = 1; }
       await Fx.wait(150);
     } else if (e.kind === 'heal') {
+      Audio.playSe('se_heal');
       Fx.fxNumber(snap.bar[e.p], e.v, 'heal');
+      Fx.fxHeal(snap.bar[e.p]);
       await Fx.wait(120);
+    } else if (e.kind === 'buff') {
+      Audio.playSe('se_buff');
+      // 盤面のモンスターを強化したときだけ光らせる（最大コスト増加などは対象が無い）
+      if (e.slot != null) Fx.fxBuff(snap.mons[`${e.p}:${e.slot}`], e.atk || 0, e.def || 0);
+      await Fx.wait(e.slot != null ? 140 : 60);
+    } else if (e.kind === 'mode') {
+      if (e.slot != null) Fx.fxFlip(e.p, e.slot);
+      await Fx.wait(120);
+    } else if (e.kind === 'draw') {
+      if (e.p === 0) Audio.playSe('se_draw');
+      Fx.fxDraw(snap.pile[`deck:${e.p}`], e.p === 0 ? snap.hand : null);
+      await Fx.wait(70);
     }
   }
-  app.fxBusy = false;
+
+  // とどめ
+  if (g.winner !== null) await Fx.fxLethal();
+
   return ok;
 }
 
@@ -896,9 +1283,22 @@ function afterAction() {
   if (g.active === 1) scheduleAi();
 }
 
-function scheduleAi() {
+// 相手が何をしているか目で追えるだけの間を置く。
+// 攻撃は演出自体が長いので短め、サポートは読む時間が要るので長め。
+const AI_PACE = { think: 560, summon: 420, support: 900, equip: 700, mode: 380, attack: 260, forge: 380 };
+
+function scheduleAi(extra = 0) {
   clearTimeout(app.aiTimer);
-  app.aiTimer = setTimeout(aiStep, 240);
+  app.aiTimer = setTimeout(aiStep, AI_PACE.think + extra);
+}
+/** 直前の行動を見せておきたい時間 */
+function aiPauseFor(g, act) {
+  if (!act) return 0;
+  if (act.type === 'support') {
+    const c = card(g.players[1].hand[act.hand]);
+    return c && c.equip ? AI_PACE.equip : AI_PACE.support;
+  }
+  return AI_PACE[act.type] ?? 0;
 }
 function aiStep() {
   const g = app.game;
@@ -916,7 +1316,11 @@ function aiStep() {
     render(); return scheduleAi();
   }
   const act = aiChooseAction(g, 1, { noise: app.enemy?.noise || 0, profile: app.enemy?.profile || 'balanced' });
-  if (act) { actWithFx(1, act).then(() => scheduleAi()); return; }
+  if (act) {
+    const pause = aiPauseFor(g, act);
+    actWithFx(1, act).then(() => scheduleAi(pause));
+    return;
+  }
   applyAction(g, 1, { type: 'end' });
   render();
   maybeTurnBanner();
@@ -1037,7 +1441,22 @@ document.addEventListener('pointermove', ev => {
 let suppressClick = false;
 document.addEventListener('click', ev => {
   if (suppressClick) { suppressClick = false; return; }
+  // 選択・決定・戻るを耳でも区別できるようにする。
+  const btn = ev.target.closest('.btn, .tab, .adv-tab, .avpick, .card, .chip, .foe .fbtn, .modepick button, .title-action, .dexback, .artzoom-close');
+  if (btn) {
+    const label = (btn.textContent || '').trim();
+    const back = btn.matches('[data-go="title"],[data-closedetail],[data-closeartzoom],[data-closegrave],[data-cancelgrave],[data-cancel],[data-surrender],.dexback,.artzoom-close')
+      || label.includes('戻る') || /^(閉じる|やめる|キャンセル|選択解除|投了)/.test(label);
+    const confirm = btn.matches('.primary,.title-action.main,[data-fight],[data-freefight],[data-startbattle],[data-obstart],[data-savedeck],[data-openpack],[data-buypack],[data-rematch],[data-closepack]');
+    Audio.playSe(back ? 'se_back' : confirm ? 'se_confirm' : 'se_click', { gap: 40 });
+  }
   handleClick(ev);
+});
+
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  if (app.artZoom) { Audio.playSe('se_back'); app.artZoom = null; render(); return; }
+  if (app.detail) { Audio.playSe('se_back'); app.detail = null; render(); }
 });
 
 document.addEventListener('pointerup', ev => {
@@ -1130,8 +1549,11 @@ function addToDeck(id) {
   const d = app.deckDraft;
   const have = d.filter(x => x === id).length;
   const own = app.save.collection[id] || 0;
+  const limit = card(id).maxCopies || 3;
   if (d.length >= 30) { toast('デッキは30枚までです'); return; }
-  if (have >= Math.min(3, own)) { toast('これ以上は入れられません（同名3枚・所持数まで）'); return; }
+  if (have >= Math.min(limit, own)) {
+    toast(limit === 1 ? 'レジェンドは同名1枚までです' : 'これ以上は入れられません（同名3枚・所持数まで）'); return;
+  }
   d.push(id);
 }
 function removeFromDeck(id) {
@@ -1146,6 +1568,21 @@ function handleClick(ev) {
   const t = ev.target;
   const hit = sel => t.closest(sel);
 
+  const observe = hit('[data-observe]');
+  if (observe && app.game?.pendingChoice) {
+    applyAction(app.game, 0, { type: 'observe', index: Number(observe.dataset.observe) });
+    return afterAction();
+  }
+
+  // --- 図鑑のイラスト拡大 ---
+  if (hit('[data-closeartzoom]')) { app.artZoom = null; return render(); }
+  const artZoomEl = hit('[data-artzoom]');
+  if (artZoomEl) {
+    const zid = artZoomEl.dataset.artzoom;
+    if (!(app.save.collection[zid] || 0)) return toast('まだ入手していないカードです');
+    app.artZoom = zid; return render();
+  }
+
   // --- 画面遷移など ---
   const goEl = hit('[data-go]');
   if (goEl) return go(goEl.dataset.go);
@@ -1157,10 +1594,12 @@ function handleClick(ev) {
   if (freeEl) { const [a, e] = freeEl.dataset.freefight.split(':').map(Number); return startBattle(a, e, true); }
   const fd = hit('[data-freediff]');
   if (fd) { app.freeDiff = fd.dataset.freediff; return render(); }
+  const collectionSet = hit('[data-collectionset]');
+  if (collectionSet) { app.collectionSet = Number(collectionSet.dataset.collectionset); return render(); }
   const bp = hit('[data-buypack]');
   if (bp) {
     const item = DUST_SHOP.find(x => x.pack === bp.dataset.buypack);
-    if (!item || (app.save.stardust || 0) < item.cost) return;
+    if (!item || (item.unlockAfter && !prismUnlocked(app.save)) || (app.save.stardust || 0) < item.cost) return;
     app.save.stardust -= item.cost;
     app.packResult = openPack(item.pack);
     addCards(app.save, app.packResult); writeSave(app.save);
@@ -1174,7 +1613,7 @@ function handleClick(ev) {
     addCards(app.save, app.packResult); writeSave(app.save);
     return render();
   }
-  if (hit('[data-closepack]')) { app.packResult = null; return render(); }
+  if (hit('[data-closepack]')) { app.packResult = null; app.packRevealing = false; app.packRevealed = 0; return render(); }
   if (hit('[data-rematch]')) {
     const [a, e] = app.enemyKey.split(':');
     const ai = AREAS.findIndex(x => x.id === a);
@@ -1201,11 +1640,44 @@ function handleClick(ev) {
 
   // --- デッキ編集 ---
   if (app.screen === 'deck') {
+    // クリックは出し入れに使うので、効果は「i」ボタンから見る
+    const info = hit('[data-cardinfo]');
+    if (info) { app.detail = info.dataset.cardinfo; return render(); }
     const pc = hit('[data-poolcard]');
     if (pc) { addToDeck(pc.dataset.poolcard); return render(); }
     const dc = hit('[data-deckcard]');
     if (dc) { removeFromDeck(dc.dataset.deckcard); return render(); }
-    if (hit('[data-savedeck]')) { app.save.deck = [...app.deckDraft]; writeSave(app.save); toast('デッキを保存しました'); return go('title'); }
+    const slot = hit('[data-deckslot]');
+    if (slot) return switchDeckSlot(Number(slot.dataset.deckslot));
+    if (hit('[data-deckadd]')) {
+      if (app.save.decks.length >= MAX_DECKS) return toast(`デッキは${MAX_DECKS}個までです`);
+      app.save.decks.push({ name: `デッキ${app.save.decks.length + 1}`, list: [] });
+      app.pendingSlot = null;
+      app.save.activeDeck = app.save.decks.length - 1;
+      app.save.deck = [];
+      app.deckDraft = [];
+      writeSave(app.save);
+      Audio.playSe('se_click');
+      return render();
+    }
+    if (hit('[data-deckdel]')) {
+      if (app.save.decks.length <= 1) return toast('デッキは1つ以上必要です');
+      app.save.decks.splice(app.save.activeDeck, 1);
+      app.save.activeDeck = Math.max(0, app.save.activeDeck - 1);
+      app.save.deck = [...app.save.decks[app.save.activeDeck].list];
+      app.deckDraft = [...app.save.deck];
+      app.pendingSlot = null;
+      writeSave(app.save);
+      return render();
+    }
+    if (hit('[data-savedeck]')) {
+      app.save.decks[app.save.activeDeck].list = [...app.deckDraft];
+      app.save.deck = [...app.deckDraft];
+      app.pendingSlot = null;
+      writeSave(app.save);
+      toast(`「${app.save.decks[app.save.activeDeck].name}」を保存しました`);
+      return render();
+    }
     if (hit('[data-resetdeck]')) { app.deckDraft = [...STARTER_DECK]; return render(); }
     if (hit('[data-cleardeck]')) { app.deckDraft = []; return render(); }
   }
@@ -1234,6 +1706,7 @@ function handleClick(ev) {
   if (!g) return;
 
   if (hit('[data-toggle-log]')) { app.logOpen = !app.logOpen; return render(); }
+  if (hit('[data-toggle-info]')) { app.infoOpen = app.infoOpen === false; return render(); }
   if (hit('[data-surrender]')) { clearTimeout(app.aiTimer); return go(app.free ? 'free' : 'adventure'); }
   const gv = hit('[data-grave]');
   if (gv) { app.graveView = Number(gv.dataset.grave); return render(); }
@@ -1249,13 +1722,13 @@ function handleClick(ev) {
   if (act) {
     const p = app.popup; app.popup = null;
     if (act.dataset.act === 'attack') { app.sel = { kind: 'attack', slot: p.slot }; app.hint = '攻撃する相手を選んでください'; return render(); }
-    if (act.dataset.act === 'mode') { applyAction(g, 0, { type: 'mode', slot: p.slot }); return afterAction(); }
+    if (act.dataset.act === 'mode') return actWithFx(0, { type: 'mode', slot: p.slot }).then(afterAction);
     if (act.dataset.act === 'detail') { app.detail = g.players[0].field[p.slot].id; return render(); }
   }
   if (app.popup) { app.popup = null; render(); }
 
   if (hit('[data-cancel]')) { app.sel = null; app.hint = ''; return render(); }
-  if (hit('[data-forge]')) { applyAction(g, 0, { type: 'forge' }); return afterAction(); }
+  if (hit('[data-forge]')) return actWithFx(0, { type: 'forge' }).then(afterAction);
   if (hit('[data-endturn]')) { app.sel = null; applyAction(g, 0, { type: 'end' }); return afterAction(); }
   if (hit('[data-attackface]') && app.sel) {
     const act = { type: 'attack', slot: app.sel.slot, target: 'face' };
@@ -1321,6 +1794,25 @@ document.addEventListener('input', ev => {
     writeSave(app.save);
   }
   if (ev.target.matches('[data-obname]') && app.onboard) app.onboard.name = ev.target.value;
+  // デッキ名は打つたびに保存する（再描画すると入力欄からフォーカスが外れるので render しない）
+  if (ev.target.matches('[data-deckname]')) {
+    const d = app.save.decks[app.save.activeDeck];
+    if (d) {
+      d.name = ev.target.value.slice(0, 14) || `デッキ${app.save.activeDeck + 1}`;
+      writeSave(app.save);
+      const tab = document.querySelector(`[data-deckslot="${app.save.activeDeck}"] b`);
+      if (tab) tab.textContent = d.name;
+    }
+  }
+});
+// デッキ編集では右クリックでも効果を見られるようにする
+document.addEventListener('contextmenu', ev => {
+  if (app.screen !== 'deck') return;
+  const el = ev.target.closest('[data-poolcard],[data-deckcard]');
+  if (!el) return;
+  ev.preventDefault();
+  app.detail = el.dataset.poolcard || el.dataset.deckcard;
+  render();
 });
 document.addEventListener('change', ev => {
   if (ev.target.matches('[data-poolsort]')) { app.poolSort = ev.target.value; render(); }
@@ -1334,7 +1826,7 @@ document.addEventListener('contextmenu', ev => {
   if (!mini) return;
   ev.preventDefault();
   const slot = Number(mini.dataset.slot);
-  if (canChangeMode(app.game, 0, slot)) { applyAction(app.game, 0, { type: 'mode', slot }); afterAction(); }
+  if (canChangeMode(app.game, 0, slot)) actWithFx(0, { type: 'mode', slot }).then(afterAction);
   else toast('モード変更はできません（1ターン1回・攻撃後は不可）');
 });
 
@@ -1370,7 +1862,7 @@ function makeDemo(areaIndex = 1, enemyIndex = 2) {
   lastBannerTurn = g.turn;
   render();
 }
-window.__TE = { app, render, startBattle, makeDemo, card, ALL_CARDS, applyAction, afterAction, beginPlay, doMulligan };
+window.__TE = { app, render, startBattle, makeDemo, card, ALL_CARDS, applyAction, afterAction, beginPlay, doMulligan, actWithFx, Fx };
 
 // ============================================================
 Audio.scanAudio().then(info => { app.audioInfo = info; });

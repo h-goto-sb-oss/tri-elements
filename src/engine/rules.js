@@ -27,7 +27,11 @@ export const DEFAULT_RULES = {
 
   // --- 原案では未定義だった裁定 ---
   reflectOnAttackerLoss: true,  // 攻撃モード同士で攻撃側が負けたら、差分を攻撃側プレイヤーへ
-  defenseExcessDamage: true,    // 防御モードを破壊したとき、超過分をプレイヤーへ（=防御モードは「DEF分の軽減」）
+  // 防御モードを破壊したとき、超過分をプレイヤーへ。
+  //   true = そのまま / 'half' = 半分（切り上げ） / false = 通さない
+  // 'half' は「防御にしておけば被害が減る」という手触りを出すための設定。
+  // false まで下げると盤面が膠着して試合が伸びるので half で止めている。
+  defenseExcessDamage: 'half',
   defenseKillsAttacker: false, // 防御力が攻撃力以上なら攻撃側モンスターを破壊（守りに牙を与える案）
   defenseReflect: false,        // 防御力が攻撃力を上回ったとき差分を攻撃側プレイヤーへ（原案どおり=false）
   modeChangeAfterAttack: false, // 攻撃済みモンスターのモード変更を許すか（=false で禁止）

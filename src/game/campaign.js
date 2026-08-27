@@ -29,6 +29,103 @@ const E = (name, icon, deck, opt = {}) => ({
   weak: opt.weak || null,        // 有効な属性のヒント
 });
 
+// ---- 第3弾エリア（6〜8）の敵デッキ ----
+// 1体ずつ役割を分けた30枚。カーブは 1c:4 2c:5 3c:4-5 4c:4-5 5c:2-3 6c:2-3 が基本。
+
+// A6-1 観測者リィナ：観測とドローで手札を整える水。壁は薄い。
+const D_RIINA = mk([
+  ['z_w1', 2], ['w02', 2],
+  ['w03', 3], ['z_w2', 2],
+  ['w07', 2], ['w06', 2],
+  ['z_w4', 2], ['w08', 2],
+  ['x_w5', 2], ['z_w5', 2],
+  ['x_w6', 1],
+  ['z_sw1', 2], ['z_sw2', 2], ['sw3', 2], ['z_sn2', 2],
+]);
+// A6-2 歯車の巡礼者：【加速】と装備で星具を回す混成。
+const D_PILGRIM = mk([
+  ['z_f1', 2], ['z_g1', 2],
+  ['z_f2', 2], ['z_g2', 3],
+  ['z_g3', 2], ['z_f3', 2],
+  ['z_f4', 2], ['z_g4', 2],
+  ['z_g5', 2],
+  ['z_w6', 1], ['z_f6', 1],
+  ['z_sn1', 3], ['z_sn2', 3], ['x_sn1', 2], ['sn2', 1],
+]);
+// A6-3 黄昏の門番 オルド：守護を並べて全体強化で押し返す草。
+const D_ORDO = mk([
+  ['z_g1', 2], ['x_g1', 2],
+  ['z_g2', 3], ['x_g2', 2],
+  ['z_g3', 2], ['g05', 1],
+  ['z_g4', 2], ['x_g4', 2],
+  ['z_g5', 2], ['x_g5', 2],
+  ['z_g6', 2], ['x_g6', 1],
+  ['z_sg1', 2], ['x_sg4', 2], ['sg2', 2], ['z_sn1', 1],
+]);
+
+// A7-1 星読みのユエ：静止の月で足を止めて上から殴る水コントロール。
+const D_YUE = mk([
+  ['z_w1', 2], ['w02', 2],
+  ['w03', 3], ['z_w2', 2],
+  ['z_w3', 2], ['w07', 2],
+  ['z_w4', 2], ['w08', 2],
+  ['x_w5', 3], ['z_w5', 2],
+  ['z_w6', 1], ['w10', 1],
+  ['z_sw2', 3], ['sw3', 2], ['z_sn2', 1],
+]);
+// A7-2 彗星騎士 カイロス：【貫通】【連撃】で守護を無視して走る炎アグロ。
+const D_KAIROS = mk([
+  ['z_f1', 3], ['x_f1', 2],
+  ['f03', 3], ['z_f2', 2],
+  ['z_f3', 3], ['x_f2', 2],
+  ['f08', 2], ['z_f4', 2],
+  ['f09', 2],
+  ['z_f6', 1],
+  ['z_sf1', 3], ['x_sf1', 2], ['z_sf2', 1], ['sn2', 2],
+]);
+// A7-3 門の守り手 アステル：三属性を平均的に使う総合力型。
+const D_ASTEL = mk([
+  ['z_f1', 2], ['z_w1', 2],
+  ['z_g2', 3], ['w03', 2],
+  ['z_f3', 2], ['z_g3', 2], ['z_w3', 1],
+  ['z_f4', 2], ['z_g4', 2], ['z_w4', 1],
+  ['z_g5', 2],
+  ['z_g6', 1], ['z_f6', 1],
+  ['z_sn1', 1], ['z_sn2', 3], ['z_sg1', 2], ['sn2', 1],
+]);
+
+// A8-1 無貌の使者：天秤の裁定で手札を平らにしてくる混成。
+const D_FACELESS = mk([
+  ['z_f1', 2], ['z_g1', 2],
+  ['z_f2', 2], ['z_g2', 2], ['w03', 1],
+  ['z_f3', 2], ['z_g3', 2], ['z_w3', 1],
+  ['z_f4', 2], ['z_g4', 2], ['z_w4', 1],
+  ['z_g5', 1], ['x_g5', 1],
+  ['z_f6', 2], ['z_w6', 1],
+  ['z_sn3', 2], ['z_sn1', 1], ['z_sn2', 2], ['z_sf2', 1],
+]);
+// A8-2 双極の女王：炎の打点と水の妨害を半身ずつ。
+const D_QUEEN = mk([
+  ['z_f1', 2], ['z_w1', 2],
+  ['z_f2', 2], ['w03', 2],
+  ['z_f3', 2], ['z_w3', 2],
+  ['z_f4', 2], ['z_w4', 2], ['x_w4', 1],
+  ['f09', 2], ['z_w5', 2],
+  ['z_f6', 2], ['z_w6', 1],
+  ['z_sf2', 1], ['z_sw2', 2], ['z_sn2', 2], ['z_sn1', 1],
+]);
+// A8-3 星辰王 アストラリス：【門の鍵】で伸ばしてレジェンドを着地させる最終ボス。
+const D_ASTRALIS = mk([
+  ['z_g1', 2], ['z_f1', 1],
+  ['z_g2', 3], ['z_f2', 2],
+  ['z_g3', 2], ['z_f3', 2],
+  ['z_f4', 2], ['z_g4', 2], ['z_w4', 1],
+  ['z_g5', 2],
+  ['z_f6', 2], ['z_g6', 1],
+  ['z_lf1', 1], ['z_lg1', 1], ['z_lw1', 1],
+  ['z_sn1', 3], ['z_sf3', 2],
+]);
+
 export const AREAS = [
   {
     id: 'a1', name: 'はじまりの草原', desc: '旅の始まり。まだ手加減してくれる相手ばかり。',
@@ -118,6 +215,57 @@ export const AREAS = [
       ]), { face: 'f10', noise: 0, life: 26, startCost: 1, desc: '最終ボス。三属性の切り札を全て操る。' }),
     ],
   },
+  {
+    id: 'a6', name: '黄昏の回廊', desc: '星辰の門へ続く崩れた石の回廊。無機の星具が目を覚ます。',
+    enemies: [
+      E('観測者リィナ', '🔭', [...D_RIINA], {
+        face: 'z_w4', weak: 'grass', noise: 1, life: 28, startCost: 1,
+        desc: '【観測】で必要な星具を探し当ててくる。壁は薄いので押し切れる。',
+      }),
+      E('歯車の巡礼者', '⚙️', [...D_PILGRIM], {
+        face: 'z_sn1', noise: 0, life: 26, startCost: 1,
+        desc: '【加速】と装備で星具を回す。育ちきる前に叩きたい。',
+      }),
+      E('黄昏の門番 オルド', '🗿', [...D_ORDO], {
+        face: 'z_g6', weak: 'fire', noise: 0, life: 27, startCost: 1,
+        desc: 'エリアボス。守護を並べ、全体強化で一気に押し返してくる。',
+      }),
+    ],
+  },
+  {
+    id: 'a7', name: '星辰の門', desc: '空が近い高原に、世界を隔てる巨大な門が立つ。',
+    enemies: [
+      E('星読みのユエ', '🌙', [...D_YUE], {
+        face: 'z_w5', weak: 'grass', noise: 0, life: 32, startCost: 1,
+        desc: '【静止の月】で足を止め、上から殴ってくる。長期戦は不利。',
+      }),
+      E('彗星騎士 カイロス', '☄️', [...D_KAIROS], {
+        face: 'z_f3', weak: 'water', noise: 0, life: 22, startCost: 1, profile: 'aggro',
+        desc: '【貫通】【連撃】で守護を無視して走る。速度勝負を挑まれる。',
+      }),
+      E('門の守り手 アステル', '✨', [...D_ASTEL], {
+        face: 'z_ln1', noise: 0, life: 26, startCost: 1,
+        desc: 'エリアボス。三属性を平均的に使いこなす総合力型。',
+      }),
+    ],
+  },
+  {
+    id: 'a8', name: '王たちの座', desc: '門の向こう側。足元も空も星に満ちた、王たちの終着点。',
+    enemies: [
+      E('無貌の使者', '🎭', [...D_FACELESS], {
+        face: 'z_sn3', noise: 0, life: 28, startCost: 1,
+        desc: '【天秤の裁定】で手札を平らにしてくる。溜め込む戦い方は通じない。',
+      }),
+      E('双極の女王', '♊', [...D_QUEEN], {
+        face: 'z_lw1', noise: 0, life: 30, startCost: 1,
+        desc: '炎の打点と水の妨害を半身ずつ宿す。攻守どちらも隙がない。',
+      }),
+      E('星辰王 アストラリス', '👑', [...D_ASTRALIS], {
+        face: 'z_lf1', noise: 0, life: 30, startCost: 1,
+        desc: '最終ボス。【門の鍵】でコストを伸ばし、レジェンドを着地させてくる。',
+      }),
+    ],
+  },
 ];
 
 // ---------- パック ----------
@@ -140,6 +288,11 @@ export const PACK_TYPES = {
     weights: { common: 22, uncommon: 42, rare: 32, epic: 4 },
     lastSlot: { common: 0, uncommon: 20, rare: 62, epic: 18 },
   },
+  prism: {
+    name: 'プリズムパック', size: 5, set: 3,
+    weights: { common: 28, uncommon: 38, rare: 25, epic: 8, legend: 1 },
+    lastSlot: { common: 0, uncommon: 22, rare: 48, epic: 24, legend: 6 },
+  },
 };
 
 function pickWeighted(w, rand) {
@@ -155,11 +308,11 @@ export function openPack(type, rand = Math.random) {
   for (let i = 0; i < t.size; i++) {
     // 最後の1枚は必ずアンコモン以上（当たり枠）
     const rarity = pickWeighted(i === t.size - 1 ? t.lastSlot : t.weights, rand);
-    const wantSet2 = rand() < t.set2Rate;
-    const wantSet = wantSet2 ? 2 : 1;
+    const wantSet2 = rand() < (t.set2Rate || 0);
+    const wantSet = t.set || (wantSet2 ? 2 : 1);
     let pool = ALL_CARDS.filter(c => c.rarity === rarity && c.set === wantSet);
     // その弾に該当レア度が無ければ、同じ弾の1段下のレア度へ落とす（弾の壁は越えない）
-    const order = ['epic', 'rare', 'uncommon', 'common'];
+    const order = ['legend', 'epic', 'rare', 'uncommon', 'common'];
     for (let k = order.indexOf(rarity) + 1; !pool.length && k < order.length; k++) {
       pool = ALL_CARDS.filter(c => c.rarity === order[k] && c.set === wantSet);
     }
@@ -179,15 +332,24 @@ export const FREE_DIFFICULTY = {
 
 // 星屑とパックの交換レート
 export const DUST_SHOP = [
-  { pack: 'bronze', cost: 3 },
-  { pack: 'silver', cost: 8 },
-  { pack: 'gold', cost: 18 },
+  { pack: 'bronze', cost: 2 },
+  { pack: 'silver', cost: 5 },
+  { pack: 'gold', cost: 8 },
+  { pack: 'prism', cost: 10, unlockAfter: 'a5' },
 ];
 
 // 同じ相手からパックをもらえる回数
 export const REWARD_LIMIT = 3;
 
-export const REWARD = { a1: 'bronze', a2: 'silver', a3: 'silver', a4: 'gold', a5: 'gold' };
+export const REWARD = {
+  a1: 'bronze', a2: 'silver', a3: 'silver', a4: 'gold', a5: 'gold',
+  a6: 'prism', a7: 'prism', a8: 'prism',
+};
+
+export function prismUnlocked(save) {
+  const area = AREAS.find(a => a.id === 'a5');
+  return !!area && area.enemies.every((_, i) => save.cleared?.[`a5:${i}`]);
+}
 
 // ---------- セーブ ----------
 const KEY = 'tri-elements-save-v1';
@@ -200,11 +362,33 @@ export const AVATARS = [
   { id: 6, name: '大人 女性', emoji: '👩‍🦰', tint: '#8a5a2a' },
 ];
 
+// 保存できるデッキの数
+export const MAX_DECKS = 8;
+
+/**
+ * decks（複数スロット）と deck（実際に対戦で使う1つ）を整合させる。
+ * 古いセーブには decks が無いので、その場合は今の deck を1枠目にする。
+ */
+export function ensureDecks(s) {
+  if (!Array.isArray(s.decks) || !s.decks.length) {
+    s.decks = [{ name: 'デッキ1', list: [...(s.deck || STARTER_DECK)] }];
+  }
+  s.decks = s.decks.slice(0, MAX_DECKS).map((d, i) => ({
+    name: String((d && d.name) || `デッキ${i + 1}`).slice(0, 14),
+    list: Array.isArray(d && d.list) ? [...d.list] : [],
+  }));
+  if (typeof s.activeDeck !== 'number' || !s.decks[s.activeDeck]) s.activeDeck = 0;
+  s.deck = [...s.decks[s.activeDeck].list];   // 対戦で使うのは常に選択中のスロット
+  return s;
+}
+
 export function newSave() {
   return {
     profile: null,      // { name, avatar } — 未設定なら初回の名前入力へ
     collection: { ...STARTER_COLLECTION },
     deck: [...STARTER_DECK],
+    decks: [{ name: 'デッキ1', list: [...STARTER_DECK] }],
+    activeDeck: 0,
     cleared: {},        // `${areaId}:${enemyIndex}` -> true（解放判定）
     clearCount: {},     // 同じ相手を倒した回数（報酬は REWARD_LIMIT 回まで）
     packs: {},          // 未開封パック
@@ -226,7 +410,7 @@ export function loadSave() {
       s.clearCount = {};
       Object.keys(s.cleared || {}).forEach(k => { s.clearCount[k] = 1; });
     }
-    return s;
+    return ensureDecks(s);
   } catch { return newSave(); }
 }
 export function writeSave(s) {
