@@ -6,7 +6,7 @@ import { RARITY } from '../engine/rarity.js';
 import {
   createGame, mulligan, applyAction, legalAttackTargets, canSummon, canPlaySupport,
   canChangeMode, canAttack, supportNeedsTarget, fieldMonsters, effAtk, effDef,
-  isMonster, matchFilter, hasKw, emptySlot, canForge, canSummonAt, summonCostOf,
+  isMonster, matchFilter, hasKw, emptySlot, canForge, canSummonAt, summonCostOf, canEquipTo,
 } from '../engine/game.js';
 import { aiChooseAction } from '../engine/ai.js';
 import { cardArtSvg } from './art.js';
@@ -14,11 +14,12 @@ import { cardHtml, monsterHtml, supportHtml, detailHtml, esc } from './cardview.
 import {
   AREAS, REWARD, openPack, PACK_TYPES, loadSave, writeSave,
   areaUnlocked, addCards, deckCurve, STARTER_DECK, AVATARS,
-  FREE_DIFFICULTY, DUST_SHOP,
+  FREE_DIFFICULTY, DUST_SHOP, REWARD_LIMIT,
 } from '../game/campaign.js';
 import * as Audio from './audio.js';
 import { ENEMY_ART, AREA_BG, PLAYER_ART } from './assets_map.js';
 import { renderRulesPage } from './rules.js';
+import * as Fx from './fx.js';
 
 const $app = document.getElementById('app');
 
@@ -53,6 +54,7 @@ function syncBgm() { Audio.playBgm(SCENE_BGM[app.screen] || 'bgm_menu'); }
 
 function go(screen) {
   clearTimeout(app.aiTimer);
+  Audio.stopSe();
   app.screen = screen; app.result = null; app.popup = null; app.sel = null; app.detail = null;
   if (screen === 'deck') app.deckDraft = [...app.save.deck];
   syncBgm(); render();
@@ -203,8 +205,10 @@ function renderAdventure() {
     // 1体目は常に挑戦可能。2体目以降は前の敵を倒すと解放
     const prevOk = i === 0 || !!app.save.cleared[`${area.id}:${i - 1}`];
     const open = unlocked && prevOk;
+    const cnt = (app.save.clearCount || {})[`${area.id}:${i}`] || 0;
+    const left = Math.max(0, REWARD_LIMIT - cnt);
     return `<div class="foe ${cleared ? 'cleared' : ''} ${open ? '' : 'locked'}">
-      ${cleared ? '<div class="badge">クリア</div>' : ''}
+      ${cleared ? `<div class="badge">${left ? `報酬 あと${left}回` : 'クリア済'}</div>` : ''}
       ${open ? '' : '<div class="lockicon">🔒</div>'}
       ${portraitHtml(area.id, i, e)}
       <div class="fname">${esc(e.name)}</div>
@@ -215,8 +219,8 @@ function renderAdventure() {
         ${e.weak ? `<span>${ELEMENTS[e.weak].icon}が有効</span>` : ''}
         ${i === area.enemies.length - 1 ? '<span style="color:#ffd27a">ボス</span>' : ''}
       </div>
-      <button class="btn ${cleared ? '' : 'primary'} fbtn" ${open ? `data-fight="${ai}:${i}"` : 'disabled'}>
-        ${open ? (cleared ? 'もう一度戦う' : '挑戦する') : '前の相手を倒すと解放'}
+      <button class="btn ${cleared && !left ? '' : 'primary'} fbtn" ${open ? `data-fight="${ai}:${i}"` : 'disabled'}>
+        ${open ? (cleared ? (left ? `戦う（報酬あと${left}回）` : 'もう一度戦う') : '挑戦する') : '前の相手を倒すと解放'}
       </button>
     </div>`;
   }).join('');
@@ -400,7 +404,6 @@ function renderSettings() {
   const avatars = AVATARS.map(a => `
     <button class="avpick ${myAvatar() === a.id ? 'on' : ''}" data-avatar="${a.id}">
       <div class="avimg">${avatarHtml(a.id)}</div>
-      <div class="avname">${esc(a.name)}</div>
     </button>`).join('');
 
   const player = `
@@ -446,7 +449,6 @@ function onboardingOverlay() {
   const avatars = AVATARS.map(a => `
     <button class="avpick ${draft.avatar === a.id ? 'on' : ''}" data-obavatar="${a.id}">
       <div class="avimg">${avatarHtml(a.id)}</div>
-      <div class="avname">${esc(a.name)}</div>
     </button>`).join('');
   return `<div class="overlay"><div class="modal" style="max-width:800px">
     <h2>ようこそ、三属の戦記へ</h2>
@@ -471,6 +473,21 @@ function pileHtml(kind, n, side) {
   </div>`;
 }
 
+/** 墓地から選ぶ必要があるカードなら、選べる墓地の位置を返す */
+function graveChoices(g, handIndex) {
+  const id = g.players[0].hand[handIndex];
+  const c = id ? card(id) : null;
+  if (!c || c.type !== 'support') return null;
+  const e = c.effects.find(x => x.op === 'revive' || x.op === 'recallSupport');
+  if (!e) return null;
+  const grave = g.players[0].grave;
+  const idx = grave.map((gid, i) => {
+    if (e.op === 'revive') return (isMonster(gid) && card(gid).cost <= e.maxCost) ? i : null;
+    return !isMonster(gid) ? i : null;
+  }).filter(i => i !== null);
+  return { effect: e, indices: idx };
+}
+
 function supportTargetSlots(g, handIndex) {
   const id = g.players[0].hand[handIndex];
   const c = card(id);
@@ -478,7 +495,10 @@ function supportTargetSlots(g, handIndex) {
   if (!c || c.type !== 'support') return res;
   const e = c.effects.find(x => x.op === 'equip' || x.target === 'one');
   if (!e) return res;
-  if (e.op === 'equip') { res.self = fieldMonsters(g.players[0]).map(x => x.i); return res; }
+  if (e.op === 'equip') {
+    res.self = fieldMonsters(g.players[0]).filter(({ m }) => canEquipTo(g, 0, m)).map(x => x.i);
+    return res;
+  }
   const key = e.side === 'enemy' ? 'enemy' : 'self';
   const p = g.players[e.side === 'enemy' ? 1 : 0];
   res[key] = fieldMonsters(p).filter(({ m }) => matchFilter(m, e.filter)).map(x => x.i);
@@ -626,6 +646,7 @@ function overlays() {
   if (app.phase === 'start') h += battleStartOverlay();
   if (app.detail) h += detailOverlay();
   if (app.graveView !== null) h += graveOverlay();
+  if (app.gravePick) h += gravePickOverlay();
   if (app.result) h += resultOverlay();
   if (app.packResult) h += packOverlay();
   return h;
@@ -679,6 +700,21 @@ function detailOverlay() {
   </div></div>`;
 }
 
+function gravePickOverlay() {
+  const gp = app.gravePick;
+  const g = app.game;
+  if (!gp || !g) return '';
+  const c = card(g.players[0].hand[gp.hand]);
+  const cards = gp.indices.map(i =>
+    `<div class="gpick" data-gravepick="${i}">${cardHtml(card(g.players[0].grave[i]), { cls: 'selectable' })}</div>`).join('');
+  return `<div class="overlay"><div class="modal" style="max-width:840px">
+    <h2>${esc(c.name)}</h2>
+    <p>墓地から1枚選んでください。</p>
+    <div class="grid" style="margin:12px 0">${cards}</div>
+    <div class="row-btn"><button class="btn" data-cancelgrave>やめる</button></div>
+  </div></div>`;
+}
+
 function graveOverlay() {
   const p = app.game.players[app.graveView];
   const cards = p.grave.map(id => cardHtml(card(id), { cls: 'selectable' })).join('');
@@ -717,6 +753,17 @@ function packOverlay() {
 // ============================================================
 // 描画
 // ============================================================
+/** 戦闘画面は固定サイズで作って、ウィンドウに合わせて縮小する */
+function applyBattleScale() {
+  const el = document.querySelector('.battle');
+  if (!el) return;
+  const DW = 1440, DH = 876;
+  const s = Math.min(1, window.innerWidth / DW, window.innerHeight / DH);
+  el.style.transform = `scale(${s})`;
+  el.style.left = `${Math.max(0, (window.innerWidth - DW * s) / 2)}px`;
+}
+window.addEventListener('resize', () => { applyBattleScale(); });
+
 function render() {
   let html;
   switch (app.screen) {
@@ -733,6 +780,7 @@ function render() {
   if (!app.save.profile) html += onboardingOverlay();
   if (app.toast) html += `<div class="toast">${esc(app.toast)}</div>`;
   $app.innerHTML = html;
+  if (app.screen === 'battle') applyBattleScale();
 }
 
 // ============================================================
@@ -754,6 +802,7 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   });
   app.game.players[1].life = (enemy.life || 20) + (diff ? diff.life : 0);
   app.enemyLifeMax = app.game.players[1].life;
+  lastBannerTurn = 0;
   app.phase = 'mulligan';
   app.screen = 'battle';
   syncBgm();
@@ -772,19 +821,84 @@ function doMulligan(redraw) {
 function beginPlay() {
   app.phase = 'play';
   render();
+  lastBannerTurn = app.game.turn;
+  Fx.fxBanner(app.game.active === 0 ? 'あなたのターン' : `${esc(app.enemy.name)} のターン`, '', 750);
   if (app.game.active === 1) scheduleAi();
+}
+
+let lastBannerTurn = 0;
+function maybeTurnBanner() {
+  const g = app.game;
+  if (!g || g.winner !== null || app.phase !== 'play') return;
+  if (g.turn === lastBannerTurn) return;
+  lastBannerTurn = g.turn;
+  Fx.fxBanner(g.active === 0 ? 'あなたのターン' : `${esc(app.enemy?.name || '相手')} のターン`,
+    `ターン ${g.turn}`, 700);
+}
+
+/**
+ * アクションを実行して、増えたログから演出を再生する。
+ * 盤面は描き直されるので、実行前に座標を控えておく。
+ */
+async function actWithFx(pi, action) {
+  const g = app.game;
+  if (!g || app.fxBusy) return false;
+  app.fxBusy = true;
+  const snap = Fx.snapshotRects();
+  const from = action.type === 'attack' ? snap.mons[`${pi}:${action.slot}`] : null;
+  const target = action.type === 'attack'
+    ? (action.target === 'face' ? snap.bar[1 - pi] : snap.mons[`${1 - pi}:${action.target}`])
+    : null;
+  const attackerHtml = action.type === 'attack'
+    ? (() => { const m = g.players[pi].field[action.slot]; return m ? cardHtml(card(m.id), {}) : ''; })() : '';
+  const mark = g.log.length;
+
+  const ok = applyAction(g, pi, action);
+  const entries = g.log.slice(mark);
+  render();
+
+  // 攻撃の突進
+  if (action.type === 'attack') {
+    if (action.target === 'face') Fx.fxSlash(target);
+    await Fx.fxLunge(from, target, attackerHtml);
+  }
+  if (action.type === 'summon') {
+    const slot = g.players[pi].field.findIndex(m => m && m.uid === Math.max(
+      ...g.players[pi].field.filter(Boolean).map(x => x.uid)));
+    if (slot >= 0) Fx.fxSummon(pi, slot);
+  }
+
+  // ログを順に演出へ
+  let shook = 0;
+  for (const e of entries) {
+    if (e.kind === 'destroy') {
+      Fx.fxBurst(snap.mons[`${e.p}:${e.slot}`] || snap.mons[`${e.p}:0`]);
+      await Fx.wait(90);
+    } else if (e.kind === 'damage') {
+      Fx.fxNumber(snap.bar[e.p], e.v, 'damage');
+      Fx.fxHit(e.p, snap);
+      if (e.v >= 4 && !shook) { Fx.fxShake(e.v / 3); shook = 1; }
+      await Fx.wait(150);
+    } else if (e.kind === 'heal') {
+      Fx.fxNumber(snap.bar[e.p], e.v, 'heal');
+      await Fx.wait(120);
+    }
+  }
+  app.fxBusy = false;
+  return ok;
 }
 
 function afterAction() {
   const g = app.game;
   render();
+  maybeTurnBanner();
   if (g.winner !== null) return finishGame();
   if (g.active === 1) scheduleAi();
 }
 
 function scheduleAi() {
   clearTimeout(app.aiTimer);
-  app.aiTimer = setTimeout(aiStep, 460);
+  app.aiTimer = setTimeout(aiStep, 240);
 }
 function aiStep() {
   const g = app.game;
@@ -802,9 +916,10 @@ function aiStep() {
     render(); return scheduleAi();
   }
   const act = aiChooseAction(g, 1, { noise: app.enemy?.noise || 0, profile: app.enemy?.profile || 'balanced' });
-  if (act) { applyAction(g, 1, act); render(); return scheduleAi(); }
+  if (act) { actWithFx(1, act).then(() => scheduleAi()); return; }
   applyAction(g, 1, { type: 'end' });
   render();
+  maybeTurnBanner();
   if (g.winner !== null) return finishGame();
   if (g.active === 1) return scheduleAi();
 }
@@ -831,11 +946,18 @@ function finishGame() {
 
   if (win) {
     app.save.stats.wins++;
-    if (app.enemyKey && !app.save.cleared[app.enemyKey]) {
-      app.save.cleared[app.enemyKey] = true;
-      const [areaId, idx] = app.enemyKey.split(':');
+    const key = app.enemyKey;
+    app.save.clearCount = app.save.clearCount || {};
+    const before = app.save.clearCount[key] || 0;
+    app.save.clearCount[key] = before + 1;
+    const first = !app.save.cleared[key];
+    app.save.cleared[key] = true;
+    const [areaId, idx] = key.split(':');
+    if (before < REWARD_LIMIT) {
       reward = REWARD[areaId];
       app.save.packs[reward] = (app.save.packs[reward] || 0) + 1;
+    }
+    if (first) {
       const area = AREAS.find(a => a.id === areaId);
       const next = area.enemies[Number(idx) + 1];
       if (next) unlocked = next.name;
@@ -954,6 +1076,12 @@ document.addEventListener('pointerup', ev => {
       render(); return;
     }
     // サポート
+    const gc = graveChoices(g, d.index);
+    if (gc) {
+      if (!gc.indices.length) { toast('墓地に対象がありません'); render(); return; }
+      app.gravePick = { hand: d.index, indices: gc.indices };
+      render(); return;
+    }
     const t = supportTargetSlots(g, d.index);
     const needsTarget = supportNeedsTarget(id);
     if (needsTarget) {
@@ -961,14 +1089,13 @@ document.addEventListener('pointerup', ev => {
       if (mEl) {
         const side = Number(mEl.dataset.side), slot = Number(mEl.dataset.slot);
         const ok = side === 0 ? t.self.includes(slot) : t.enemy.includes(slot);
-        if (ok) { applyAction(g, 0, { type: 'support', hand: d.index, target: { slot } }); afterAction(); return; }
+        if (ok) { actWithFx(0, { type: 'support', hand: d.index, target: { slot } }).then(afterAction); return; }
         toast('そのカードは対象にできません');
       } else toast('対象のモンスターにドロップしてください');
       render(); return;
     }
     if (elementUnder(x, y, '.field') && canPlaySupport(g, 0, d.index)) {
-      applyAction(g, 0, { type: 'support', hand: d.index });
-      afterAction(); return;
+      actWithFx(0, { type: 'support', hand: d.index }).then(afterAction); return;
     }
     render(); return;
   }
@@ -980,10 +1107,10 @@ document.addEventListener('pointerup', ev => {
     const legal = legalAttackTargets(g, 0, d.slot);
     if (mEl) {
       const slot = Number(mEl.dataset.slot);
-      if (legal.includes(slot)) { applyAction(g, 0, { type: 'attack', slot: d.slot, target: slot }); afterAction(); return; }
+      if (legal.includes(slot)) { actWithFx(0, { type: 'attack', slot: d.slot, target: slot }).then(afterAction); return; }
       toast('【守護】がいるため、そのモンスターは攻撃できません');
     } else if (legal.includes('face') && y < window.innerHeight * 0.42) {
-      applyAction(g, 0, { type: 'attack', slot: d.slot, target: 'face' }); afterAction(); return;
+      actWithFx(0, { type: 'attack', slot: d.slot, target: 'face' }).then(afterAction); return;
     }
     render(); return;
   }
@@ -1091,6 +1218,13 @@ function handleClick(ev) {
   // --- オーバーレイ ---
   if (hit('[data-closedetail]')) { app.detail = null; return render(); }
   if (hit('[data-closegrave]')) { app.graveView = null; return render(); }
+  if (hit('[data-cancelgrave]')) { app.gravePick = null; return render(); }
+  const gpk = hit('[data-gravepick]');
+  if (gpk && app.gravePick) {
+    const gi = Number(gpk.dataset.gravepick), h = app.gravePick.hand;
+    app.gravePick = null;
+    return actWithFx(0, { type: 'support', hand: h, target: { grave: gi } }).then(afterAction);
+  }
   const mull = hit('[data-mulligan]');
   if (mull) return doMulligan(mull.dataset.mulligan === 'redraw');
   if (hit('[data-startbattle]')) return beginPlay();
@@ -1108,8 +1242,7 @@ function handleClick(ev) {
   const sm = hit('[data-summon]');
   if (sm) {
     const p = app.popup; app.popup = null;
-    applyAction(g, 0, { type: 'summon', hand: p.hand, mode: sm.dataset.summon, slot: p.slot });
-    return afterAction();
+    return actWithFx(0, { type: 'summon', hand: p.hand, mode: sm.dataset.summon, slot: p.slot }).then(afterAction);
   }
   // --- 自分モンスターの操作メニュー ---
   const act = hit('[data-act]');
@@ -1125,8 +1258,9 @@ function handleClick(ev) {
   if (hit('[data-forge]')) { applyAction(g, 0, { type: 'forge' }); return afterAction(); }
   if (hit('[data-endturn]')) { app.sel = null; applyAction(g, 0, { type: 'end' }); return afterAction(); }
   if (hit('[data-attackface]') && app.sel) {
-    applyAction(g, 0, { type: 'attack', slot: app.sel.slot, target: 'face' });
-    app.sel = null; return afterAction();
+    const act = { type: 'attack', slot: app.sel.slot, target: 'face' };
+    app.sel = null;
+    return actWithFx(0, act).then(afterAction);
   }
 
   // --- 手札 ---
@@ -1145,9 +1279,14 @@ function handleClick(ev) {
       if (slotEl) return openModePick(i, slotEl);
     } else {
       if (!canPlaySupport(g, 0, i)) { toast('今は使えません'); return; }
+      const gc = graveChoices(g, i);
+      if (gc) {
+        if (!gc.indices.length) { toast('墓地に対象がありません'); return; }
+        app.gravePick = { hand: i, indices: gc.indices };
+        return render();
+      }
       if (supportNeedsTarget(id)) { toast('対象のモンスターにドラッグしてください'); return; }
-      applyAction(g, 0, { type: 'support', hand: i });
-      return afterAction();
+      return actWithFx(0, { type: 'support', hand: i }).then(afterAction);
     }
     return;
   }
@@ -1160,8 +1299,9 @@ function handleClick(ev) {
       if (app.sel && app.sel.kind === 'attack') {
         const legal = legalAttackTargets(g, 0, app.sel.slot);
         if (!legal.includes(slot)) { toast('【守護】がいるため攻撃できません'); return; }
-        applyAction(g, 0, { type: 'attack', slot: app.sel.slot, target: slot });
-        app.sel = null; app.hint = ''; return afterAction();
+        const act = { type: 'attack', slot: app.sel.slot, target: slot };
+        app.sel = null; app.hint = '';
+        return actWithFx(0, act).then(afterAction);
       }
       app.detail = g.players[1].field[slot]?.id; return render();
     }
@@ -1227,6 +1367,7 @@ function makeDemo(areaIndex = 1, enemyIndex = 2) {
   g.players[0].hand = ['f09', 'sf1', 'x_g5', 'sn6', 'w05'];
   g.players[1].hand = ['w01', 'w03', 'sw1'];
   app.phase = 'play';
+  lastBannerTurn = g.turn;
   render();
 }
 window.__TE = { app, render, startBattle, makeDemo, card, ALL_CARDS, applyAction, afterAction, beginPlay, doMulligan };

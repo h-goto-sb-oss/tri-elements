@@ -11,6 +11,7 @@ export const DEFAULT_RULES = {
   handLimit: 6,           // 手札上限（ターン終了時に捨てる）
   fieldSlots: 3,          // モンスターゾーン
   supportSlots: 3,        // サポートゾーン
+  equipPerMonster: 1,     // 1体のモンスターに装備できる枚数
   maxCostCap: 10,         // 最大コストの上限（原案に無かったので追加）
   summonsPerTurn: 99,     // 1ターンの召喚回数（原案は1。コストが余って手詰まりになるため撤廃）
   replaceSummon: true,    // 【入れ替え召喚】場が満杯でも、自分のモンスター1体を墓地へ送って召喚できる

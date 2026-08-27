@@ -46,7 +46,7 @@ def scan_players():
     if not os.path.isdir(PLAYER_DIR):
         return out
     for fn in sorted(os.listdir(PLAYER_DIR)):
-        m = re.match(r'avatar-(\d+)-.*\.(png|jpg|jpeg|webp)$', fn, re.I)
+        m = re.match(r'(?:avatar|player)-(\d+)-.*\.(png|jpg|jpeg|webp)$', fn, re.I)
         if m:
             out[str(int(m.group(1)))] = f'/{PLAYER_DIR}/{fn}'
     return out

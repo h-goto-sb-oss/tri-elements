@@ -27,4 +27,11 @@ export const AREA_BG = {
   "common": "/assets/backgrounds/battle-common.png"
 };
 
-export const PLAYER_ART = {};
+export const PLAYER_ART = {
+  "1": "/assets/players/player-01-boy.png",
+  "2": "/assets/players/player-02-girl.png",
+  "3": "/assets/players/player-03-teen-male.png",
+  "4": "/assets/players/player-04-teen-female.png",
+  "5": "/assets/players/player-05-adult-male.png",
+  "6": "/assets/players/player-06-adult-female.png"
+};

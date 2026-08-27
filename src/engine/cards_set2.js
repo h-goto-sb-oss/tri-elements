@@ -38,8 +38,8 @@ export const SET2 = [
     flavor: '倒れたあとに、本当の火が来る。',
   }),
   S('x_sf1', '決戦の狼煙', 'fire', 1, 'banner', {
-    set: 2, tier: 2, text: 'このターン、自分のモンスター1体を+3/+0する。',
-    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 3, def: 0, duration: 'turn' }],
+    set: 2, tier: 2, text: 'このターン、自分の炎モンスター1体を+3/+0する。',
+    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 3, def: 0, duration: 'turn', filter: { element: 'fire' } }],
     flavor: '合図はひとつ。前へ。',
   }),
   S('x_sf3', '炎の共鳴', 'fire', 2, 'banner', {
@@ -145,8 +145,8 @@ export const SET2 = [
     flavor: '歩けば地形が変わり、踏まれた者も起き上がる。',
   }),
   S('x_sg1', '大樹の抱擁', 'grass', 3, 'ward', {
-    set: 2, tier: 2, text: '自分のモンスター1体を+2/+4する。',
-    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 2, def: 4, duration: 'permanent' }],
+    set: 2, tier: 2, text: '自分の草モンスター1体を+2/+4する。',
+    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 2, def: 4, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: '包まれると、少し強くなる。',
   }),
   S('x_sg5', '森の砦', 'grass', 3, 'armor', {
@@ -165,14 +165,14 @@ export const SET2 = [
     flavor: '根がつながっている限り、一緒に育つ。',
   }),
   S('x_sg2', '森の再生', 'grass', 4, 'sprout', {
-    set: 2, tier: 3, text: '自分の墓地からコスト5以下のモンスターを2体まで場に出す。',
-    effects: [{ op: 'revive', maxCost: 5 }, { op: 'revive', maxCost: 5 }],
+    set: 2, tier: 3, text: '自分の墓地からコスト5以下の草モンスターを2体まで場に出す。',
+    effects: [{ op: 'revive', maxCost: 5, element: 'grass' }, { op: 'revive', maxCost: 5, element: 'grass' }],
     flavor: '倒れた木の上に、次の森が育つ。',
   }),
 
   S('x_sg3', '大地の反撃', 'grass', 3, 'ward', {
-    set: 2, tier: 2, text: 'このターン、自分のモンスター1体は防御力を攻撃力として扱う。',
-    effects: [{ op: 'defAsAtk', side: 'self', target: 'one', duration: 'turn' }],
+    set: 2, tier: 2, text: 'このターン、自分の草モンスター1体は防御力を攻撃力として扱う。',
+    effects: [{ op: 'defAsAtk', side: 'self', target: 'one', duration: 'turn', filter: { element: 'grass' } }],
     flavor: '守っていた腕が、そのまま拳になる。',
   }),
 

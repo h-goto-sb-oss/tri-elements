@@ -120,7 +120,8 @@ export function destroyMonster(state, pi, slot, opts = {}) {
   const p = state.players[pi];
   const m = p.field[slot];
   if (!m) return;
-  if (!opts.ignoreFog && opts.byCombat && state.turn <= p.fogUntil) {
+  if (!opts.ignoreFog && opts.byCombat && state.turn <= p.fogUntil
+    && (!p.fogElement || card(m.id).element === p.fogElement)) {
     log(state, 'info', `${card(m.id).name} は【森の加護】で破壊されなかった`);
     return;
   }
@@ -130,7 +131,7 @@ export function destroyMonster(state, pi, slot, opts = {}) {
     if (s && s.attachedTo === m.uid) { p.grave.push(s.id); p.supports[si] = null; }
   });
   p.grave.push(m.id);
-  log(state, 'destroy', `${card(m.id).name} が破壊された`, { p: pi, cardId: m.id });
+  log(state, 'destroy', `${card(m.id).name} が破壊された`, { p: pi, cardId: m.id, slot });
   const od = card(m.id).onDeath;
   if (od) runEffects(state, pi, od, { auto: true, sourceName: card(m.id).name });
 }
@@ -254,14 +255,16 @@ function applyOp(state, pi, op, ctx) {
     }
     case 'invuln':
       me.fogUntil = state.turn + 1; // このターン + 次の相手ターン
+      me.fogElement = op.element || null;
       log(state, 'info', `${me.name} のモンスターは次の相手ターン終了まで戦闘で破壊されない`);
       break;
     case 'revive': {
-      const gi = ctx.target && ctx.target.grave != null ? ctx.target.grave : autoGraveMonster(me, op.maxCost);
+      const gi = ctx.target && ctx.target.grave != null ? ctx.target.grave : autoGraveMonster(me, op.maxCost, op.element);
       if (gi == null) break;
       const slot = emptySlot(me); if (slot < 0) break;
       const id = me.grave[gi];
       if (!id || !isMonster(id) || card(id).cost > op.maxCost) break;
+      if (op.element && card(id).element !== op.element) break;
       me.grave.splice(gi, 1);
       me.field[slot] = makeMonster(state, id, 'attack');
       log(state, 'summon', `${card(id).name} が墓地から蘇った`, { p: pi, cardId: id });
@@ -292,17 +295,23 @@ function applyOp(state, pi, op, ctx) {
   }
 }
 
-function autoGraveMonster(p, maxCost) {
+function autoGraveMonster(p, maxCost, element) {
   let best = null, bestCost = -1;
   p.grave.forEach((id, i) => {
-    if (isMonster(id) && card(id).cost <= maxCost && card(id).cost > bestCost) { best = i; bestCost = card(id).cost; }
+    if (!isMonster(id) || card(id).cost > maxCost) return;
+    if (element && card(id).element !== element) return;
+    if (card(id).cost > bestCost) { best = i; bestCost = card(id).cost; }
   });
   return best;
 }
 
 function pickSlot(state, pi, op, ctx) {
-  if (ctx.target && ctx.target.slot != null && !ctx.auto) return ctx.target.slot;
-  if (ctx.target && ctx.target.slot != null) return ctx.target.slot;
+  if (ctx.target && ctx.target.slot != null) {
+    const tp = state.players[resolveSide(pi, op.side || 'self')];
+    const m = tp.field[ctx.target.slot];
+    if (m && matchFilter(m, op.filter)) return ctx.target.slot;
+    return null;
+  }
   const auto = pickAuto(state, pi, op.side || 'enemy', op.filter);
   return auto ? auto.slot : null;
 }
@@ -450,6 +459,14 @@ export function supportNeedsTarget(id) {
   return c.effects.some(e => e.op === 'equip' || (e.target === 'one') || e.op === 'revive' || e.op === 'recallSupport');
 }
 
+/** そのモンスターに装備を付けられるか（1体につき equipPerMonster 枚まで） */
+export function canEquipTo(state, pi, m) {
+  if (!m) return false;
+  const p = state.players[pi];
+  const n = p.supports.filter(s => s && s.attachedTo === m.uid).length;
+  return n < (state.rules.equipPerMonster ?? 99);
+}
+
 export function canPlaySupport(state, pi, handIndex) {
   const p = state.players[pi], id = p.hand[handIndex];
   if (!id || isMonster(id)) return false;
@@ -457,7 +474,8 @@ export function canPlaySupport(state, pi, handIndex) {
   if (c.cost > p.cost) return false;
   if (c.equip) {
     if (p.supports.findIndex(s => s === null) < 0) return false;
-    if (fieldMonsters(p).length === 0) return false;
+    const eq = c.effects.find(x => x.op === 'equip');
+    if (!fieldMonsters(p).some(({ m }) => canEquipTo(state, pi, m) && matchFilter(m, eq && eq.filter))) return false;
   }
   // ターゲットが必須なのに対象がいない場合は使えない
   for (const e of c.effects) {
@@ -467,7 +485,8 @@ export function canPlaySupport(state, pi, handIndex) {
     }
     if (e.op === 'revive') {
       if (emptySlot(p) < 0) return false;
-      if (!p.grave.some(gid => isMonster(gid) && card(gid).cost <= e.maxCost)) return false;
+      if (!p.grave.some(gid => isMonster(gid) && card(gid).cost <= e.maxCost
+        && (!e.element || card(gid).element === e.element))) return false;
     }
     if (e.op === 'recallSupport' && !p.grave.some(gid => !isMonster(gid))) return false;
   }
@@ -483,8 +502,9 @@ export function playSupport(state, pi, handIndex, target = null) {
   if (c.equip) {
     const e = c.effects.find(x => x.op === 'equip');
     let slot = target && target.slot != null ? target.slot : null;
-    if (slot == null || !p.field[slot]) {
-      const cands = fieldMonsters(p).sort((a, b) => effAtk(b.m) - effAtk(a.m));
+    const okEquip = m => m && canEquipTo(state, pi, m) && matchFilter(m, e.filter);
+    if (slot == null || !okEquip(p.field[slot])) {
+      const cands = fieldMonsters(p).filter(({ m }) => okEquip(m)).sort((a, b) => effAtk(b.m) - effAtk(a.m));
       slot = cands.length ? cands[0].i : null;
     }
     if (slot == null) { p.grave.push(id); return true; }

@@ -141,16 +141,16 @@ const SUPPORTS = [
     effects: [{ op: 'damageFace', side: 'enemy', v: 2 }], flavor: '真っ直ぐ、それだけ。',
   }),
   S('sf2', '灼熱の刃', 'fire', 2, 'sword', {
-    tier: 1, equip: true, text: '装備：自分のモンスター1体を+2/+0する。場に残る。',
-    effects: [{ op: 'equip', atk: 2, def: 0 }], flavor: '柄まで焼けるが、構わない。',
+    tier: 1, equip: true, text: '装備：自分の炎モンスター1体を+2/+0する。場に残る。',
+    effects: [{ op: 'equip', atk: 2, def: 0, filter: { element: 'fire' } }], flavor: '柄まで焼けるが、構わない。',
   }),
   S('sf3', '火球', 'fire', 3, 'orb', {
     tier: 2, text: '攻撃力4以下の相手モンスター1体を破壊する。',
     effects: [{ op: 'destroy', side: 'enemy', target: 'one', filter: { maxAtk: 4 } }], flavor: '狙いは小物で十分。',
   }),
   S('sf4', '猛火の号令', 'fire', 2, 'banner', {
-    tier: 2, text: 'このターン、自分のモンスター全てを+2/+0する。',
-    effects: [{ op: 'buff', side: 'self', target: 'all', atk: 2, def: 0, duration: 'turn' }], flavor: '全軍、焼き払え。',
+    tier: 2, text: 'このターン、自分の炎モンスター全てを+2/+0する。',
+    effects: [{ op: 'buff', side: 'self', target: 'all', atk: 2, def: 0, duration: 'turn', filter: { element: 'fire' } }], flavor: '全軍、焼き払え。',
   }),
   S('sf5', '業火の裁き', 'fire', 5, 'meteor', {
     tier: 3, text: 'お互いのモンスターを全て破壊する。',
@@ -163,8 +163,8 @@ const SUPPORTS = [
     effects: [{ op: 'heal', side: 'self', v: 3 }], flavor: 'ひと雫で喉が潤う。',
   }),
   S('sw2', '氷の護り', 'water', 2, 'shield', {
-    tier: 1, equip: true, text: '装備：自分のモンスター1体を+0/+4する。場に残る。',
-    effects: [{ op: 'equip', atk: 0, def: 4 }], flavor: '溶けない氷で編んだ鎧。',
+    tier: 1, equip: true, text: '装備：自分の水モンスター1体を+0/+4する。場に残る。',
+    effects: [{ op: 'equip', atk: 0, def: 4, filter: { element: 'water' } }], flavor: '溶けない氷で編んだ鎧。',
   }),
   S('sw3', '導きの潮流', 'water', 2, 'scroll', {
     tier: 2, text: 'カードを2枚引く。',
@@ -181,25 +181,25 @@ const SUPPORTS = [
 
   // 草 5
   S('sg1', '光合成', 'grass', 1, 'leaf', {
-    tier: 1, text: '自分のモンスター1体を+1/+1する。',
-    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 1, def: 1, duration: 'permanent' }],
+    tier: 1, text: '自分の草モンスター1体を+1/+1する。',
+    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 1, def: 1, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: '陽の光は無料の食事。',
   }),
   S('sg2', '茨の鎧', 'grass', 2, 'armor', {
-    tier: 1, equip: true, text: '装備：自分のモンスター1体を+1/+3する。場に残る。',
-    effects: [{ op: 'equip', atk: 1, def: 3 }], flavor: '守りながら、少し刺す。',
+    tier: 1, equip: true, text: '装備：自分の草モンスター1体を+1/+3する。場に残る。',
+    effects: [{ op: 'equip', atk: 1, def: 3, filter: { element: 'grass' } }], flavor: '守りながら、少し刺す。',
   }),
   S('sg3', '森の加護', 'grass', 2, 'ward', {
-    tier: 2, text: '次の相手ターンが終わるまで、自分のモンスターは戦闘で破壊されない。',
-    effects: [{ op: 'invuln', side: 'self' }], flavor: '森が味方をしている間は、誰も倒れない。',
+    tier: 2, text: '次の相手ターンが終わるまで、自分の草モンスターは戦闘で破壊されない。',
+    effects: [{ op: 'invuln', side: 'self', element: 'grass' }], flavor: '森が味方をしている間は、誰も倒れない。',
   }),
   S('sg4', '再生の芽吹き', 'grass', 3, 'sprout', {
-    tier: 2, text: '自分の墓地からコスト3以下のモンスター1体を場に出す。',
-    effects: [{ op: 'revive', maxCost: 3 }], flavor: '土に還ったものは、また芽を出す。',
+    tier: 2, text: '自分の墓地からコスト3以下の草モンスター1体を場に出す。',
+    effects: [{ op: 'revive', maxCost: 3, element: 'grass' }], flavor: '土に還ったものは、また芽を出す。',
   }),
   S('sg5', '世界樹の実', 'grass', 5, 'fruit', {
-    tier: 3, text: '自分のモンスター全てを+2/+2する。',
-    effects: [{ op: 'buff', side: 'self', target: 'all', atk: 2, def: 2, duration: 'permanent' }],
+    tier: 3, text: '自分の草モンスター全てを+2/+2する。',
+    effects: [{ op: 'buff', side: 'self', target: 'all', atk: 2, def: 2, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: 'ひと齧りで背が伸びる。',
   }),
 

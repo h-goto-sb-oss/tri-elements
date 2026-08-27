@@ -11,7 +11,7 @@ body{
   font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
   overflow:hidden; user-select:none;
 }
-#app{height:100vh;display:flex;flex-direction:column}
+#app{height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
 button{font-family:inherit;color:inherit;cursor:pointer}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-thumb{background:#33415a;border-radius:5px}
@@ -84,7 +84,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 /* ============================================================
    バトル画面
    ============================================================ */
-.battle{display:flex;flex-direction:column;height:100vh;padding:4px 10px 2px;gap:2px;position:relative;isolation:isolate}
+.battle{display:flex;flex-direction:column;width:1440px;height:876px;padding:4px 10px 2px;gap:2px;
+  position:absolute;top:0;left:0;transform-origin:top left;isolation:isolate}
 .battle::before{content:'';position:absolute;inset:0;z-index:-2;background-image:var(--bgimg);
   background-size:cover;background-position:center 42%;opacity:.62}
 .battle::after{content:'';position:absolute;inset:0;z-index:-1;
@@ -373,7 +374,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .avpick .avimg{width:88px;height:88px;border-radius:9px;overflow:hidden;background:#18202c;margin:0 auto}
 .avpick .avimg img{width:100%;height:100%;object-fit:cover}
 .avpick .avimg .avfb{font-size:40px}
-.avpick .avname{font-size:11px;margin-top:5px;color:#c3d2e2}
+.avpick .avname{display:none}
 
 /* ---------- ルール説明 ---------- */
 .rules{gap:6px;padding:18px 24px 30px}
@@ -407,3 +408,72 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .foe.free{width:210px}
 .foe.free .portrait{height:172px}
 .foe.free .fdesc{min-height:0;padding-bottom:4px}
+
+/* ============================================================
+   戦闘演出
+   ============================================================ */
+#fxlayer{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}
+
+.fxnum{position:absolute;transform:translate(-50%,-50%);font-size:34px;font-weight:900;
+  text-shadow:0 3px 10px #000,0 0 18px currentColor;animation:fxnum 1s cubic-bezier(.2,.9,.3,1) forwards}
+.fxnum.damage{color:#ff6a78}
+.fxnum.heal{color:#7fe0a0}
+@keyframes fxnum{
+  0%{opacity:0;transform:translate(-50%,-20%) scale(.6)}
+  22%{opacity:1;transform:translate(-50%,-90%) scale(1.25)}
+  60%{opacity:1;transform:translate(-50%,-120%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-190%) scale(.95)}}
+.fxnum.down{animation-name:fxnumdown}
+@keyframes fxnumdown{
+  0%{opacity:0;transform:translate(-50%,-10%) scale(.6)}
+  22%{opacity:1;transform:translate(-50%,45%) scale(1.3)}
+  62%{opacity:1;transform:translate(-50%,70%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,135%) scale(.95)}}
+
+.fxburst{position:absolute;width:44px;height:44px;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,#fff,var(--fxc) 42%,transparent 74%);
+  animation:fxburst .7s ease-out forwards}
+@keyframes fxburst{0%{opacity:1;transform:translate(-50%,-50%) scale(.35)}
+  40%{opacity:.95}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(6)}}
+.fxshatter{position:absolute;border-radius:9px;background:#fff;
+  animation:fxshatter .55s ease-out forwards;mix-blend-mode:screen}
+@keyframes fxshatter{0%{opacity:.85;transform:scale(1)}
+  55%{opacity:.4;transform:scale(1.12) rotate(3deg)}
+  100%{opacity:0;transform:scale(1.35) rotate(-5deg)}}
+.fxpiece{position:absolute;width:7px;height:7px;transform:translate(-50%,-50%);border-radius:2px;
+  background:var(--fxc);animation:fxpiece .58s ease-out forwards}
+@keyframes fxpiece{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.3) rotate(180deg)}}
+
+.fxcard{position:absolute;pointer-events:none;filter:drop-shadow(0 8px 18px #000c)}
+.fxcard .card{width:100%;height:100%}
+
+.fxslash{position:absolute;width:170px;height:8px;transform:translate(-50%,-50%) rotate(-18deg);
+  background:linear-gradient(90deg,transparent,#fff,#ffd88a,transparent);border-radius:4px;
+  animation:fxslash .4s ease-out forwards}
+@keyframes fxslash{0%{opacity:0;transform:translate(-50%,-50%) rotate(-18deg) scaleX(.2)}
+  35%{opacity:1;transform:translate(-50%,-50%) rotate(-18deg) scaleX(1.15)}
+  100%{opacity:0;transform:translate(-50%,-50%) rotate(-18deg) scaleX(1.3)}}
+
+.fxring{position:absolute;width:120px;height:120px;transform:translate(-50%,-50%);border-radius:50%;
+  border:3px solid #ffd98a;animation:fxring .6s ease-out forwards}
+@keyframes fxring{0%{opacity:.9;transform:translate(-50%,-50%) scale(.35)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.25)}}
+
+.fxhit{position:absolute;border-radius:10px;background:#ff5566;opacity:0;
+  animation:fxhit .4s ease-out forwards;mix-blend-mode:screen}
+@keyframes fxhit{0%{opacity:.5}100%{opacity:0}}
+
+.fxbanner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;
+  animation:fxbin .3s cubic-bezier(.2,1.4,.4,1)}
+.fxbanner .t{font-size:40px;font-weight:900;letter-spacing:.14em;color:#fff3d2;
+  text-shadow:0 4px 22px #000,0 0 30px #f2c15b88}
+.fxbanner .s{font-size:14px;color:#e0c48a;letter-spacing:.2em;margin-top:4px}
+.fxbanner.out{animation:fxbout .3s ease-in forwards}
+@keyframes fxbin{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes fxbout{0%{opacity:1}100%{opacity:0;transform:translate(-50%,-64%) scale(1.05)}}
+
+/* 墓地から選ぶモーダル */
+.gpick{cursor:pointer;transition:.12s}
+.gpick:hover{transform:translateY(-6px)}

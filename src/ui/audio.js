@@ -120,12 +120,21 @@ export function stopBgm() {
   if (state.el) { const el = state.el; fadeTo(el, 0, 250, () => { el.pause(); el.src = ''; }); state.el = null; }
 }
 
+let seNodes = [];
 export async function playSe(key) {
   const url = await locate(key);
   if (!url || state.muted) return;
   const a = new Audio(url);
   a.volume = state.seVol;
+  seNodes.push(a);
+  a.addEventListener('ended', () => { seNodes = seNodes.filter(x => x !== a); });
   a.play().catch(() => { /* 鳴らせなくても進行に影響なし */ });
+}
+
+/** 鳴っている効果音を止める（画面を離れたときなど） */
+export function stopSe() {
+  seNodes.forEach(a => { try { a.pause(); a.currentTime = 0; } catch { /* 無視 */ } });
+  seNodes = [];
 }
 
 // 最初のユーザー操作で自動再生の制限を解除する

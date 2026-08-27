@@ -38,8 +38,8 @@ export const AREAS = [
         ['g04', 2], ['w02', 2], ['sn1', 3], ['sg1', 3], ['sn2', 2],
       ]), { face: 'g01', noise: 7, life: 18, desc: 'まだカードの使い方を覚えたて。' }),
       E('罠師のガロ', '🪤', mk([
-        ['g02', 3], ['g03', 3], ['g05', 3], ['w01', 3], ['w05', 3], ['g04', 3],
-        ['sn8', 2], ['sg1', 3], ['sn5', 3], ['sg2', 3], ['sn3', 1],
+        ['g02', 3], ['g03', 3], ['g05', 3], ['w01', 3], ['w05', 3], ['g04', 3], ['g07', 2], ['g01', 1],
+        ['sn8', 2], ['sg1', 3], ['sn5', 1], ['sg2', 2], ['sn3', 1],
       ]), { face: 'g02', weak: 'fire', noise: 5, life: 20, profile: 'turtle', desc: '守りを固めてじっくり削ってくる。' }),
       E('草原の主 モーリー', '🐗', mk([
         ['g01', 3], ['g03', 3], ['g04', 3], ['g06', 3], ['g07', 3], ['g09', 2],
@@ -184,17 +184,20 @@ export const DUST_SHOP = [
   { pack: 'gold', cost: 18 },
 ];
 
+// 同じ相手からパックをもらえる回数
+export const REWARD_LIMIT = 3;
+
 export const REWARD = { a1: 'bronze', a2: 'silver', a3: 'silver', a4: 'gold', a5: 'gold' };
 
 // ---------- セーブ ----------
 const KEY = 'tri-elements-save-v1';
 export const AVATARS = [
-  { id: 1, name: '炎の見習い', emoji: '🔥', tint: '#a2492a' },
-  { id: 2, name: '水の巫女', emoji: '💧', tint: '#2a6ea8' },
-  { id: 3, name: '森の狩人', emoji: '🌿', tint: '#357f47' },
-  { id: 4, name: '旅の魔術師', emoji: '🔮', tint: '#6a4a8a' },
-  { id: 5, name: '竜騎士', emoji: '🐉', tint: '#8a5a2a' },
-  { id: 6, name: '星読みの少女', emoji: '✨', tint: '#7a6a3a' },
+  { id: 1, name: '少年', emoji: '🧒', tint: '#a2492a' },
+  { id: 2, name: '少女', emoji: '👧', tint: '#8a4a7a' },
+  { id: 3, name: '10代 男', emoji: '👦', tint: '#2a6ea8' },
+  { id: 4, name: '10代 女', emoji: '👩', tint: '#357f47' },
+  { id: 5, name: '大人 男性', emoji: '🧔', tint: '#6a4a8a' },
+  { id: 6, name: '大人 女性', emoji: '👩‍🦰', tint: '#8a5a2a' },
 ];
 
 export function newSave() {
@@ -202,7 +205,8 @@ export function newSave() {
     profile: null,      // { name, avatar } — 未設定なら初回の名前入力へ
     collection: { ...STARTER_COLLECTION },
     deck: [...STARTER_DECK],
-    cleared: {},        // `${areaId}:${enemyIndex}` -> true
+    cleared: {},        // `${areaId}:${enemyIndex}` -> true（解放判定）
+    clearCount: {},     // 同じ相手を倒した回数（報酬は REWARD_LIMIT 回まで）
     packs: {},          // 未開封パック
     stats: { wins: 0, losses: 0 },
     freeStats: {},      // フリーバトルの相手ごとの戦績 { 'a1:0': {w,l} }
@@ -215,6 +219,13 @@ export function loadSave() {
     if (!raw) return newSave();
     const s = JSON.parse(raw);
     if (!s.collection || !s.deck) return newSave();
+    // 古いセーブの補完
+    s.freeStats = s.freeStats || {};
+    s.stardust = s.stardust || 0;
+    if (!s.clearCount) {
+      s.clearCount = {};
+      Object.keys(s.cleared || {}).forEach(k => { s.clearCount[k] = 1; });
+    }
     return s;
   } catch { return newSave(); }
 }
