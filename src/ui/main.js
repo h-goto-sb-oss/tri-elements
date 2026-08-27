@@ -183,7 +183,7 @@ function renderTitle() {
     <div class="title-bg" style="--titlebg:url(${withBase('/assets/backgrounds/title-bg.webp')})" aria-hidden="true"></div>
     <div class="title-shade" aria-hidden="true"></div>
     <div class="title-hero">
-      <img class="title-logo" src="assets/ui/title-logo.svg" alt="TRI-ELEMENTS 三属の戦記">
+      <img class="title-logo" src="${withBase('/assets/ui/title-logo.svg')}" alt="TRI-ELEMENTS 三属の戦記">
       <p class="title-tagline">三つの力を束ね、まだ見ぬカードと世界へ。</p>
       <div class="title-elements" aria-label="炎・水・草の三属性">
         <span class="fire">🔥 炎</span><span class="water">💧 水</span><span class="grass">🌿 草</span>
@@ -1041,7 +1041,9 @@ window.addEventListener('resize', () => {
 
 // innerHTML を丸ごと差し替えるので、スクロール位置は自前で持ち越す。
 // （デッキ編集で1枚足すたびに所持カード一覧が先頭へ戻るのを防ぐ）
-const SCROLL_KEEP = ['[data-pool]', '[data-decklist]'];
+// 描き直しでスクロール位置を戻す対象。スマホでは .deckwrap ごと縦に流れる
+// レイアウトになるので、内側のプールだけでなく外側も見る。
+const SCROLL_KEEP = ['.deckwrap', '[data-pool]', '[data-decklist]', '.adventure'];
 
 function render(opts = {}) {
   const keep = {};
@@ -1410,12 +1412,16 @@ function elementUnder(x, y, selector) {
 function killGhostPointerEvents() { /* ghost は pointer-events:none なので何もしなくてよい */ }
 
 document.addEventListener('pointerdown', ev => {
+  if (!app.drag) killGhost();   // 何かの拍子に残った残像があれば、ここで必ず消す
   const handCard = ev.target.closest('[data-hand]');
   const deckCard = ev.target.closest('[data-deckcard]');
   const poolCard = ev.target.closest('[data-poolcard]');
   const boardMon = ev.target.closest('.mini[data-side="0"]');
   if (!handCard && !deckCard && !poolCard && !boardMon) return;
   if (ev.button !== 0) return;
+  // デッキ編集を指で触るときは、ドラッグより縦スクロールを優先する。
+  // （出し入れはタップでできるので、指でのドラッグは無くても困らない）
+  if (ev.pointerType === 'touch' && app.screen === 'deck') return;
   app.drag = {
     from: handCard ? 'hand' : deckCard ? 'deck' : poolCard ? 'pool' : 'board',
     index: handCard ? Number(handCard.dataset.hand) : undefined,
@@ -1468,6 +1474,17 @@ document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
   if (app.artZoom) { Audio.playSe('se_back'); app.artZoom = null; render(); return; }
   if (app.detail) { Audio.playSe('se_back'); app.detail = null; render(); }
+});
+
+// ブラウザがジェスチャを横取りすると pointerup が来ない。
+// その場合ここで後始末しないと、掴んだカードの残像が画面に残ってしまう。
+document.addEventListener('pointercancel', () => {
+  if (!app.drag) return;
+  const moved = app.drag.moved;
+  app.drag = null;
+  killGhost();
+  document.querySelectorAll('.slot.hot').forEach(e => e.classList.remove('hot'));
+  if (moved) render();
 });
 
 document.addEventListener('pointerup', ev => {

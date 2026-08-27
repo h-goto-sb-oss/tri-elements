@@ -30,6 +30,11 @@ RULES = {
 }
 EXTS = ('.png', '.jpg', '.jpeg', '.webp')
 
+# 変換せずそのまま配信するフォルダ（音・SVGロゴなど）。
+# public/ は .gitignore なので、ここに写しておかないとビルドに含まれない。
+COPY_FOLDERS = ['audio', 'ui']
+COPY_SKIP = ('.txt', '.md')
+
 
 def convert(src, dst, max_side, quality):
     im = Image.open(src)
@@ -77,10 +82,34 @@ def main():
     print(f'  {"合計":12} {total_src/1048576:7.1f}MB → {total_out/1048576:6.1f}MB'
           f'  ({(1 - total_out/total_src)*100 if total_src else 0:.1f}% 削減)'
           f'  新規{made} / 据え置き{skipped}')
+    copy_as_is(dry)
+
     if dry:
         print('  (--dry のため書き出していません)')
         return
     rewrite_manifests()
+
+
+def copy_as_is(dry=False):
+    """音・SVG など変換しないものを public/ へ写す"""
+    for folder in COPY_FOLDERS:
+        d = os.path.join(SRC_ROOT, folder)
+        if not os.path.isdir(d):
+            continue
+        n = size = 0
+        for fn in sorted(os.listdir(d)):
+            src = os.path.join(d, fn)
+            if not os.path.isfile(src) or fn.lower().endswith(COPY_SKIP):
+                continue
+            dst = os.path.join(OUT_ROOT, folder, fn)
+            size += os.path.getsize(src); n += 1
+            if dry:
+                continue
+            if os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src):
+                continue
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+        print(f'  {folder:12} {size/1048576:7.1f}MB そのまま複製 {n}件')
 
 
 def rewrite_manifests():

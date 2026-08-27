@@ -371,7 +371,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   radial-gradient(circle at 50% 38%,transparent 0 28%,#05080f55 68%,#03050ae8 100%),
   linear-gradient(180deg,#07101c30 0%,#05081122 42%,#03050bd4 100%)}
 .title-hero{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;z-index:1}
-.title-logo{display:block;width:min(720px,88vw);height:auto;filter:drop-shadow(0 12px 18px #000c)}
+.title-logo{display:block;width:min(720px,88vw);height:auto;aspect-ratio:1000/360;object-fit:contain;filter:drop-shadow(0 12px 18px #000c)}
 .title-tagline{margin-top:-14px;color:#f4eddc;font-size:clamp(12px,1.3vw,16px);font-weight:700;
   letter-spacing:.13em;text-shadow:0 2px 8px #000,0 0 18px #000}
 .title-elements{display:flex;gap:9px;justify-content:center;margin-top:13px}
@@ -498,7 +498,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .poolcard{position:relative}
 .poolcard .own{position:absolute;bottom:-2px;right:2px;background:#000c;border-radius:6px;
   padding:0 6px;font-size:10.5px;font-weight:800;z-index:6}
-.poolcard.full .card{filter:grayscale(.65) brightness(.6)}
+.poolcard.full .card{filter:grayscale(.4) brightness(.78)}
 
 /* デッキ編集：クリックは出し入れなので、効果はこのボタンから見る */
 .cinfo{position:absolute;top:2px;left:2px;z-index:3;width:17px;height:17px;padding:0;
@@ -850,12 +850,39 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .screen h2{font-size:20px}
 
   /* デッキ編集：横2列だと入らないので縦に積む */
-  .deckwrap{flex-direction:column;padding:8px 10px;gap:10px;overflow-y:auto}
-  .deckcol{width:100%;flex:none}
-  .decklist{max-height:240px;flex:none}
-  .poolcol{width:100%;flex:1;min-height:300px}
-  .dslot{max-width:none;flex:1;min-width:88px}
+  .deckwrap{flex-direction:column;padding:8px 8px 10px;gap:8px;overflow-y:auto;overscroll-behavior:contain}
+  .deckcol{width:100%;flex:none;gap:6px}
+  .decklist{max-height:216px;flex:none;padding:6px;gap:5px}
+  .poolcol{width:100%;flex:none;gap:5px}
   .pooltools{flex-wrap:wrap}
+
+  /* デッキの保存枠：幅を食うので1行の横スクロールにまとめる */
+  .dslots{flex-wrap:nowrap;overflow-x:auto;gap:5px;padding-bottom:2px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .dslots::-webkit-scrollbar{display:none}
+  .dslot{flex:none;flex-direction:row;align-items:baseline;gap:5px;
+    max-width:130px;min-width:0;padding:5px 9px}
+  .dslot b{font-size:11.5px;max-width:74px}
+  .dslot small{font-size:9.5px}
+  .dslot.add{padding:5px 11px}
+  .dnamerow{gap:6px}
+  .dname{padding:4px 8px;font-size:13px}
+  .dcount{font-size:13px}
+  .curve{height:52px;padding:14px 2px 0;margin-bottom:16px}
+  .curve .bar{width:24px}
+
+  /* カードは詰めて、効果は「i」から見る。1画面に入る枚数を優先する */
+  .pool{gap:6px;padding:2px;overflow:visible;flex:none}
+  .poolcard .card,.dcard .card{width:76px;height:126px}
+  .poolcard .card .art,.dcard .card .art{height:66px}
+  .poolcard .card .cname,.dcard .card .cname{font-size:8.5px;height:20px;padding:2px 16px 1px 4px}
+  .poolcard .card .cost,.dcard .card .cost{width:16px;height:16px;font-size:9.5px;top:1px;right:1px}
+  .poolcard .card .body{display:none}
+  .poolcard .card .stats,.dcard .card .stats{height:16px;font-size:10px}
+  .poolcard .card .kw,.poolcard .card .rarity{display:none}
+  .dcard{width:76px}
+  .poolcard .own{font-size:9.5px;padding:0 5px}
+  .cinfo{width:20px;height:20px;font-size:12px;opacity:.85}
 
   /* 図鑑：弾のタブを横スクロールにして、カードは詰める */
   .dexsets{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
@@ -868,10 +895,18 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .setrow label{min-width:0}
   .avgrid{max-width:100%;justify-content:flex-start}
 
-  /* 冒険：立ち絵を縦に並べる */
-  .adventure{padding:8px 10px}
+  /* 冒険：立ち絵を縦に並べる。
+     以前は .adv-stage を中央寄せのまま overflow:hidden にしていたので、
+     はみ出した上側（1体目）にどうやっても届かなかった。ページごと縦に流す。 */
+  .adventure{padding:8px 10px;overflow-y:auto;overscroll-behavior:contain}
   .adv-head h2{font-size:19px}
-  .adv-stage .foes{gap:12px}
+  .adv-stage{flex:none;align-items:stretch;overflow:visible;padding:12px 10px}
+  .adv-stage .foes{flex-direction:column;flex-wrap:nowrap;width:100%;
+    align-items:stretch;gap:12px}
+  .foe{width:100%}
+  .foe .portrait{height:180px}
+  .foe:hover{transform:none}
+  .adv-foot{flex-wrap:wrap;padding-bottom:4px}
 
   /* タイトルの装飾が画面をはみ出さないように */
   .title-bg{background-position:center 42%}

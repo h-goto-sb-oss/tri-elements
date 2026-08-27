@@ -14,3 +14,6 @@ public/
 
 # tools/publish_github.ps1 が GitHub Pages 用に一時的に作るビルド（gh-pagesブランチへ配信済み）
 dist-pages/
+
+# Pythonのキャッシュ
+__pycache__/
