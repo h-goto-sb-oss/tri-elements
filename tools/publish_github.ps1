@@ -42,22 +42,29 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host ""
-Write-Host "== 3. dist/ を作り直して gh-pages ブランチへ配信します ==" -ForegroundColor Cyan
-npm run build
+Write-Host "== 3. Pages用にビルドして gh-pages ブランチへ配信します ==" -ForegroundColor Cyan
+# https://<ユーザー名>.github.io/tri-elements/ のようにサブパスで配信されるので、
+# 素材のパスもそれに合わせて --base で焼き込む（通常の npm run build とは別出力）。
+Remove-Item -Recurse -Force dist-pages -ErrorAction SilentlyContinue
+npx vite build --base=/tri-elements/ --outDir dist-pages
 
-# dist/ の中身だけを持つ gh-pages ブランチを作り直す（master には一切触れない）
-$mainBranch = git rev-parse --abbrev-ref HEAD
+# 現在のリポジトリを一切汚さないよう、専用の worktree（別フォルダ）で
+# gh-pages ブランチを作り直して push する。
+$worktree = Join-Path $env:TEMP "tri-elements-gh-pages"
+Remove-Item -Recurse -Force $worktree -ErrorAction SilentlyContinue
+git worktree remove gh-pages-deploy --force 2>$null | Out-Null
 git branch -D gh-pages 2>$null | Out-Null
-git checkout --orphan gh-pages
-git reset --hard *>$null
-Get-ChildItem -Force | Where-Object { $_.Name -notin @('dist', '.git') } | Remove-Item -Recurse -Force
-Get-ChildItem dist | Move-Item -Destination .
-Remove-Item dist -Recurse -Force
-New-Item -ItemType File -Name ".nojekyll" | Out-Null   # _で始まるassetsフォルダ名がPagesに無視されないように
+git worktree add --orphan -b gh-pages $worktree
+
+Copy-Item dist-pages\* $worktree -Recurse -Force
+New-Item -ItemType File -Path (Join-Path $worktree ".nojekyll") -Force | Out-Null
+
+Push-Location $worktree
 git add -A
 git commit -q -m "Deploy: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
 git push -f origin gh-pages
-git checkout $mainBranch
+Pop-Location
+git worktree remove $worktree --force
 
 Write-Host ""
 Write-Host "== 4. GitHub Pages を有効化します ==" -ForegroundColor Cyan
