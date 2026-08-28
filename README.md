@@ -142,6 +142,12 @@ node tools/scan_overlap.mjs
 「カード名.png」を `<カードID>.png` へ改名し、余白をトリムして `src/ui/art_map.js` を作り直します
 （`--dry` で対応表だけ確認できます）。ファイル名は必ずカードIDかカード名にしてください。
 
+GitHub Pages 用のビルドは必ず `npm run build:pages` を使ってください。
+`--base=/tri-elements/` をコマンドラインで直接渡すと、Git Bash が
+`C:/Program Files/Git/tri-elements/` というWindowsのパスに書き換えてしまい、
+配信先で JS と CSS が 404 になります（画面が真っ白になる）。
+オプションを package.json に置いてあるのはそのためです。
+
 キャラクターカード（`c_*`）の立ち絵は `python tools/adopt_char_art.py` で取り込みます。
 `assets/art/` に置いたファイルを、名前に含まれるカタカナからカードIDへ結びつけ、
 

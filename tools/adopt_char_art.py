@@ -16,10 +16,21 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
+# どこから実行してもいいように、プロジェクトの直下へ移動してから始める
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# コンソールの文字コードが日本語を扱えないと、ファイル名を表示した時点で
+# 落ちてしまうので、表示だけは常に UTF-8 で行う
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 ART = 'assets/art'
 ENEMIES = 'assets/enemies'
 KEEP = os.path.join(ART, '_chars_src')
 SIZE = 512
+EXTS = ('.png', '.webp', '.jpg', '.jpeg')
 HEAD_BIAS = 0.16     # 頭の上に残す余白。カードの絵枠は上下が切り落とされるので多めに取る
 BG_MIN = 210         # これ以上明るく、かつ
 BG_SPREAD = 24       # RGBの差がこれ以下なら「無彩色の背景」とみなす
@@ -85,17 +96,21 @@ def strip_background(im):
 
 # ---------- 切り出し ----------
 def solid_bbox(im):
-    """キャラ本体の位置。半透明のもや（炎や光のエフェクト）や、
-    背景に取り残された小さなゴミを無視したいので、
-    「はっきり不透明な画素が、その行／列にある程度まとまっている」範囲を採る。"""
+    """キャラ本体の位置。半透明のもや（炎や光のエフェクト）や、背景に取り残された
+    小さなゴミは外したいが、アホ毛や槍の先のような細い部分は含めたい。
+    そこで「はっきり不透明な画素のかたまり」を拾い、小さすぎる島だけ捨てる。"""
     a = np.asarray(im.getchannel('A'))
     solid = a >= 100
-    rows, cols = solid.sum(1), solid.sum(0)
-    ry = np.where(rows >= im.width * 0.02)[0]
-    rx = np.where(cols >= im.height * 0.02)[0]
-    if not len(ry) or not len(rx):
+    lab, n = ndimage.label(solid)
+    if n == 0:
         return im.getchannel('A').getbbox() or (0, 0, *im.size)
-    return int(rx[0]), int(ry[0]), int(rx[-1]) + 1, int(ry[-1]) + 1
+    sizes = ndimage.sum(solid, lab, range(1, n + 1))
+    keep = [i + 1 for i, v in enumerate(sizes) if v >= solid.size * 0.001]
+    if not keep:
+        keep = [int(np.argmax(sizes)) + 1]
+    mask = np.isin(lab, keep)
+    ys, xs = np.where(mask.any(1))[0], np.where(mask.any(0))[0]
+    return int(xs[0]), int(ys[0]), int(xs[-1]) + 1, int(ys[-1]) + 1
 
 
 def square_bust(im):
@@ -116,10 +131,10 @@ def sha(path):
 
 def main():
     known = {sha(os.path.join(ENEMIES, f)): f for f in os.listdir(ENEMIES)
-             if f.lower().endswith('.png')}
+             if f.lower().endswith(EXTS)}
     todo = []
     for f in sorted(os.listdir(ART)):
-        if not f.lower().endswith('.png'):
+        if not f.lower().endswith(EXTS):
             continue
         stem = os.path.splitext(f)[0]
         if re.fullmatch(r'c_\w+', stem):

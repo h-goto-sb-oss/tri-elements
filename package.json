@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port 5180",
     "build": "vite build",
+    "build:pages": "vite build --base=/tri-elements/ --outDir dist-pages",
     "sim": "node sim/run.js"
   },
   "devDependencies": {
