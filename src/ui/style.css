@@ -158,16 +158,17 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .mini.defense{width:142px;height:112px}
 .battle.portrait .pile{width:66px}
 
-/* 手札は横スクロール。1枚を小さくするより、めくって見える方が読める */
-.battle.portrait .hand{height:200px;justify-content:flex-start;overflow-x:auto;
-  overflow-y:hidden;padding:3px 6px;gap:7px;scrollbar-width:thin}
-.battle.portrait .hand .card{width:134px;height:206px;flex:none}
-.battle.portrait .hand .card .art{height:96px}
-.battle.portrait .hand .card .cname{font-size:16px;height:32px;padding:3px 28px 2px 6px}
-.battle.portrait .hand .card .cost{width:27px;height:27px;font-size:18px}
-.battle.portrait .hand .card .body{height:50px;font-size:14.5px;line-height:1.28;padding:4px 6px}
-.battle.portrait .hand .card .stats{height:25px;font-size:19px}
-.battle.portrait .hand .card .kw,.battle.portrait .hand .card .rarity{top:31px;font-size:11px}
+/* 手札は横スクロール。1枚を小さくするより、めくって見える方が読める。
+   枠の高さはカードより必ず大きくしておく（足りないと名前とコストが切れる） */
+.battle.portrait .hand{height:216px;justify-content:flex-start;align-items:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 6px;gap:7px;scrollbar-width:thin}
+.battle.portrait .hand .card{width:128px;height:196px;flex:none}
+.battle.portrait .hand .card .art{height:90px}
+.battle.portrait .hand .card .cname{font-size:15px;height:30px;padding:3px 27px 2px 6px}
+.battle.portrait .hand .card .cost{width:26px;height:26px;font-size:17px}
+.battle.portrait .hand .card .body{height:46px;font-size:13.5px;line-height:1.26;padding:4px 6px}
+.battle.portrait .hand .card .stats{height:24px;font-size:18px}
+.battle.portrait .hand .card .kw,.battle.portrait .hand .card .rarity{top:29px;font-size:11px}
 .battle.portrait .hand .card.selectable:hover{transform:none}
 
 .battle.portrait .enemybar{min-height:92px;gap:9px;align-items:center}
@@ -186,7 +187,10 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .pip{width:12px;height:12px}
 .battle.portrait .meta{font-size:13px}
 /* 操作ボタンは1行に収まらないので折り返す */
-.battle.portrait .playerbar{min-height:52px;padding:5px 9px;flex-wrap:wrap;row-gap:5px}
+.battle.portrait .playerbar{min-height:52px;padding:5px 9px;flex-wrap:wrap;row-gap:6px}
+/* 指で押すボタンなので、鍛錬とターン終了は大きめに取る */
+.battle.portrait .playerbar .btn{font-size:18px;padding:11px 18px;min-height:50px;border-radius:10px}
+.battle.portrait .playerbar .btn.primary{font-size:19px;padding:11px 22px;font-weight:900}
 .battle.portrait .playerbar .face{width:36px;height:36px;font-size:20px}
 .battle.portrait .playerbar .who{font-size:15px}
 .battle.portrait .playerbar .meta{display:none}

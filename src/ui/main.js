@@ -1088,9 +1088,13 @@ function applyBattleScale() {
   const { w: DW, h: DH } = BATTLE_SIZE[mode];
   el.classList.toggle('portrait', mode === 'portrait');
   const s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+  // 縦持ちは横幅で倍率が決まるため、縦が余ることが多い。
+  // 余ったぶんは設計上の高さを伸ばして盤面に回す（画面をぴったり使い切る）。
+  const h = mode === 'portrait' ? Math.min(DH * 1.5, window.innerHeight / s) : DH;
+  el.style.height = `${h}px`;
   el.style.transform = `scale(${s})`;
   el.style.left = `${Math.max(0, (window.innerWidth - DW * s) / 2)}px`;
-  el.style.top = `${Math.max(0, (window.innerHeight - DH * s) / 2)}px`;
+  el.style.top = `${Math.max(0, (window.innerHeight - h * s) / 2)}px`;
 }
 let resizeTimer = 0;
 window.addEventListener('resize', () => {
@@ -1454,6 +1458,7 @@ function finishGame() {
 // ============================================================
 let ghost = null;
 function makeGhost(html, x, y) {
+  killGhost();                       // 前の残像が残っていれば必ず先に消す
   ghost = document.createElement('div');
   ghost.className = 'dragghost';
   ghost.innerHTML = html;
@@ -1461,7 +1466,14 @@ function makeGhost(html, x, y) {
   document.body.appendChild(ghost);
 }
 function moveGhost(x, y) { if (ghost) { ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; } }
-function killGhost() { if (ghost) { ghost.remove(); ghost = null; } }
+/**
+ * 変数で覚えている1枚だけでなく、DOM に居る残像を全部消す。
+ * 以前は上書きで参照を失った残像が二度と消せず、画面に残り続けていた。
+ */
+function killGhost() {
+  document.querySelectorAll('.dragghost').forEach(g => g.remove());
+  ghost = null;
+}
 
 function elementUnder(x, y, selector) {
   killGhostPointerEvents();
@@ -1471,7 +1483,8 @@ function elementUnder(x, y, selector) {
 function killGhostPointerEvents() { /* ghost は pointer-events:none なので何もしなくてよい */ }
 
 document.addEventListener('pointerdown', ev => {
-  if (!app.drag) killGhost();   // 何かの拍子に残った残像があれば、ここで必ず消す
+  if (app.drag) return;         // すでに掴んでいる指がある（2本目は無視する）
+  killGhost();                  // 何かの拍子に残った残像があれば、ここで必ず消す
   const handCard = ev.target.closest('[data-hand]');
   const deckCard = ev.target.closest('[data-deckcard]');
   const poolCard = ev.target.closest('[data-poolcard]');
