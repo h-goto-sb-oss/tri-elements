@@ -106,14 +106,14 @@ function portraitHtml(areaId, index, enemy) {
     return '<div class="portrait art">'
       + (bg ? '<div class="pbg" style="background-image:url(' + bg + ')"></div>' : '')
       + '<img class="pchar" src="' + src + '" alt="">'
-      + '<div class="picon">' + enemy.icon + '</div></div>';
+      + '</div>';
   }
   const faceCard = enemy.face ? card(enemy.face) : null;
   const fallback = faceCard
     ? '<div class="pface">' + cardArtSvg(faceCard) + '</div>'
     : '<div class="emoji">' + enemy.icon + '</div>';
   return '<div class="portrait" style="background:radial-gradient(circle at 50% 35%, ' + tint + ', #070a10 74%)">'
-    + fallback + '<div class="picon">' + enemy.icon + '</div></div>';
+    + fallback + '</div>';
 }
 
 /** エリアごとの背景。奥行きのあるシルエットを重ねる。 */
@@ -1126,20 +1126,36 @@ function battleLayout() {
   return window.innerWidth / window.innerHeight < 0.95 ? 'portrait' : 'wide';
 }
 
+// スマホのブラウザは、画面に触れるたびに上下のバーが出入りして
+// window.innerHeight が数十pxも変わる。そのたびに倍率を計算し直すと、
+// カードを持ったりタップしたりするだけで盤面がびくっと動いてしまう。
+// svh（バーが出ている状態＝いちばん狭いときの高さ）で測れば、
+// バーの出入りに関係なく同じ値になるので、盤面はその場から動かない。
+let vhProbe = null;
+function stableHeight() {
+  if (!vhProbe) {
+    vhProbe = document.createElement('div');
+    vhProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(vhProbe);
+  }
+  return vhProbe.offsetHeight || window.innerHeight;
+}
+
 function applyBattleScale() {
   const el = document.querySelector('.battle');
   if (!el) return;
   const mode = battleLayout();
   const { w: DW, h: DH } = BATTLE_SIZE[mode];
   el.classList.toggle('portrait', mode === 'portrait');
-  const s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+  const VW = window.innerWidth, VH = stableHeight();
+  const s = Math.min(VW / DW, VH / DH);
   // 縦持ちは横幅で倍率が決まるため、縦が余ることが多い。
   // 余ったぶんは設計上の高さを伸ばして盤面に回す（画面をぴったり使い切る）。
-  const h = mode === 'portrait' ? Math.min(DH * 1.5, window.innerHeight / s) : DH;
+  const h = mode === 'portrait' ? Math.min(DH * 1.5, VH / s) : DH;
   el.style.height = `${h}px`;
   el.style.transform = `scale(${s})`;
-  el.style.left = `${Math.max(0, (window.innerWidth - DW * s) / 2)}px`;
-  el.style.top = `${Math.max(0, (window.innerHeight - h * s) / 2)}px`;
+  el.style.left = `${Math.max(0, (VW - DW * s) / 2)}px`;
+  el.style.top = `${Math.max(0, (VH - h * s) / 2)}px`;
 }
 let resizeTimer = 0;
 window.addEventListener('resize', () => {
