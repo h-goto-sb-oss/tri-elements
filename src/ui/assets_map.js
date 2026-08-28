@@ -22,7 +22,7 @@ export const ENEMY_ART = {
   "a7:0": "/assets/enemies/area-07-01-yue.webp",
   "a7:1": "/assets/enemies/area-07-02-kairos.webp",
   "a7:2": "/assets/enemies/area-07-03-astel.webp",
-  "a8:0": "/assets/enemies/area-08-01-messenger.webp",
+  "a8:0": "/assets/enemies/area-08-01-nox.webp",
   "a8:1": "/assets/enemies/area-08-02-queen.webp",
   "a8:2": "/assets/enemies/area-08-03-astralis.webp"
 };
