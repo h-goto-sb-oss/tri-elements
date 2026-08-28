@@ -10,7 +10,7 @@ from PIL import Image
 SRC = 'assets/enemies'
 OUT = 'assets/art'
 SIZE = 512          # 出力サイズ（カードの絵枠は正方形）
-HEAD_BIAS = 0.06    # 頭の上にこれだけ余白を残す（切れると窮屈に見える）
+HEAD_BIAS = 0.16    # 頭の上にこれだけ余白を残す（カードの絵枠は上下が切られるので多め）
 
 # 敵キー → カードID は cards_chars.js の CHARACTER_OF から読む
 src = io.open('src/engine/cards_chars.js', encoding='utf-8').read()
