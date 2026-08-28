@@ -75,9 +75,36 @@ export function fxNumber(rect, value, kind = 'damage') {
   const sign = kind === 'heal' ? '+' : '−';
   // 画面上端に近いときは下向きに浮かせる（相手のライフは一番上にあるため）
   const up = cy(rect) > 120;
-  const node = spawn(`<div class="fxnum ${kind} ${up ? '' : 'down'}">${sign}${value}</div>`,
+  const big = kind === 'damage' && value >= 4 ? ' big' : '';
+  const node = spawn(`<div class="fxnum ${kind}${big} ${up ? '' : 'down'}">${sign}${value}</div>`,
     `left:${cx(rect)}px;top:${Math.max(46, cy(rect))}px;`);
-  kill(node, 1000);
+  kill(node, 1200);
+}
+
+/**
+ * 大ダメージの一撃。画面を拡大する代わりに、衝撃波と亀裂で重さを出す。
+ * value が大きいほど強く、長く見せる。
+ */
+export function fxHeavyHit(rect, value = 4) {
+  if (!rect) return;
+  const power = Math.max(0, Math.min(1, (value - 3) / 7));   // 4 → 0.14, 10 → 1
+  const wave = spawn('<div class="fxwave"></div>',
+    `left:${cx(rect)}px;top:${cy(rect)}px;--fxp:${1 + power};`);
+  kill(wave, 760);
+  if (!calm()) {
+    const flash = spawn('<div class="fxvignette"></div>', `--fxo:${0.28 + power * 0.4};`);
+    kill(flash, 620);
+    // 破片を放射状に飛ばす
+    const n = 8 + Math.round(power * 10);
+    for (let i = 0; i < n; i++) {
+      const a = (Math.PI * 2 * i) / n + Math.random() * 0.5;
+      const d = (60 + Math.random() * 70) * (1 + power);
+      const p = spawn('<div class="fxshard"></div>',
+        `left:${cx(rect)}px;top:${cy(rect)}px;--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px;`);
+      kill(p, 720);
+    }
+  }
+  fxShake(1 + power * 4);
 }
 
 /** 破壊の閃光 */
@@ -125,13 +152,17 @@ export function fxSlash(rect) {
 export function fxShake(power = 1) {
   const el = document.querySelector('.battle');
   if (!el || calm()) return;
+  // 盤面は scale(...) で画面に合わせてあるので、その倍率を足したまま揺らす。
+  // 以前は translate だけを指定していて倍率が消え、揺れるたびに
+  // 盤面が原寸へ跳ね上がる（画面アップに見える）不具合になっていた。
+  const base = el.style.transform || '';
   const p = Math.min(14, 4 + power * 2);
   el.animate([
-    { transform: 'translate(0,0)' },
-    { transform: `translate(${p}px,${-p * 0.6}px)` },
-    { transform: `translate(${-p * 0.8}px,${p * 0.5}px)` },
-    { transform: `translate(${p * 0.5}px,${p * 0.3}px)` },
-    { transform: 'translate(0,0)' },
+    { transform: `${base} translate(0,0)` },
+    { transform: `${base} translate(${p}px,${-p * 0.6}px)` },
+    { transform: `${base} translate(${-p * 0.8}px,${p * 0.5}px)` },
+    { transform: `${base} translate(${p * 0.5}px,${p * 0.3}px)` },
+    { transform: `${base} translate(0,0)` },
   ], { duration: 260, easing: 'ease-out' });
 }
 

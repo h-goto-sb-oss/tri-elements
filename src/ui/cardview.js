@@ -4,19 +4,22 @@
 import { ELEMENTS, KEYWORDS, card } from '../engine/cards.js';
 import { RARITY } from '../engine/rarity.js';
 import { cardArtSvg } from './art.js';
-import { effAtk, effDef, hasKw } from '../engine/game.js';
+import { effAtk, effDef, hasKw, maxAttacks } from '../engine/game.js';
 
 export const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** 手札・一覧用の縦カード */
 export function cardHtml(c, opts = {}) {
-  const cls = ['card', c.element, `r-${c.rarity || 'common'}`, opts.cls || ''].join(' ');
+  const sup = c.type === 'support';
+  const cls = ['card', c.element, `r-${c.rarity || 'common'}`,
+    sup ? 'is-support' : 'is-monster', opts.cls || ''].join(' ');
   const kw = c.keywords?.length
     ? `<div class="kw">${c.keywords.map(k => KEYWORDS[k].name).join('/')}</div>` : '';
-  const stats = c.type === 'monster'
-    ? `<div class="stats"><span class="atk">⚔${c.atk}</span><span class="def">🛡${c.def}</span></div>`
-    : '';
+  // モンスターは ⚔/🛡、サポートは種別の帯。下辺を見るだけで区別できる。
+  const stats = sup
+    ? `<div class="stats suptype">${c.equip ? '🔗 装備' : '✦ サポート'}</div>`
+    : `<div class="stats"><span class="atk">⚔${c.atk}</span><span class="def">🛡${c.def}</span></div>`;
   const r = RARITY[c.rarity || 'common'];
   return `<div class="${cls}" ${opts.attr || ''} data-card="${c.id}">
     <div class="shine"></div>
@@ -39,7 +42,9 @@ export function monsterHtml(m, side, slot, opts = {}) {
   const def = m.mode === 'defense';
   const cls = ['mini', c.element, `r-${c.rarity || 'common'}`,
     def ? 'defense' : 'attackmode',
-    opts.cls || '', (m.attacks || 0) > 0 && side === 0 ? 'exhausted' : ''].join(' ');
+    // 【連撃】は2回殴れるので、1回目のあとはまだ動ける。
+    // 攻撃回数を使い切ったときだけ沈める。
+    opts.cls || '', (m.attacks || 0) >= maxAttacks(m) && side === 0 ? 'exhausted' : ''].join(' ');
   const buffed = (m.atk + m.tempAtk) > c.atk || (m.def + m.tempDef) > c.def;
   return `<div class="${cls}" data-side="${side}" data-slot="${slot}" data-card="${c.id}">
     <div class="inner">

@@ -55,7 +55,7 @@ export const SET2 = [
 
   // ---------- 水 8 ----------
   M('x_w1', 'テンタクルス', 'water', 2, 2, 3, 'kraken', {
-    set: 2, tier: 2, text: '【登場時】相手モンスター1体の攻撃力を-2する。',
+    set: 2, tier: 2, text: '【登場時】攻撃力が最も高い相手モンスター1体の攻撃力を-2する。',
     onSummon: [{ op: 'buff', side: 'enemy', target: 'one', atk: -2, def: 0, duration: 'permanent' }],
     flavor: '掴まれた腕は、二度と上がらない。',
   }),
@@ -122,7 +122,7 @@ export const SET2 = [
     flavor: '踏まれた場所から芽が出る。',
   }),
   M('x_g2', '若木の戦士', 'grass', 2, 3, 3, 'plant', {
-    set: 2, tier: 2, text: '【登場時】自分のモンスター1体を+0/+2する。',
+    set: 2, tier: 2, text: '【登場時】攻撃力が最も高い自分のモンスター1体を+0/+2する。',
     onSummon: [{ op: 'buff', side: 'self', target: 'one', atk: 0, def: 2, duration: 'permanent' }],
     flavor: 'まだ細いが、折れない。',
   }),

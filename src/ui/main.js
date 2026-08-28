@@ -1323,8 +1323,9 @@ async function runActionFx(g, pi, action) {
       Audio.playSe('se_hit');
       Fx.fxNumber(snap.bar[e.p], e.v, 'damage');
       Fx.fxHit(e.p, snap);
-      if (e.v >= 4 && !shook) { Fx.fxShake(e.v / 3); shook = 1; }
-      await Fx.wait(150);
+      // 大ダメージは画面を拡大せず、衝撃の演出を強めて「間」で見せる
+      if (e.v >= 4 && !shook) { Fx.fxHeavyHit(snap.bar[e.p], e.v); shook = 1; }
+      await Fx.wait(e.v >= 4 ? 260 + Math.min(420, e.v * 45) : 150);
     } else if (e.kind === 'heal') {
       Audio.playSe('se_heal');
       Fx.fxNumber(snap.bar[e.p], e.v, 'heal');

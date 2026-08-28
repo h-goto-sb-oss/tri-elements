@@ -110,7 +110,7 @@ const GRASS_MONSTERS = [
   }),
   M('g03', 'キノコ戦士', 'grass', 2, 3, 4, 'plant', { tier: 1, flavor: '胞子まみれの小さな盾。' }),
   M('g04', '蔦絡みの精霊', 'grass', 2, 3, 3, 'spirit', {
-    tier: 1, text: '【登場時】自分のモンスター1体を+1/+1する。',
+    tier: 1, text: '【登場時】攻撃力が最も高い自分のモンスター1体を+1/+1する。',
     onSummon: [{ op: 'buff', side: 'self', target: 'one', atk: 1, def: 1, duration: 'permanent' }],
     flavor: '絡まれた者は、なぜか強くなる。',
   }),
@@ -215,13 +215,17 @@ const SUPPORTS = [
     tier: 1, text: 'カードを1枚引く。',
     effects: [{ op: 'draw', side: 'self', n: 1 }], flavor: '次の一手は、めくれば分かる。',
   }),
-  S('sn3', '防御指令', 'none', 1, 'flagblue', {
-    tier: 1, text: '自分のモンスター1体を防御モードにする（モード変更回数を消費しない）。',
-    effects: [{ op: 'setMode', side: 'self', mode: 'defense', target: 'one', free: true }], flavor: '構えろ！',
+  // 自分のモードは元から自由に変えられるので、相手のモードをいじる札にした。
+  // そのぶん強いのでコストは 1 → 2。
+  S('sn3', '威圧', 'none', 2, 'flagblue', {
+    tier: 1, text: '相手のモンスター1体を防御モードにする。攻撃を1体ぶん止められる。',
+    effects: [{ op: 'setMode', side: 'enemy', mode: 'defense', target: 'one', free: true }],
+    flavor: '睨まれた者は、一歩も前に出られない。',
   }),
-  S('sn4', '突撃指令', 'none', 1, 'flagred', {
-    tier: 1, text: '自分のモンスター1体を攻撃モードにする（モード変更回数を消費しない）。',
-    effects: [{ op: 'setMode', side: 'self', mode: 'attack', target: 'one', free: true }], flavor: '走れ！',
+  S('sn4', '挑発', 'none', 2, 'flagred', {
+    tier: 1, text: '相手のモンスター1体を攻撃モードにする。守りを剥がせる。',
+    effects: [{ op: 'setMode', side: 'enemy', mode: 'attack', target: 'one', free: true }],
+    flavor: '構えを解かせてしまえば、あとは早い。',
   }),
   S('sn5', '鋼の盾', 'none', 2, 'shield', {
     tier: 1, equip: true, text: '装備：自分のモンスター1体を+0/+3する。場に残る。',

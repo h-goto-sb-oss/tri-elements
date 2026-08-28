@@ -41,6 +41,22 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 }
 .card.fire{border-color:#8c3a1c}.card.water{border-color:#1c5b8c}
 .card.grass{border-color:#2a6b39}.card.none{border-color:#6b5c34}
+
+/* ------------------------------------------------------------
+   サポートは一目でモンスターと見分けられるようにする。
+   枠の形（角のカット）・二重線・下辺の帯の3点で違いを出す。
+   ------------------------------------------------------------ */
+.card.is-support{border-style:double;border-width:4px;
+  border-radius:10px 10px 3px 3px;
+  background:linear-gradient(180deg,#2b2740,#171426)}
+.card.is-support.fire{border-color:#a2542b}.card.is-support.water{border-color:#2f6f9e}
+.card.is-support.grass{border-color:#3a7f4a}.card.is-support.none{border-color:#8a7440}
+.card.is-support .art{background:#0a0812}
+/* 左上を斜めに落として、シルエットでも見分けられるように */
+.card.is-support::before{content:'';position:absolute;left:-1px;top:-1px;width:15px;height:15px;
+  background:linear-gradient(135deg,#f2c15bcc 0 46%,transparent 46%);z-index:4;pointer-events:none}
+.card .stats.suptype{justify-content:center;letter-spacing:.06em;font-size:10px;
+  color:#ffe0a6;background:linear-gradient(0deg,#000000cc,#00000055)}
 .card .cname{font-size:10.5px;font-weight:800;padding:3px 22px 2px 5px;line-height:1.15;
   height:25px;display:flex;align-items:center;text-shadow:0 1px 2px #000;position:relative;z-index:2}
 .card .cost{position:absolute;top:2px;right:2px;width:21px;height:21px;border-radius:50%;
@@ -854,11 +870,11 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .ipanel.enemyplay{border-color:#c9683c;box-shadow:0 0 0 1px #c9683c44,0 0 18px #c9683c33;
   animation:ipin .28s cubic-bezier(.2,1.3,.4,1)}
 @keyframes ipin{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:none}}
-.ip-banner{font-size:12.5px;font-weight:900;letter-spacing:.04em;color:#ffcaa8;text-align:center;
+.ip-banner{font-size:13.5px;font-weight:900;letter-spacing:.04em;color:#ffcaa8;text-align:center;
   background:#3a1c10;border:1px solid #c9683c;border-radius:7px;padding:4px 8px;line-height:1.4}
-.ip-title{font-size:14px;font-weight:800;color:var(--gold)}
-.ip-hint{font-size:11.5px;color:var(--muted);line-height:1.6}
-.ip-legend{display:flex;flex-direction:column;gap:10px;margin-top:6px;font-size:11.5px;line-height:1.65;color:#c3d2e2}
+.ip-title{font-size:16px;font-weight:800;color:var(--gold)}
+.ip-hint{font-size:13px;color:var(--muted);line-height:1.65}
+.ip-legend{display:flex;flex-direction:column;gap:10px;margin-top:6px;font-size:13px;line-height:1.7;color:#c3d2e2}
 .ip-legend b{display:block;margin-bottom:2px}
 .atkc{color:#ff9c6b}.defc{color:#7fc4ff}.gold{color:var(--gold)}
 /* 直近に使われたカードを2件ぶん積む表示 */
@@ -866,21 +882,21 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .ip-entry{display:flex;flex-direction:column;gap:5px;padding:7px;border-radius:10px;
   background:#0f1926;border:1px solid #2b3a4d}
 .ip-entry.foe{border-color:#c9683c88;background:#1a1210}
-.ip-entry .ip-banner{font-size:11.5px;padding:3px 7px}
+.ip-entry .ip-banner{font-size:12.5px;padding:4px 8px}
 .ip-entry.mine .ip-banner{color:#bfe0ff;background:#132434;border-color:#3c72c9}
 .ip-row{display:flex;gap:8px;align-items:flex-start}
 .ip-row .card{flex:none}
 .ip-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.ip-side .ip-name{text-align:left;font-size:13.5px}
-.ip-side .ip-meta{justify-content:flex-start;gap:6px;font-size:10.5px}
-.ip-side .ip-text{font-size:11px;padding:5px 7px;line-height:1.55}
-.ip-side .ip-kw{font-size:10px;padding:5px 6px}
-.ip-name{font-size:15px;font-weight:900;text-align:center}
-.ip-meta{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;font-size:11px;color:var(--muted)}
-.ip-text{font-size:12px;line-height:1.7;color:#d3dfec;background:#101a26;border-radius:8px;padding:7px 9px}
-.ip-kw{font-size:11px;line-height:1.6;color:#a8bdd4;background:#111a24;border-radius:8px;padding:6px 8px}
+.ip-side .ip-name{text-align:left;font-size:15px}
+.ip-side .ip-meta{justify-content:flex-start;gap:6px;font-size:12px}
+.ip-side .ip-text{font-size:12.5px;padding:6px 8px;line-height:1.6}
+.ip-side .ip-kw{font-size:11.5px;padding:6px 7px}
+.ip-name{font-size:17px;font-weight:900;text-align:center}
+.ip-meta{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;font-size:12.5px;color:var(--muted)}
+.ip-text{font-size:13.5px;line-height:1.75;color:#d3dfec;background:#101a26;border-radius:8px;padding:8px 10px}
+.ip-kw{font-size:12.5px;line-height:1.65;color:#a8bdd4;background:#111a24;border-radius:8px;padding:7px 9px}
 .ip-kw b{color:var(--gold)}
-.ip-flavor{font-size:11px;color:#7b8ca1;font-style:italic;text-align:center}
+.ip-flavor{font-size:12.5px;color:#7b8ca1;font-style:italic;text-align:center}
 
 /* ============================================================
    狭い画面（スマホ縦持ちなど）
@@ -1010,3 +1026,31 @@ button{font-family:inherit;color:inherit;cursor:pointer}
    手札は横スワイプでめくれる必要があるので、縦方向だけこちらで受け取る。 */
 .battle .hand .card{touch-action:pan-x}
 .battle .mini,.battle .slot{touch-action:none}
+
+/* ============================================================
+   大ダメージの演出
+   画面を拡大するのはやめて、衝撃波・破片・周縁の赤みで重さを出す。
+   ============================================================ */
+.fxnum.big{font-size:56px;text-shadow:0 0 18px #ff2d45,0 4px 10px #000}
+.fxwave{position:absolute;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;
+  border:4px solid #ff6a78;box-shadow:0 0 24px #ff2d4588,inset 0 0 18px #ff2d4566;
+  animation:fxwave .62s cubic-bezier(.15,.75,.3,1) forwards}
+@keyframes fxwave{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.25)}
+  18%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(calc(6 * var(--fxp,1)))}
+}
+.fxshard{position:absolute;width:7px;height:7px;border-radius:2px;background:#ff8a94;
+  box-shadow:0 0 8px #ff2d45aa;animation:fxshard .62s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes fxshard{
+  0%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.3)}
+}
+.fxvignette{position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 42%,#ff1d33 130%);
+  animation:fxvig .55s ease-out forwards}
+@keyframes fxvig{0%{opacity:0}22%{opacity:var(--fxo,.4)}100%{opacity:0}}
+
+@media (prefers-reduced-motion:reduce){
+  .fxwave,.fxshard,.fxvignette{display:none}
+}
