@@ -190,7 +190,7 @@ export const AREAS = [
         ['g01', 3], ['g03', 3], ['x_g2', 2], ['g07', 2],
         ['sf2', 2], ['sg1', 3], ['sn6', 2],
       ]), { face: 'g07', weak: 'water', noise: 0, life: 22, profile: 'aggro', desc: '炎と草の合わせ技。隙がない。' }),
-      E('世界樹の守護者', '🌳', mk([
+      E('世界樹の守護者 ヴェルダ', '🌳', mk([
         ['g01', 2], ['x_g2', 3], ['x_g3', 3], ['g07', 3], ['x_g4', 2], ['x_g5', 3], ['g09', 3], ['g10', 2],
         ['x_sg4', 3], ['x_sg1', 3], ['sg1', 3],
       ]), { face: 'g10', weak: 'fire', noise: 0, life: 26, startCost: 1, desc: 'エリアボス。ユグドラの加護を受ける。' }),
@@ -199,7 +199,7 @@ export const AREAS = [
   {
     id: 'a5', name: '三属の頂', desc: '三つの属性が交わる最果て。ここまでのカードでは足りない。',
     enemies: [
-      E('双子の術士', '👯', mk([
+      E('双子の術士 フレア & ミスト', '👯', mk([
         ['f01', 3], ['f03', 3], ['f05', 3], ['x_f2', 2], ['f09', 2],
         ['x_w1', 3], ['x_w4', 3], ['x_g3', 3],
         ['sf3', 3], ['x_sf1', 3], ['sn6', 2],
@@ -222,7 +222,7 @@ export const AREAS = [
         face: 'z_w4', weak: 'grass', noise: 1, life: 28, startCost: 1,
         desc: '【観測】で必要な星具を探し当ててくる。壁は薄いので押し切れる。',
       }),
-      E('歯車の巡礼者', '⚙️', [...D_PILGRIM], {
+      E('歯車の巡礼者 カルダン', '⚙️', [...D_PILGRIM], {
         face: 'z_sn1', noise: 0, life: 26, startCost: 1,
         desc: '【加速】と装備で星具を回す。育ちきる前に叩きたい。',
       }),
@@ -252,11 +252,11 @@ export const AREAS = [
   {
     id: 'a8', name: '王たちの座', desc: '門の向こう側。足元も空も星に満ちた、王たちの終着点。',
     enemies: [
-      E('無貌の使者', '🎭', [...D_FACELESS], {
+      E('無貌の使者 ノクス', '🎭', [...D_FACELESS], {
         face: 'z_sn3', noise: 0, life: 28, startCost: 1,
         desc: '【天秤の裁定】で手札を平らにしてくる。溜め込む戦い方は通じない。',
       }),
-      E('双極の女王', '♊', [...D_QUEEN], {
+      E('双極の女王 ディオーネ', '♊', [...D_QUEEN], {
         face: 'z_lw1', noise: 0, life: 30, startCost: 1,
         desc: '炎の打点と水の妨害を半身ずつ宿す。攻守どちらも隙がない。',
       }),
@@ -310,13 +310,15 @@ export function openPack(type, rand = Math.random) {
     const rarity = pickWeighted(i === t.size - 1 ? t.lastSlot : t.weights, rand);
     const wantSet2 = rand() < (t.set2Rate || 0);
     const wantSet = t.set || (wantSet2 ? 2 : 1);
-    let pool = ALL_CARDS.filter(c => c.rarity === rarity && c.set === wantSet);
+    // キャラクターカードは隠しなのでパックからは絶対に出さない
+    const packable = ALL_CARDS.filter(c => !c.hidden);
+    let pool = packable.filter(c => c.rarity === rarity && c.set === wantSet);
     // その弾に該当レア度が無ければ、同じ弾の1段下のレア度へ落とす（弾の壁は越えない）
     const order = ['legend', 'epic', 'rare', 'uncommon', 'common'];
     for (let k = order.indexOf(rarity) + 1; !pool.length && k < order.length; k++) {
-      pool = ALL_CARDS.filter(c => c.rarity === order[k] && c.set === wantSet);
+      pool = packable.filter(c => c.rarity === order[k] && c.set === wantSet);
     }
-    if (!pool.length) pool = ALL_CARDS.filter(c => c.rarity === 'common');
+    if (!pool.length) pool = packable.filter(c => c.rarity === 'common');
     out.push(pool[Math.floor(rand() * pool.length)].id);
   }
   return out;

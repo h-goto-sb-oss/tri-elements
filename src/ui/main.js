@@ -3,6 +3,7 @@
 // ============================================================
 import { ALL_CARDS, card, ELEMENTS, KEYWORDS } from '../engine/cards.js';
 import { RARITY } from '../engine/rarity.js';
+import { CHARACTER_OF, CHARACTER_WINS_NEEDED } from '../engine/cards_chars.js';
 import {
   createGame, mulligan, applyAction, legalAttackTargets, canSummon, canPlaySupport,
   canChangeMode, canAttack, supportNeedsTarget, fieldMonsters, effAtk, effDef,
@@ -226,7 +227,7 @@ function renderTitle() {
         <button class="title-action main" data-go="adventure"><span class="ta-icon">⚔️</span><span><b>冒険へ出る</b><small>物語を進める</small></span></button>
         <button class="title-action" data-go="free"><span class="ta-icon">🏟️</span><span><b>フリーバトル</b><small>好きな相手と対戦</small></span></button>
         <button class="title-action" data-go="deck"><span class="ta-icon">🃏</span><span><b>デッキ編集</b><small>30枚を編成</small></span></button>
-        <button class="title-action" data-go="collection"><span class="ta-icon">📖</span><span><b>カード図鑑</b><small>全${ALL_CARDS.length}種を眺める</small></span></button>
+        <button class="title-action" data-go="collection"><span class="ta-icon">📖</span><span><b>カード図鑑</b><small>全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める</small></span></button>
         <button class="title-action" data-go="rules"><span class="ta-icon">📜</span><span><b>ルール説明</b><small>遊び方を確認</small></span></button>
         <button class="title-action quiet" data-go="settings"><span class="ta-icon">⚙️</span><span><b>設定</b><small>音量・プロフィール</small></span></button>
       </div>
@@ -502,14 +503,18 @@ function renderCollection() {
     1: { name: '第1弾', sub: '三属の目覚め' },
     2: { name: '第2弾', sub: '嵐の来訪者' },
     3: { name: '第3弾', sub: '星辰の門' },
+    4: { name: 'キャラクター', sub: '極の果てに現れる者たち' },
   };
-  const sets = [...new Set(ALL_CARDS.map(c => c.set || 1))].sort((a, b) => a - b);
+  // キャラクターカードは隠し。1枚でも入手するまで弾のタブごと出さない
+  const charOwned = ALL_CARDS.filter(c => c.hidden && app.save.collection[c.id]).length;
+  const visible = ALL_CARDS.filter(c => !c.hidden || charOwned);
+  const sets = [...new Set(visible.map(c => c.set || 1))].sort((a, b) => a - b);
   const activeSet = sets.includes(app.collectionSet) ? app.collectionSet : sets[0];
-  const setCards = ALL_CARDS.filter(c => (c.set || 1) === activeSet);
+  const setCards = visible.filter(c => (c.set || 1) === activeSet);
   const setHave = setCards.filter(c => app.save.collection[c.id]).length;
   const copies = setCards.reduce((n, c) => n + (app.save.collection[c.id] || 0), 0);
   const tabs = sets.map(s => {
-    const cards = ALL_CARDS.filter(c => (c.set || 1) === s);
+    const cards = visible.filter(c => (c.set || 1) === s);
     const have = cards.filter(c => app.save.collection[c.id]).length;
     const info = setInfo[s] || { name: `第${s}弾`, sub: '' };
     return `<button class="dexset ${s === activeSet ? 'on' : ''}" data-collectionset="${s}">
@@ -525,6 +530,11 @@ function renderCollection() {
       <div class="dexgroup-head"><h3>${label}</h3><span>${have}/${cs.length}種</span></div>
       <div class="grid dexgrid">${cs.map(c => {
         const own = app.save.collection[c.id] || 0;
+        // 隠しカードは、入手するまで中身を見せない（何が居るかも伏せる）
+        if (c.hidden && !own) {
+          return `<div class="poolcard"><div class="card secretcard"><div class="secretmark">？</div></div>
+            <div class="own">未入手</div></div>`;
+        }
         return `<div class="poolcard">${cardHtml(c, { cls: own ? 'selectable' : 'disabled' })}
           <div class="own">${own ? '×' + own : '未所持'}</div></div>`;
       }).join('')}</div></section>`;
@@ -1047,6 +1057,12 @@ function resultOverlay() {
     ${r.reward ? `<p style="color:var(--gold);font-size:15px">報酬: ${PACK_TYPES[r.reward].name} を1つ獲得！</p>` : ''}
     ${r.dust ? `<p style="color:var(--gold);font-size:15px">星屑 ✦${r.dust} を獲得！（所持 ✦${app.save.stardust}）</p>` : ''}
     ${r.unlocked ? `<p style="color:#8fe0a8">「${esc(r.unlocked)}」が解放されました！</p>` : ''}
+    ${r.charCard ? `<div class="charget">
+      <div class="charget-label">✦ キャラクターカードを入手 ✦</div>
+      ${cardHtml(card(r.charCard), { cls: 'big' })}
+      <div class="charget-name">${esc(card(r.charCard).name)}</div>
+    </div>` : ''}
+    ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります</p>` : ''}
     <div class="row-btn">
       <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? 'フリーバトルへ戻る' : '冒険へ戻る'}</button>
       <button class="btn" data-rematch>もう一度</button>
@@ -1197,8 +1213,15 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   app.enemyKey = `${area.id}:${enemyIndex}`;
   app.result = null; app.sel = null; app.popup = null; app.hint = ''; app.detail = null;
   const seed = (Math.random() * 1e9) | 0;
+  // フリーバトルの「極」では、そのキャラ自身のカードをデッキに混ぜてくる。
+  // 狙っているカードを手に入れる前に見られる、という導線でもある。
+  let foeDeck = [...enemy.deck];
+  const selfCard = CHARACTER_OF[app.enemyKey];
+  if (free && app.freeDiff === 'extreme' && selfCard) {
+    foeDeck = [selfCard, ...foeDeck.slice(1)];
+  }
   app.game = createGame({
-    decks: [[...app.save.deck], [...enemy.deck]],
+    decks: [[...app.save.deck], foeDeck],
     seed, names: [myName(), enemy.name],
     startCost: [0, (enemy.startCost || 0) + (diff ? diff.cost : 0)],
   });
@@ -1326,7 +1349,11 @@ async function runActionFx(g, pi, action) {
   if (action.type === 'summon') {
     const slot = g.players[pi].field.findIndex(m => m && m.uid === Math.max(
       ...g.players[pi].field.filter(Boolean).map(x => x.uid)));
-    if (slot >= 0) Fx.fxSummon(pi, slot);
+    // レジェンドだけは専用の召喚演出にする
+    if (slot >= 0 && sumCard && sumCard.rarity === 'legend') {
+      Audio.playSe('se_rare', { gap: 0 });
+      await Fx.fxLegendSummon(pi, slot, sumCard.name);
+    } else if (slot >= 0) Fx.fxSummon(pi, slot);
     // 【登場時】が仕事をしたら効果音を足す
     if (entries.some(e => e.kind !== 'summon' && e.kind !== 'endturn')) {
       Audio.playSe('se_effect', { gap: 120 });
@@ -1444,11 +1471,28 @@ function finishGame() {
     const key = app.enemyKey;
     app.save.freeStats = app.save.freeStats || {};
     const st = app.save.freeStats[key] || { w: 0, l: 0 };
-    if (win) { st.w++; dust = FREE_DIFFICULTY[app.free.difficulty].dust; app.save.stardust = (app.save.stardust || 0) + dust; }
-    else st.l++;
+    let charCard = null, charLeft = 0;
+    if (win) {
+      st.w++;
+      dust = FREE_DIFFICULTY[app.free.difficulty].dust;
+      app.save.stardust = (app.save.stardust || 0) + dust;
+      // 「極」で本人を規定回数倒すと、そのキャラのカードが手に入る
+      if (app.free.difficulty === 'extreme') {
+        st.xw = (st.xw || 0) + 1;
+        const cid = CHARACTER_OF[key];
+        if (cid && !app.save.collection[cid]) {
+          if (st.xw >= CHARACTER_WINS_NEEDED) {
+            app.save.collection[cid] = 1;
+            charCard = cid;
+          } else {
+            charLeft = CHARACTER_WINS_NEEDED - st.xw;
+          }
+        }
+      }
+    } else st.l++;
     app.save.freeStats[key] = st;
     writeSave(app.save);
-    app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true };
+    app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true, charCard, charLeft };
     Audio.playSe(win ? 'se_win' : 'se_lose');
     return render();
   }

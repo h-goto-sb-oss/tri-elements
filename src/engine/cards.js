@@ -7,6 +7,7 @@
 import { M, S } from './cardbuild.js';
 import { SET2 } from './cards_set2.js';
 import { SET3 } from './cards_set3.js';
+import { CHARACTERS } from './cards_chars.js';
 import { rarityOf } from './rarity.js';
 
 export const ELEMENTS = {
@@ -25,6 +26,8 @@ export const KEYWORDS = {
   double: { name: '連撃', desc: '1ターンに2回攻撃できる。' },
   accelerate: { name: '加速', desc: '召喚したとき、自分の最大コストを1増やす（上限10）。' },
   observe: { name: '観測', desc: '登場時、山札の上から3枚を見て1枚を手札に加え、残りを山札の底へ戻す。' },
+  dual:   { name: '双属', desc: '炎としても水としても扱う。有利を取りやすいが、不利も受けやすい。' },
+  tri:    { name: '三属', desc: '三属性すべてとして扱う。常に有利を取れるが、常に不利も受ける。' },
 };
 
 // ------------------------------------------------------------
@@ -255,8 +258,11 @@ const SUPPORTS = [
   }),
 ];
 
-export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS, ...SET2, ...SET3]
+export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS,
+  ...SET2, ...SET3, ...CHARACTERS]
   .map(c => ({ ...c, rarity: rarityOf(c.id) }));
+/** パックにも図鑑にも普段は出ないカード（キャラクターカード） */
+export const HIDDEN_CARDS = ALL_CARDS.filter(c => c.hidden);
 export const SET1_CARDS = ALL_CARDS.filter(c => c.set === 1);
 export const SET2_CARDS = ALL_CARDS.filter(c => c.set === 2);
 export const SET3_CARDS = ALL_CARDS.filter(c => c.set === 3);

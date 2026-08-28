@@ -184,6 +184,39 @@ export function fxSummon(side, slot) {
   kill(node, 620);
 }
 
+/**
+ * レジェンドの召喚。
+ * 金の紋章が割れて、光の柱と星が降りてくる。
+ */
+export async function fxLegendSummon(side, slot, name = '') {
+  const el = document.querySelector(`.mini[data-side="${side}"][data-slot="${slot}"]`);
+  const r = el ? el.getBoundingClientRect() : null;
+  if (!r) return;
+  const veil = spawn('<div class="fxlegveil"></div>');
+  kill(veil, 1400);
+  const pillar = spawn('<div class="fxlegpillar"></div>',
+    `left:${cx(r)}px;top:${cy(r)}px;height:${Math.max(window.innerHeight, 900)}px;`);
+  kill(pillar, 1100);
+  const seal = spawn('<div class="fxlegseal"></div>', `left:${cx(r)}px;top:${cy(r)}px;`);
+  kill(seal, 1100);
+  if (!calm()) {
+    for (let i = 0; i < 18; i++) {
+      const a = (Math.PI * 2 * i) / 18 + Math.random() * 0.4;
+      const d = 70 + Math.random() * 90;
+      const p = spawn('<div class="fxlegstar"></div>',
+        `left:${cx(r)}px;top:${cy(r)}px;--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px;` +
+        `animation-delay:${(i % 6) * 40}ms;`);
+      kill(p, 1100);
+    }
+  }
+  if (name) {
+    const label = spawn(`<div class="fxlegname">${name}</div>`, `left:${cx(r)}px;top:${r.top - 18}px;`);
+    kill(label, 1300);
+  }
+  fxShake(2);
+  await wait(760);
+}
+
 /** ライフバーを光らせる */
 export function fxHit(side, snap) {
   const r = snap.bar[side];

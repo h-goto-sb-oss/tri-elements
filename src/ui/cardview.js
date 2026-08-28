@@ -14,8 +14,11 @@ export function cardHtml(c, opts = {}) {
   const sup = c.type === 'support';
   const cls = ['card', c.element, `r-${c.rarity || 'common'}`,
     sup ? 'is-support' : 'is-monster', opts.cls || ''].join(' ');
-  const kw = c.keywords?.length
-    ? `<div class="kw">${c.keywords.map(k => KEYWORDS[k].name).join('/')}</div>` : '';
+  // 【双属】【三属】はキーワード欄と同じ場所に出す
+  const multi = c.elements && c.elements.length > 1
+    ? [c.elements.length >= 3 ? '三属' : '双属'] : [];
+  const kwNames = [...multi, ...(c.keywords || []).map(k => KEYWORDS[k].name)];
+  const kw = kwNames.length ? `<div class="kw">${kwNames.join('/')}</div>` : '';
   // モンスターは ⚔/🛡、サポートは種別の帯。下辺を見るだけで区別できる。
   const stats = sup
     ? `<div class="stats suptype">${c.equip ? '🔗 装備' : '✦ サポート'}</div>`
@@ -25,7 +28,8 @@ export function cardHtml(c, opts = {}) {
     <div class="shine"></div>
     <div class="cost">${c.cost}</div>
     <div class="cname">${esc(c.name)}</div>
-    <div class="art" ${opts.artAttr || ''}>${cardArtSvg(c)}<div class="elem">${ELEMENTS[c.element].icon}</div></div>
+    <div class="art" ${opts.artAttr || ''}>${cardArtSvg(c)}<div class="elem">${
+      (c.elements || [c.element]).map(e => ELEMENTS[e].icon).join('')}</div></div>
     ${kw}
     <div class="rarity" style="color:${r.color};border-color:${r.color}66">${r.short}</div>
     <div class="body">${esc(c.text || c.flavor)}</div>

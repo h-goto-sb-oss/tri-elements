@@ -66,6 +66,16 @@ export const RARITY_OF = {
   z_sn1: 'uncommon', z_sn3: 'uncommon',
   // レジェンド
   z_lf1: 'legend', z_lw1: 'legend', z_lg1: 'legend', z_ln1: 'legend',
+
+  // ---------------- キャラクターカード（隠し・全てレジェンド） ----------------
+  c_toto: 'legend', c_garo: 'legend', c_morley: 'legend',
+  c_pirika: 'legend', c_gou: 'legend', c_varga: 'legend',
+  c_mina: 'legend', c_val: 'legend', c_nept: 'legend',
+  c_rim: 'legend', c_yona: 'legend', c_verda: 'legend',
+  c_twins: 'legend', c_nameless: 'legend', c_triades: 'legend',
+  c_riina: 'legend', c_cardan: 'legend', c_ordo: 'legend',
+  c_yue: 'legend', c_kairos: 'legend', c_astel: 'legend',
+  c_nox: 'legend', c_dione: 'legend', c_astralis: 'legend',
 };
 
 export const rarityOf = id => RARITY_OF[id] || 'common';

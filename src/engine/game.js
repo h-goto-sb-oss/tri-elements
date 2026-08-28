@@ -66,9 +66,18 @@ export const eff = m => ({ atk: Math.max(0, m.atk + m.tempAtk), def: Math.max(0,
 export const effAtk = m => Math.max(0, m.atk + m.tempAtk);
 export const effDef = m => Math.max(0, m.def + m.tempDef);
 
+/** そのカードが名乗っている属性。【双属】【三属】は複数返る */
+export const elementsOf = c => c.elements || [c.element];
+
+/**
+ * 属性有利の判定。
+ * 【双属】【三属】は名乗っている属性のどれかで有利を取れれば有利。
+ * 逆に、守る側が複数属性なら、そのどれかを突かれれば不利を受ける。
+ * （常に有利を取れるが、常に不利も受ける、という設計）
+ */
 export function elementBonus(state, atkM, defM) {
-  const a = card(atkM.id).element, d = card(defM.id).element;
-  return STRONG_AGAINST[a] === d ? state.rules.elementBonus : 0;
+  const A = elementsOf(card(atkM.id)), D = elementsOf(card(defM.id));
+  return A.some(a => D.some(d => STRONG_AGAINST[a] === d)) ? state.rules.elementBonus : 0;
 }
 export const hasKw = (m, kw) => card(m.id).keywords.includes(kw) || (m.grants || []).includes(kw);
 export const maxAttacks = m => (hasKw(m, 'double') ? 2 : 1);
@@ -249,7 +258,9 @@ function applyOp(state, pi, op, ctx) {
     }
     case 'defAsAtk': {
       const tps = resolveSide(pi, op.side || 'self'), tp = state.players[tps];
-      const list = op.target === 'all' ? fieldMonsters(tp).map(x => x.i)
+      const list = op.target === 'self'
+        ? [tp.field.indexOf(ctx.self)].filter(i => i >= 0)
+        : op.target === 'all' ? fieldMonsters(tp).map(x => x.i)
         : [pickSlot(state, pi, { ...op, side: op.side || 'self' }, ctx)].filter(x => x != null);
       list.forEach(sl => {
         const m = tp.field[sl]; if (!m) return;
@@ -273,6 +284,19 @@ function applyOp(state, pi, op, ctx) {
       const count = slots.length;
       slots.forEach(sl => tp.field[sl] && destroyMonster(state, tps, sl));
       if (count) damagePlayer(state, tps, count * (op.multiplier || 1), ctx.sourceName);
+      break;
+    }
+    // 相手に手札を1枚捨てさせる。いちばん重いカードから落とす
+    case 'discardHand': {
+      const tp = state.players[resolveSide(pi, op.side || 'enemy')];
+      for (let k = 0; k < (op.n || 1); k++) {
+        if (!tp.hand.length) break;
+        let worst = 0, score = -Infinity;
+        tp.hand.forEach((id, i) => { const v = card(id).cost; if (v > score) { score = v; worst = i; } });
+        const [id] = tp.hand.splice(worst, 1);
+        tp.grave.push(id);
+        log(state, 'info', `${tp.name} は ${card(id).name} を捨てた`);
+      }
       break;
     }
     case 'bounce': {
@@ -302,11 +326,32 @@ function applyOp(state, pi, op, ctx) {
     }
     case 'stun': {
       const tps = resolveSide(pi, op.side), tp = state.players[tps];
-      const sl = pickSlot(state, pi, op, ctx);
-      if (sl == null) break;
-      const m = tp.field[sl]; if (!m) break;
-      m.stunnedUntil = Math.max(m.stunnedUntil || -1, state.turn + 1);
-      log(state, 'info', `${card(m.id).name} は次の自分のターンに攻撃できない`);
+      const list = op.target === 'all'
+        ? fieldMonsters(tp).map(x => x.i)
+        : [pickSlot(state, pi, op, ctx)].filter(x => x != null);
+      list.forEach(sl => {
+        const m = tp.field[sl]; if (!m) return;
+        m.stunnedUntil = Math.max(m.stunnedUntil || -1, state.turn + 1);
+        log(state, 'info', `${card(m.id).name} は次の自分のターンに攻撃できない`);
+      });
+      break;
+    }
+    // 無貌の使者：相手の一番強いモンスターの攻守を写し取り、少しだけ上回る
+    case 'copyStats': {
+      const self = ctx.self;                       // 効果を出したモンスター本体
+      if (!self) break;
+      const foe = state.players[other(pi)];
+      const best = fieldMonsters(foe).sort((a, b) => effAtk(b.m) - effAtk(a.m))[0];
+      if (best) {
+        self.atk = effAtk(best.m) + (op.atk || 0);
+        self.def = effDef(best.m) + (op.def || 0);
+        log(state, 'info', `${card(self.id).name} が ${card(best.m.id).name} の姿を写し取った（${self.atk}/${self.def}）`);
+      } else {
+        // 写す相手がいなければ、素の値のまま出る
+        self.atk = op.baseAtk ?? self.atk;
+        self.def = op.baseDef ?? self.def;
+        log(state, 'info', `${card(self.id).name} は写し取る相手がいなかった`);
+      }
       break;
     }
     case 'invuln':
@@ -325,7 +370,7 @@ function applyOp(state, pi, op, ctx) {
       me.field[slot] = makeMonster(state, id, 'attack');
       log(state, 'summon', `${card(id).name} が墓地から蘇った`, { p: pi, cardId: id });
       const os = card(id).onSummon;
-      if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name });
+      if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name, self: me.field[slot] });
       break;
     }
     case 'recallSupport': {
@@ -356,7 +401,7 @@ function applyOp(state, pi, op, ctx) {
         count++;
         log(state, 'summon', `${card(id).name} が墓地から蘇った`, { p: pi, cardId: id });
         const os = card(id).onSummon;
-        if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name });
+        if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name, self: me.field[slot] });
       }
       break;
     }
@@ -435,7 +480,7 @@ export function startTurn(state) {
 
   // ターン開始時トリガー
   p.field.forEach(m => {
-    if (m && card(m.id).onTurnStart) runEffects(state, pi, card(m.id).onTurnStart, { auto: true, sourceName: card(m.id).name });
+    if (m && card(m.id).onTurnStart) runEffects(state, pi, card(m.id).onTurnStart, { auto: true, sourceName: card(m.id).name, self: m });
   });
   if (state.winner !== null) return;
 
@@ -550,7 +595,7 @@ export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
   log(state, 'summon', `${p.name} が ${card(id).name} を${mode === 'attack' ? '攻撃' : '防御'}モードで召喚`,
     { p: pi, cardId: id, mode });
   const os = card(id).onSummon;
-  if (os) runEffects(state, pi, os, { sourceName: card(id).name, target: state.pendingTarget || null });
+  if (os) runEffects(state, pi, os, { sourceName: card(id).name, self: m, target: state.pendingTarget || null });
   state.pendingTarget = null;
   return true;
 }

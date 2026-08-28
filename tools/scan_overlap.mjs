@@ -8,7 +8,7 @@ import { ALL_CARDS, KEYWORDS } from '../src/engine/cards.js';
 
 /** 効果の「かたち」。数値と対象条件は別に見るため、ここでは落とす */
 const shape = ops => (ops || []).map(o =>
-  [o.op, o.side || 'self', o.target || '-', o.duration || '-', o.mode || '-'].join(':')
+  [o._when || 'use', o.op, o.side || 'self', o.target || '-', o.duration || '-', o.mode || '-'].join(':')
 ).join(' + ');
 
 /** 数値の合計。大きいほど強い、というざっくりした目安 */
@@ -42,7 +42,14 @@ const grants = ops => (ops || []).flatMap(o => o.grants || []).sort().join(',');
 const atkSum = ops => (ops || []).reduce((s, o) => s + (o.atk || 0), 0);
 const defSum = ops => (ops || []).reduce((s, o) => s + (o.def || 0), 0);
 
-const ops = c => (c.effects || []).concat(c.onSummon || []);
+// 発動タイミングも「かたち」の一部。登場時のドローと断末魔のドローは別物。
+const tagged = (list, when) => (list || []).map(o => ({ ...o, _when: when }));
+const ops = c => [
+  ...tagged(c.effects, 'use'),
+  ...tagged(c.onSummon, 'summon'),
+  ...tagged(c.onDeath, 'death'),
+  ...tagged(c.onTurnStart, 'turn'),
+];
 const desc = c => `${c.id} ${c.name}（${c.cost}c${c.type === 'monster' ? ` ${c.atk}/${c.def}` : ''}）`;
 
 const groups = new Map();
