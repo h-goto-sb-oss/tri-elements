@@ -856,7 +856,10 @@ function renderBattle() {
       </div>
     </div>`;
 
-  return `<div class="battle" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
+  // portrait は最初から付けておく。
+  // 後から付けると、いったん横向き用の大きさで組まれてから縦向き用に
+  // 変わることになり、枠やボタンが「拡大してから縮む」動きをしてしまう。
+  return `<div class="battle ${portrait ? 'portrait' : ''}" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
     ${enemyBar}
 
     <div class="mid">
@@ -1151,29 +1154,48 @@ function stableHeight() {
   return vhFallback.h;
 }
 
-function applyBattleScale() {
-  const el = document.querySelector('.battle');
-  if (!el) return;
+// 盤面の大きさと位置は一度決めたら動かさない。
+// 画面の高さを測り直すたびに計算し直していたため、
+// ブラウザのバーが少しずつ動くのに合わせて盤面もじわじわ伸び縮みし、
+// サポート枠やボタンが動いて見えていた。
+// 測り直すのは、画面の向きが変わったとき（＝横幅が変わったとき）だけ。
+let battleGeo = null;
+
+function battleGeometry() {
+  const VW = window.innerWidth;
   const mode = battleLayout();
+  if (battleGeo && battleGeo.vw === VW && battleGeo.mode === mode) return battleGeo;
   const { w: DW, h: DH } = BATTLE_SIZE[mode];
-  el.classList.toggle('portrait', mode === 'portrait');
-  const VW = window.innerWidth, VH = stableHeight();
+  const VH = stableHeight();
   const s = Math.min(VW / DW, VH / DH);
   // 縦持ちは横幅で倍率が決まるため、縦が余ることが多い。
   // 余ったぶんは設計上の高さを伸ばして盤面に回す（画面をぴったり使い切る）。
   const h = mode === 'portrait' ? Math.min(DH * 1.5, VH / s) : DH;
-  el.style.height = `${h}px`;
-  el.style.transform = `scale(${s})`;
-  el.style.left = `${Math.max(0, (VW - DW * s) / 2)}px`;
-  el.style.top = `${Math.max(0, (VH - h * s) / 2)}px`;
+  battleGeo = {
+    vw: VW, mode, s, h,
+    left: Math.max(0, (VW - DW * s) / 2),
+    top: Math.max(0, (VH - h * s) / 2),
+  };
+  return battleGeo;
+}
+
+function applyBattleScale() {
+  const el = document.querySelector('.battle');
+  if (!el) return;
+  const g = battleGeometry();
+  el.classList.toggle('portrait', g.mode === 'portrait');
+  el.style.height = `${g.h}px`;
+  el.style.transform = `scale(${g.s})`;
+  el.style.left = `${g.left}px`;
+  el.style.top = `${g.top}px`;
 }
 let resizeTimer = 0;
 window.addEventListener('resize', () => {
-  applyBattleScale();
+  // ここで測り直さない。スマホのバーが出入りするだけで何度も呼ばれるため。
   // 縦横が入れ替わったら組み直す（横のカラムが引き出しに変わるため）
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    if (app.screen === 'battle' && app.battleMode !== battleLayout()) render();
+    if (app.screen === 'battle' && app.battleMode !== battleLayout()) { applyBattleScale(); render(); }
     else if (app.screen !== 'battle' && app.navNarrow !== isNarrow()) render();
   }, 160);
 });
