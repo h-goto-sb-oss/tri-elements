@@ -11,7 +11,9 @@ body{
   font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
   overflow:hidden; user-select:none;
 }
-#app{height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+/* スマホの下メニューぶんの余白。下メニューを出さない画面では 0 になる */
+:root{--navpad:0px}
 button{font-family:inherit;color:inherit;cursor:pointer}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-thumb{background:#33415a;border-radius:5px}
@@ -124,6 +126,14 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle .btn{font-size:16px;padding:9px 16px}
 .battle .btn.small{font-size:15px;padding:7px 14px}
 .battle .btn.tiny{font-size:14px;padding:5px 11px}
+/* カード情報・ログ・投了は「今どれが開いているか」が見える形にする */
+.paneltab{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1;
+  min-width:48px;padding:6px 7px!important;border-radius:10px;
+  background:#141d2b;border:1px solid #3d4c62;color:#c6d3e2;font-size:17px!important}
+.paneltab small{font-size:10px;font-weight:800;letter-spacing:.02em}
+.paneltab.on{background:linear-gradient(180deg,#d0a03a,#8f6415);border-color:#f0cc7a;color:#fff8e6;
+  box-shadow:0 0 12px #f2c15b55}
+.paneltab.quit{color:#e2a3a3;border-color:#5d3b3b}
 
 /* ============================================================
    縦長の画面（スマホ縦持ちなど）
@@ -132,12 +142,13 @@ button{font-family:inherit;color:inherit;cursor:pointer}
    ============================================================ */
 .battle.portrait{width:520px;height:980px;padding:4px 6px 6px}
 .battle.portrait .mid{position:relative;gap:0;overflow:hidden}   /* 畳んだ引き出しがはみ出さないように */
-.battle.portrait .sidecol{position:absolute;top:0;bottom:0;z-index:30;width:300px;
-  transition:transform .22s ease}
+/* 開いているときだけ描くので、出入りのアニメーションは付けない。
+   （タブが裏に回るとアニメーションが進まず、ずれたまま止まることがある） */
+.battle.portrait .sidecol{position:absolute;top:0;bottom:0;z-index:31;width:330px}
 .battle.portrait .sidecol.left{left:0}
-.battle.portrait .sidecol.left.closed{transform:translateX(calc(-100% - 14px))}
-.battle.portrait .sidecol.right{right:0;width:320px}
-.battle.portrait .sidecol.right:empty{display:none}
+.battle.portrait .sidecol.right{right:0;width:340px}
+/* 引き出しの外を触れば閉じる。盤面を触りたいときに邪魔にならないように */
+.battle.portrait .drawerback{position:absolute;inset:0;z-index:30;background:#04070c66}
 .battle.portrait .ipanel,.battle.portrait .logpane{box-shadow:0 10px 40px #000d}
 .battle.portrait .field{width:100%}
 .battle.portrait .row{gap:6px}
@@ -159,9 +170,16 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .hand .card .kw,.battle.portrait .hand .card .rarity{top:31px;font-size:11px}
 .battle.portrait .hand .card.selectable:hover{transform:none}
 
-.battle.portrait .enemybar{min-height:92px;gap:9px}
-.battle.portrait .bar.enemybar .face{width:84px;height:84px}
-.battle.portrait .enemybar .who{font-size:16px}
+.battle.portrait .enemybar{min-height:92px;gap:9px;align-items:center}
+.battle.portrait .bar.enemybar>.face{position:relative;left:auto;top:auto;width:84px;height:84px;
+  border-radius:14px;flex:none;border:2px solid #d5b45f;
+  box-shadow:0 6px 22px #000c,0 0 18px #f2c15b44;background:#111927;overflow:hidden}
+.battle.portrait .bar.enemybar>.face img{width:100%;height:100%;object-fit:cover;object-position:center 24%}
+/* 幅が足りず名前が1文字ずつ縦に折れてしまうので、折り返さず縮める */
+.battle.portrait .foeinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.battle.portrait .foeinfo .pname{font-size:17px;font-weight:900;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 5px #000}
+.battle.portrait .foesub{display:flex;align-items:center;gap:8px;min-width:0}
 .battle.portrait .lifeval{font-size:24px;min-width:34px}
 .battle.portrait .lifebar{width:104px;height:10px}
 .battle.portrait .costpips{max-width:112px;gap:3px}
@@ -291,7 +309,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .overlay{position:fixed;inset:0;background:#05080fdd;display:flex;align-items:center;justify-content:center;
   z-index:100;backdrop-filter:blur(3px)}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;
-  max-width:900px;max-height:88vh;overflow-y:auto;text-align:center;box-shadow:0 20px 60px #000}
+  max-width:min(900px,calc(100vw - 20px));max-height:88vh;overflow-y:auto;text-align:center;
+  box-shadow:0 20px 60px #000}
 .modal h2{font-size:24px;margin-bottom:8px;color:var(--gold)}
 .modal p{color:var(--muted);margin-bottom:12px;line-height:1.7;font-size:13px}
 .modal .row-btn{display:flex;gap:10px;justify-content:center;margin-top:12px}
@@ -353,7 +372,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 @keyframes bspop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* マリガン */
-.mull-hand{display:flex;gap:10px;justify-content:center;margin:14px 0}
+.mull-hand{display:flex;gap:10px;justify-content:center;margin:14px 0;flex-wrap:wrap}
 .observe-modal{max-width:760px}
 .observe-list{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:14px}
 .observe-card{border:0;background:none;padding:0;border-radius:12px}
@@ -475,10 +494,12 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   padding:5px 9px;color:var(--text);font-size:14px;font-weight:800;font-family:inherit}
 .dname:focus{outline:none;border-color:var(--gold)}
 .dcount{font-size:15px;font-weight:900;flex:none}
+/* バーのクラス名は .bar にすると戦闘画面の .bar（min-height:44px）と
+   ぶつかって全部同じ高さになるので .cbar にしている */
 .curve{display:flex;gap:5px;align-items:flex-end;height:70px;padding:16px 2px 0;margin-bottom:18px}
-.curve .bar{width:30px;background:linear-gradient(180deg,#6ea8ff,#2f5fa8);border-radius:3px 3px 0 0;position:relative}
-.curve .bar span{position:absolute;top:-14px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
-.curve .bar em{position:absolute;bottom:-15px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);font-style:normal}
+.curve .cbar{width:30px;background:linear-gradient(180deg,#6ea8ff,#2f5fa8);border-radius:3px 3px 0 0;position:relative}
+.curve .cbar span{position:absolute;top:-14px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
+.curve .cbar em{position:absolute;bottom:-15px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted);font-style:normal}
 .decklist{flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;
   border:1.5px dashed #2f3d52;border-radius:10px;padding:8px;background:rgba(255,255,255,.012)}
 .decklist.drop{border-color:var(--gold);background:rgba(242,193,91,.09)}
@@ -836,6 +857,20 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .ip-legend{display:flex;flex-direction:column;gap:10px;margin-top:6px;font-size:11.5px;line-height:1.65;color:#c3d2e2}
 .ip-legend b{display:block;margin-bottom:2px}
 .atkc{color:#ff9c6b}.defc{color:#7fc4ff}.gold{color:var(--gold)}
+/* 直近に使われたカードを2件ぶん積む表示 */
+.ipanel.history{gap:9px}
+.ip-entry{display:flex;flex-direction:column;gap:5px;padding:7px;border-radius:10px;
+  background:#0f1926;border:1px solid #2b3a4d}
+.ip-entry.foe{border-color:#c9683c88;background:#1a1210}
+.ip-entry .ip-banner{font-size:11.5px;padding:3px 7px}
+.ip-entry.mine .ip-banner{color:#bfe0ff;background:#132434;border-color:#3c72c9}
+.ip-row{display:flex;gap:8px;align-items:flex-start}
+.ip-row .card{flex:none}
+.ip-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ip-side .ip-name{text-align:left;font-size:13.5px}
+.ip-side .ip-meta{justify-content:flex-start;gap:6px;font-size:10.5px}
+.ip-side .ip-text{font-size:11px;padding:5px 7px;line-height:1.55}
+.ip-side .ip-kw{font-size:10px;padding:5px 6px}
 .ip-name{font-size:15px;font-weight:900;text-align:center}
 .ip-meta{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;font-size:11px;color:var(--muted)}
 .ip-text{font-size:12px;line-height:1.7;color:#d3dfec;background:#101a26;border-radius:8px;padding:7px 9px}
@@ -872,7 +907,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .dname{padding:4px 8px;font-size:13px}
   .dcount{font-size:13px}
   .curve{height:52px;padding:14px 2px 0;margin-bottom:16px}
-  .curve .bar{width:24px}
+  .curve .cbar{width:24px}
 
   /* カードは詰めて、効果は「i」から見る。1画面に入る枚数を優先する */
   .pool{gap:6px;padding:2px;overflow:visible;flex:none}
@@ -914,3 +949,60 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   /* タイトルの装飾が画面をはみ出さないように */
   .title-bg{background-position:center 42%}
 }
+
+/* ============================================================
+   スマホ用の下メニュー（戦闘中は出さない）
+   ブラウザ自身の下バーと重なるので、セーフエリアぶん持ち上げる。
+   ============================================================ */
+.bottomnav{display:none}
+@media (max-width:720px){
+  :root{--navpad:calc(58px + env(safe-area-inset-bottom,0px))}
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:90;
+    display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
+    padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px));
+    background:#0a1119f2;border-top:1px solid #2c3b4f;
+    box-shadow:0 -8px 24px #0008;backdrop-filter:blur(10px)}
+  .bnav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    padding:5px 2px;border:0;border-radius:9px;background:none;color:#93a5ba;
+    font-family:inherit;font-weight:800;cursor:pointer;min-height:44px}
+  .bnav .bn-icon{font-size:18px;line-height:1}
+  .bnav .bn-label{font-size:10px;letter-spacing:.02em}
+  .bnav.on{background:#1d2635;color:var(--gold);box-shadow:inset 0 0 0 1px #f2c15b44}
+  .bnav:active{background:#232f40}
+
+  /* 下メニューぶん、各画面の一番下に余白を足す */
+  .screen{padding-bottom:calc(14px + var(--navpad))}
+  .adventure{padding-bottom:calc(10px + var(--navpad))}
+  .deckwrap{padding-bottom:calc(10px + var(--navpad))}
+  .dexcontent{padding-bottom:calc(28px + var(--navpad))}
+  .collection-screen{padding-bottom:0}
+
+  /* タイトルのプロフィールはもっと大きく見せる */
+  .title-panel .titleprof{padding:8px 8px 12px;gap:12px}
+  .title-panel .tface{width:66px;height:66px;border-radius:14px}
+  .title-panel .tface .avfb{font-size:34px}
+  .titleprof-text b{font-size:19px}
+  .titleprof-text div{font-size:12.5px;margin-top:3px}
+}
+
+/* ============================================================
+   スマホのモーダル（初期手札など）
+   カードが横一列だと画面からはみ出すので、小さくして折り返す。
+   ============================================================ */
+@media (max-width:720px){
+  .modal{padding:14px 12px;border-radius:12px;max-height:calc(100dvh - 24px)}
+  .modal h2{font-size:20px}
+  .modal p{font-size:12px}
+  .mull-hand{gap:7px;margin:10px 0}
+  .mull-hand .card.big{width:104px;height:172px}
+  .mull-hand .card.big .art{height:92px}
+  .mull-hand .card.big .cname{font-size:10px;height:22px;padding-right:22px}
+  .mull-hand .card.big .cost{width:20px;height:20px;font-size:12px}
+  .mull-hand .card.big .body{font-size:8.6px;height:42px;padding:4px 5px}
+  .modal .row-btn{flex-wrap:wrap}
+}
+
+/* 戦闘中、指のドラッグをブラウザのスクロールに横取りされないようにする。
+   手札は横スワイプでめくれる必要があるので、縦方向だけこちらで受け取る。 */
+.battle .hand .card{touch-action:pan-x}
+.battle .mini,.battle .slot{touch-action:none}

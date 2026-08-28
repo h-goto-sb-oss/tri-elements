@@ -52,10 +52,14 @@ const app = {
   collectionSet: 1,
   free: null,           // フリーバトル中 { difficulty }
   freeDiff: 'normal',
-  logOpen: true,
+  logOpen: false,       // 戦闘開始時は畳んでおく（盤面を隠さない）
   drag: null,           // ドラッグ中の情報
   audioInfo: null,
+  playLog: [],          // 直近に召喚・発動されたカード（最大2件、新しい順）
 };
+
+/** スマホ幅かどうか。下メニューを出すか等の判断に使う */
+function isNarrow() { return window.innerWidth <= 720; }
 
 // ============================================================
 // 場面ごとの BGM
@@ -173,6 +177,24 @@ export function avatarHtml(idx) {
 }
 const myName = () => (app.save.profile?.name || 'あなた');
 const myAvatar = () => (app.save.profile?.avatar || 1);
+
+// ============================================================
+// スマホ用の下メニュー（戦闘中は出さない）
+// ============================================================
+const NAV_ITEMS = [
+  { go: 'adventure', icon: '⚔️', label: '冒険' },
+  { go: 'free', icon: '🏟️', label: 'フリー' },
+  { go: 'deck', icon: '🃏', label: 'デッキ' },
+  { go: 'collection', icon: '📖', label: '図鑑' },
+  { go: 'title', icon: '🏠', label: 'タイトル' },
+];
+function bottomNavHtml() {
+  if (app.screen === 'battle' || !isNarrow()) return '';
+  return `<nav class="bottomnav">${NAV_ITEMS.map(n => `
+    <button class="bnav ${app.screen === n.go ? 'on' : ''}" data-go="${n.go}">
+      <span class="bn-icon">${n.icon}</span><span class="bn-label">${n.label}</span>
+    </button>`).join('')}</nav>`;
+}
 
 // ============================================================
 // タイトル
@@ -376,7 +398,7 @@ function renderDeck() {
   const curve = deckCurve(draft);
   const maxC = Math.max(1, ...Object.values(curve));
   const bars = [1, 2, 3, 4, 5, 6, 7].map(c =>
-    `<div class="bar" style="height:${Math.max(3, (curve[c] || 0) / maxC * 48)}px">
+    `<div class="cbar" style="height:${Math.max(3, (curve[c] || 0) / maxC * 48)}px">
       <span>${curve[c] || ''}</span><em>${c === 7 ? '7+' : c}</em></div>`).join('');
 
   const deckCards = Object.keys(counts).map(id => card(id))
@@ -603,30 +625,39 @@ function supportTargetSlots(g, handIndex) {
 }
 
 /** 左カラム：いま見ているカードの情報 */
-function inspectPanelHtml() {
-  // 相手が直前に出したカードを優先して見せる。
-  // 盤面から消えるサポートは、これが無いと何をされたのか分からない。
-  if (app.lastPlay) {
-    const lc = card(app.lastPlay.id);
-    if (lc) {
-      const lr = RARITY[lc.rarity || 'common'];
-      const lkw = lc.keywords?.length
-        ? `<div class="ip-kw">${lc.keywords.map(k => `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
-        : '';
-      return `<div class="ipanel enemyplay">
-        <div class="ip-banner">${esc(app.enemy?.name || '相手')} が${esc(app.lastPlay.verb)}</div>
-        <div class="ip-card">${cardHtml(lc, { cls: 'big' })}</div>
-        <div class="ip-name">${esc(lc.name)}</div>
+/** 履歴1件ぶんの見出し＋カード。2段構成の1段として使う */
+function playEntryHtml(e) {
+  const c = card(e.id);
+  if (!c) return '';
+  const kw = c.keywords?.length
+    ? `<div class="ip-kw">${c.keywords.map(k => `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
+    : '';
+  return `<div class="ip-entry ${e.who === 1 ? 'foe' : 'mine'}">
+    <div class="ip-banner">${esc(e.who === 1 ? (app.enemy?.name || '相手') : myName())} が${esc(e.verb)}</div>
+    <div class="ip-row">
+      ${cardHtml(c, {})}
+      <div class="ip-side">
+        <div class="ip-name">${esc(c.name)}</div>
         <div class="ip-meta">
-          <span>${ELEMENTS[lc.element].icon} ${ELEMENTS[lc.element].name}</span>
-          <span>コスト ${lc.cost}</span>
-          ${lc.type === 'monster' ? `<span class="atkc">⚔ ${lc.atk}</span><span class="defc">🛡 ${lc.def}</span>` : '<span>サポート</span>'}
-          <span style="color:${lr.color}">${lr.name}</span>
+          <span>${ELEMENTS[c.element].icon}</span><span>コスト ${c.cost}</span>
+          ${c.type === 'monster' ? `<span class="atkc">⚔ ${c.atk}</span><span class="defc">🛡 ${c.def}</span>` : '<span>サポート</span>'}
         </div>
-        <div class="ip-text">${esc(lc.text || 'このカードに効果はありません（バニラ）。')}</div>
-        ${lkw}
-      </div>`;
-    }
+        <div class="ip-text">${esc(c.text || '効果はありません（バニラ）。')}</div>
+        ${kw}
+      </div>
+    </div>
+  </div>`;
+}
+
+function inspectPanelHtml() {
+  // 直前に出されたカードを2件まで残す。
+  // 盤面から消えるサポートは、これが無いと何をされたのか分からない。
+  // 自分から別のカードを見に行った場合は履歴を捨てて、そのカードだけを出す。
+  if (!app.inspect && app.playLog.length) {
+    return `<div class="ipanel history">
+      <div class="ip-title">直前に使われたカード</div>
+      ${app.playLog.slice(0, 2).map(playEntryHtml).join('')}
+    </div>`;
   }
   const id = app.inspect;
   const c = id ? card(id) : null;
@@ -662,18 +693,27 @@ function inspectPanelHtml() {
 
 /** ホバーしたカードを左パネルに出す（全体を描き直さずパネルだけ差し替える） */
 function setInspect(id) {
-  if (app.inspect === id) return;
+  if (app.inspect === id && !app.playLog.length) return;
   app.inspect = id;
+  app.playLog = [];        // 他のカードを参照したら履歴はリセット
   const el = document.querySelector('[data-inspectpanel]');
   if (el) el.innerHTML = inspectPanelHtml();
 }
 document.addEventListener('pointerover', ev => {
+  if (app.screen !== 'battle' || ev.pointerType === 'touch') return;
+  const el = ev.target.closest('[data-card]');
+  if (el && el.dataset.card) setInspect(el.dataset.card);
+});
+
+// 指では「重ねて長押し」でカードを覗く。タップは出し入れ・攻撃に使うため。
+document.addEventListener('contextmenu', ev => {
   if (app.screen !== 'battle') return;
   const el = ev.target.closest('[data-card]');
-  if (el && el.dataset.card) {
-    app.lastPlay = null;      // 自分で見に行ったらそちらを優先する
-    setInspect(el.dataset.card);
-  }
+  if (!el || !el.dataset.card) return;
+  ev.preventDefault();
+  setInspect(el.dataset.card);
+  if (battleLayout() === 'portrait') app.drawer = 'info';
+  render();
 });
 
 function renderBattle() {
@@ -735,28 +775,53 @@ function renderBattle() {
 
   const bg = app.free ? (AREA_BG.common || AREA_BG[AREAS[app.areaIndex]?.id])
     : (AREA_BG[AREAS[app.areaIndex]?.id] || AREA_BG.common);
-  // 縦持ちではカード情報が盤面に重なるので、既定は畳んでおく
+  // 縦持ちでは「カード情報」と「ログ」は盤面に重なる引き出しにする。
+  // 同時に2つ出ると盤面が完全に隠れてしまうので、開くのは常にどちらか一方だけ。
   const portrait = battleLayout() === 'portrait';
-  const infoClosed = portrait ? app.infoOpen !== true : app.infoOpen === false;
-  return `<div class="battle" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
+  const drawer = portrait ? (app.drawer || null) : null;   // 'info' | 'log' | null
+  const infoOpen = portrait ? drawer === 'info' : app.infoOpen !== false;
+  const logOpen = portrait ? drawer === 'log' : app.logOpen;
+
+  const foeFace = (() => {
+    const src = ENEMY_ART[`${AREAS[app.areaIndex]?.id}:${Number((app.enemyKey || ':0').split(':')[1])}`];
+    return src ? `<img src="${src}" alt="">` : (app.enemy ? app.enemy.icon : '🤖');
+  })();
+  const foeLife = `<div class="lifebox"><span class="lifeval">${op.life}</span>
+    <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, op.life / (app.enemyLifeMax || 20) * 100))}%"></div></div></div>`;
+
+  // 縦持ちは幅が足りず名前が縦書きのように折れてしまうので、
+  // 顔の右に「名前／ライフ／コスト」を縦に積む形にする。
+  const enemyBar = portrait ? `
     <div class="bar enemybar">
-      <div class="who"><div class="face">${(() => {
-        const src = ENEMY_ART[`${AREAS[app.areaIndex]?.id}:${Number((app.enemyKey || ':0').split(':')[1])}`];
-        return src ? `<img src="${src}" alt="">` : (app.enemy ? app.enemy.icon : '🤖');
-      })()}</div>${esc(op.name)}</div>
-      <div class="lifebox"><span class="lifeval">${op.life}</span>
-        <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, op.life / (app.enemyLifeMax || 20) * 100))}%"></div></div></div>
+      <div class="face">${foeFace}</div>
+      <div class="foeinfo">
+        <span class="pname">${esc(op.name)}</span>
+        ${foeLife}
+        <div class="foesub"><div class="costpips">${pips(op.cost)}</div><span class="meta">手札 <b>${op.hand.length}</b></span></div>
+      </div>
+      <div class="battle-actions">
+        <button class="btn tiny paneltab ${drawer === 'info' ? 'on' : ''}" data-toggle-info>🔍<small>情報</small></button>
+        <button class="btn tiny paneltab ${drawer === 'log' ? 'on' : ''}" data-toggle-log>📜<small>ログ</small></button>
+        <button class="btn tiny paneltab quit" data-surrender>🏳<small>投了</small></button>
+      </div>
+    </div>` : `
+    <div class="bar enemybar">
+      <div class="who"><div class="face">${foeFace}</div><span class="pname">${esc(op.name)}</span></div>
+      ${foeLife}
       <div class="costpips">${pips(op.cost)}</div>
       <span class="meta">手札 <b>${op.hand.length}</b></span>
       <div class="battle-actions">
-        ${portrait ? `<button class="btn tiny" data-toggle-info>${infoClosed ? 'カード情報' : '情報を隠す'}</button>` : ''}
         <button class="btn tiny" data-toggle-log>${app.logOpen ? 'ログ非表示' : 'ログ'}</button>
         <button class="btn tiny" data-surrender>投了</button>
       </div>
-    </div>
+    </div>`;
+
+  return `<div class="battle" ${bg ? `style="--bgimg:url(${bg})"` : ''}>
+    ${enemyBar}
 
     <div class="mid">
-      <div class="sidecol left ${infoClosed ? 'closed' : ''}" data-inspectpanel>${inspectPanelHtml()}</div>
+      ${portrait && drawer ? '<div class="drawerback" data-closedrawer></div>' : ''}
+      ${infoOpen ? `<div class="sidecol left" data-inspectpanel>${inspectPanelHtml()}</div>` : ''}
 
       <div class="field">
         <div class="row">${pileHtml('grave', op.grave.length, 1)}${supRow(op)}${pileHtml('deck', op.deck.length, 1)}</div>
@@ -770,9 +835,7 @@ function renderBattle() {
         <div class="row">${pileHtml('grave', me.grave.length, 0)}${supRow(me)}${pileHtml('deck', me.deck.length, 0)}</div>
       </div>
 
-      <div class="sidecol right">
-        ${app.logOpen ? `<div class="logpane" data-logpane>${logHtml}</div>` : ''}
-      </div>
+      ${logOpen ? `<div class="sidecol right"><div class="logpane" data-logpane>${logHtml}</div></div>` : ''}
     </div>
 
     <div class="bar playerbar">
@@ -1036,6 +1099,7 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     if (app.screen === 'battle' && app.battleMode !== battleLayout()) render();
+    else if (app.screen !== 'battle' && app.navNarrow !== isNarrow()) render();
   }, 160);
 });
 
@@ -1064,6 +1128,7 @@ function render(opts = {}) {
     case 'battle': html = renderBattle() + popupHtml(); break;
     default: html = renderTitle();
   }
+  html += bottomNavHtml();
   html += overlays();
   if (!app.save.profile) html += onboardingOverlay();
   if (app.toast) html += `<div class="toast">${esc(app.toast)}</div>`;
@@ -1072,6 +1137,7 @@ function render(opts = {}) {
     const el = document.querySelector(sel);
     if (el) el.scrollTop = top;
   });
+  app.navNarrow = isNarrow();
   if (app.screen === 'battle') {
     app.battleMode = battleLayout();
     applyBattleScale();
@@ -1109,6 +1175,11 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   lastBannerTurn = 0;
   app.phase = 'mulligan';
   app.screen = 'battle';
+  // 戦闘開始時はログもカード情報も畳んでおく（盤面を隠さない）
+  app.drawer = null;
+  app.logOpen = false;
+  app.playLog = [];
+  app.inspect = null;
   syncBgm();
   render();
 }
@@ -1159,26 +1230,17 @@ async function actWithFx(pi, action) {
 }
 
 /**
- * 相手が出したカードを左カラムに出す。
- * 次の行動まで残し、自分の番になったら消える。
+ * 召喚・発動されたカードをカード情報欄の履歴に積む（新しい順に最大2件）。
+ * 盤面から消えるサポートは、これが無いと何をされたのか分からない。
  */
-function showEnemyPlay(id, verb) {
-  app.lastPlay = { id, verb };
-  clearTimeout(showEnemyPlay._t);
-  const el = document.querySelector('[data-inspectpanel]');
-  if (el) el.innerHTML = inspectPanelHtml();
-}
-function clearEnemyPlay() {
-  if (!app.lastPlay) return;
-  app.lastPlay = null;
+function pushPlay(id, verb, who) {
+  app.inspect = null;
+  app.playLog = [{ id, verb, who }, ...app.playLog].slice(0, 2);
   const el = document.querySelector('[data-inspectpanel]');
   if (el) el.innerHTML = inspectPanelHtml();
 }
 
 async function runActionFx(g, pi, action) {
-  // 相手の行動表示は自分の番が始まっても残しておく（直前に何をされたか読めるように）。
-  // 自分が動いた時点で用済みなので片付ける。
-  if (pi === 0) app.lastPlay = null;
   const snap = Fx.snapshotRects();
   const from = action.type === 'attack' ? snap.mons[`${pi}:${action.slot}`] : null;
   const target = action.type === 'attack'
@@ -1192,12 +1254,9 @@ async function runActionFx(g, pi, action) {
   const attacker = action.type === 'attack' ? g.players[pi].field[action.slot] : null;
   const mark = g.log.length;
 
-  // 相手が出したカードは左のカード情報欄に残す
-  if (pi === 1) {
-    if (supCard) showEnemyPlay(supCard.id, supCard.equip ? '装備' : 'サポートを使用');
-    else if (sumCard) showEnemyPlay(sumCard.id, 'を召喚');
-    else if (attacker) showEnemyPlay(attacker.id, 'で攻撃');
-  }
+  // 召喚・発動されたカードは、どちらの手番でもカード情報欄の履歴に積む
+  if (supCard) pushPlay(supCard.id, supCard.equip ? '装備した' : '発動した', pi);
+  else if (sumCard) pushPlay(sumCard.id, '召喚した', pi);
 
   // 行動そのものの音
   if (action.type === 'attack') Audio.playSe(action.target === 'face' ? 'se_direct' : 'se_attack');
@@ -1478,6 +1537,23 @@ document.addEventListener('keydown', ev => {
 
 // ブラウザがジェスチャを横取りすると pointerup が来ない。
 // その場合ここで後始末しないと、掴んだカードの残像が画面に残ってしまう。
+// 画面が隠れている間は BGM を止める（裏で鳴り続けないように）
+document.addEventListener('visibilitychange', () => {
+  const el = Audio.audioState.el;
+  if (!el) return;
+  if (document.hidden) el.pause();
+  else if (!Audio.audioState.muted) el.play().catch(() => {});
+});
+
+// 掴んだままタブを離れる等でも残像を残さない
+['blur', 'visibilitychange'].forEach(t => window.addEventListener(t, () => {
+  if (!app.drag && !ghost) return;
+  const moved = app.drag && app.drag.moved;
+  app.drag = null;
+  killGhost();
+  if (moved) render();
+}));
+
 document.addEventListener('pointercancel', () => {
   if (!app.drag) return;
   const moved = app.drag.moved;
@@ -1733,8 +1809,18 @@ function handleClick(ev) {
   const g = app.game;
   if (!g) return;
 
-  if (hit('[data-toggle-log]')) { app.logOpen = !app.logOpen; return render(); }
-  if (hit('[data-toggle-info]')) { app.infoOpen = app.infoOpen === false; return render(); }
+  // 縦持ちの引き出しは常にどちらか一方だけ。もう一方が開いていれば入れ替わる。
+  if (hit('[data-toggle-log]')) {
+    if (battleLayout() === 'portrait') app.drawer = app.drawer === 'log' ? null : 'log';
+    else app.logOpen = !app.logOpen;
+    return render();
+  }
+  if (hit('[data-toggle-info]')) {
+    if (battleLayout() === 'portrait') app.drawer = app.drawer === 'info' ? null : 'info';
+    else app.infoOpen = app.infoOpen === false;
+    return render();
+  }
+  if (hit('[data-closedrawer]')) { app.drawer = null; return render(); }
   if (hit('[data-surrender]')) { clearTimeout(app.aiTimer); return go(app.free ? 'free' : 'adventure'); }
   const gv = hit('[data-grave]');
   if (gv) { app.graveView = Number(gv.dataset.grave); return render(); }
