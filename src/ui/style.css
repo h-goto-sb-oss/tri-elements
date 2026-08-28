@@ -157,7 +157,11 @@ button{font-family:inherit;color:inherit;cursor:pointer}
    盤面に重ねる引き出しにする。倍率が上がるぶん文字が読める。
    ============================================================ */
 .battle.portrait{width:520px;height:980px;padding:4px 6px 6px}
-.battle.portrait .mid{position:relative;gap:0;overflow:hidden}   /* 畳んだ引き出しがはみ出さないように */
+/* 畳んだ引き出しがはみ出さないように。
+   overflow:hidden だと「スクロールできる箱」になってしまい、
+   指の動きやフォーカス移動の拍子に中身ごと横にずれることがある。
+   clip なら切り取るだけでスクロールしないので、盤面は絶対に動かない。 */
+.battle.portrait .mid{position:relative;gap:0;overflow:hidden;overflow:clip}
 /* 開いているときだけ描くので、出入りのアニメーションは付けない。
    （タブが裏に回るとアニメーションが進まず、ずれたまま止まることがある） */
 .battle.portrait .sidecol{position:absolute;top:0;bottom:0;z-index:31;width:330px}
@@ -173,6 +177,18 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .mini{width:112px;height:142px}
 .battle.portrait .mini.defense{width:142px;height:112px}
 .battle.portrait .pile{width:66px}
+/* 縦持ちではサポート枠が小さいので、置かれるカードもそれに合わせる。
+   枠より大きいカードが入ると、枠が中身に押し広げられて行の幅が変わり、
+   中央寄せのせいで左右の山札や墓地までずれてしまう。 */
+.battle.portrait .sup{width:96px;height:70px}
+
+/* 盤面の行は、中身が何に変わっても幅が動かないようにする。
+   ・min-width:0 … flexの「中身より小さくならない」既定を外し、指定した幅を守らせる
+   ・山札の枚数は桁が変わっても同じ幅で描く（26→9 で行がずれない）
+   これをしないと、1枚引くたびに行が中央寄せし直されて小刻みに動く。 */
+.battle .slot,.battle .pile{min-width:0}
+.battle .pile .n{display:inline-block;min-width:2.1ch;text-align:left;
+  font-variant-numeric:tabular-nums}
 
 /* ヒントの文が長くなったり、「直接攻撃」ボタンが出入りするたびに
    この帯の高さが変わり、上下のサポート枠や山札が動いてしまっていた。
