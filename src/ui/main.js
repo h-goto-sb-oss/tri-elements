@@ -597,6 +597,7 @@ function renderSettings() {
       <button class="tab ${tab === 'sound' ? 'on' : ''}" data-settab="sound">サウンド</button>
     </div>
     <div class="setpanel">${tab === 'player' ? player : sound}</div>
+    <div class="hint" style="font-size:11px">ビルド ${typeof __BUILD__ === 'string' ? __BUILD__ : '開発中'}</div>
     <button class="btn" data-go="title">戻る</button>
   </div>`;
 }
@@ -1131,14 +1132,23 @@ function battleLayout() {
 // カードを持ったりタップしたりするだけで盤面がびくっと動いてしまう。
 // svh（バーが出ている状態＝いちばん狭いときの高さ）で測れば、
 // バーの出入りに関係なく同じ値になるので、盤面はその場から動かない。
-let vhProbe = null;
+let vhProbe = null, vhFallback = null;
 function stableHeight() {
-  if (!vhProbe) {
-    vhProbe = document.createElement('div');
-    vhProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
-    document.body.appendChild(vhProbe);
+  if (window.CSS && CSS.supports && CSS.supports('height', '100svh')) {
+    if (!vhProbe) {
+      vhProbe = document.createElement('div');
+      vhProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+      document.body.appendChild(vhProbe);
+    }
+    const h = vhProbe.offsetHeight;
+    if (h) return h;
   }
-  return vhProbe.offsetHeight || window.innerHeight;
+  // svh が使えないブラウザでは、最初に測った高さを使い続ける。
+  // 幅が変わったとき（＝画面の向きが変わったとき）だけ測り直す。
+  if (!vhFallback || vhFallback.w !== window.innerWidth) {
+    vhFallback = { w: window.innerWidth, h: window.innerHeight };
+  }
+  return vhFallback.h;
 }
 
 function applyBattleScale() {
