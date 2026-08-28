@@ -200,7 +200,9 @@ export const CHARACTER_WINS_NEEDED = 5;
 
 /**
  * 「極」で、相手のデッキに混ぜる本人のカードの枚数（30枚中）。
- * 1枚だと引かれないまま終わる試合がほとんどなので、4枚にして
- * だいたいの試合で1回は見られるようにしている。
+ * 何枚も積むと同じキャラが場に並んでしまうので1枚だけ。
+ * その代わり createGame の signature で「必ず初手にある」ことを保証しており、
+ * 引けずに終わる試合はない。増やすならこの枚数ではなく、
+ * 出させたい効果そのものを見直すこと。
  */
-export const EXTREME_SELF_COPIES = 4;
+export const EXTREME_SELF_COPIES = 1;

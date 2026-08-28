@@ -21,7 +21,7 @@ function shuffle(state, arr) {
 }
 
 // ---------- 初期化 ----------
-export function createGame({ decks, seed = 1, rules = {}, names = ['あなた', '相手'], startCost = null }) {
+export function createGame({ decks, seed = 1, rules = {}, names = ['あなた', '相手'], startCost = null, signature = null }) {
   const R = { ...DEFAULT_RULES, ...rules };
   const state = {
     rules: R, rngState: seed >>> 0, uid: 1,
@@ -41,8 +41,27 @@ export function createGame({ decks, seed = 1, rules = {}, names = ['あなた', 
     for (let k = 0; k < n; k++) p.hand.push(p.deck.pop());
   });
   if (startCost) startCost.forEach((v, i) => { if (v) state.players[i].maxCost = v - 1; });
+  // シグネチャカード（そのキャラ自身のカード）は必ず初手に来る。
+  // デッキに何枚も積むより「1枚を必ず持っている」ほうが、
+  // 同じキャラが場に並ばず、こちらも毎回それを前提に戦えるので公平。
+  if (signature) signature.forEach((id, i) => { if (id) { state.players[i].signature = id; ensureSignature(state, i); } });
   log(state, 'sys', `対戦開始。先攻: ${names[0]}`);
   return state;
+}
+
+/** signature に指定されたカードを、手札枚数を変えずに手札へ移す */
+function ensureSignature(state, pi) {
+  const p = state.players[pi], id = p.signature;
+  if (!id || p.hand.includes(id)) return;
+  const di = p.deck.lastIndexOf(id);
+  if (di < 0) return;
+  p.deck.splice(di, 1);
+  // 手札の1枚と入れ替える（重いカードが2枚並んで事故らないよう、いちばん重い1枚を戻す）
+  let worst = 0, sc = -1;
+  p.hand.forEach((h, i) => { const v = card(h).cost; if (v > sc) { sc = v; worst = i; } });
+  p.deck.push(p.hand.splice(worst, 1)[0]);
+  shuffle(state, p.deck);
+  p.hand.push(id);
 }
 
 function log(state, kind, text, extra = {}) {
@@ -771,6 +790,7 @@ export function mulligan(state, pi, doIt) {
     p.deck.push(...p.hand); p.hand = [];
     shuffle(state, p.deck);
     for (let i = 0; i < state.rules.startHand; i++) p.hand.push(p.deck.pop());
+    ensureSignature(state, pi);
     log(state, 'info', `${p.name} が手札を引き直した`);
   }
   if (state.players.every(x => x.mulliganed)) { state.active = 0; startTurn(state); }

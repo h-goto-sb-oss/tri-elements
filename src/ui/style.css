@@ -644,6 +644,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   border-radius:20px;padding:4px 16px}
 .freebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px}
 .freebar .tab{padding:5px 14px;font-size:12px}
+.freebar .xrule{min-height:0;font-size:11px;color:#c58cff;flex-basis:100%}
 .adv-free::before{background:radial-gradient(circle at 50% 25%,#4a5a8a,#0e1020 72%)}
 .foes.scroll{max-height:100%;overflow-y:auto;align-content:flex-start;padding:6px 2px}
 .foe.free{width:210px}

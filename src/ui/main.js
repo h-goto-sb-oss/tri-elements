@@ -364,6 +364,7 @@ function renderFree() {
     <div class="freebar">
       <span class="hint" style="min-height:0">難易度</span>
       <div class="tabs">${diffTabs}</div>
+      ${app.freeDiff === 'extreme' ? '<span class="hint xrule">極では、相手は自分のカードを1枚だけ必ず初手に持って現れます</span>' : ''}
       <span style="margin-left:auto"></span>
       <span class="hint" style="min-height:0">交換</span>
       ${shop}
@@ -1213,18 +1214,21 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   app.enemyKey = `${area.id}:${enemyIndex}`;
   app.result = null; app.sel = null; app.popup = null; app.hint = ''; app.detail = null;
   const seed = (Math.random() * 1e9) | 0;
-  // フリーバトルの「極」では、そのキャラ自身のカードをデッキに混ぜてくる。
+  // フリーバトルの「極」では、そのキャラ自身のカードを1枚だけ持ってくる。
   // 狙っているカードを手に入れる前に見られる、という導線でもある。
-  // 30枚に1枚だとほとんど出てこないので、多めに積ませて high 確率で見られるようにする。
-  let foeDeck = [...enemy.deck];
+  // 枚数を増やすと同じキャラが場に並んでしまうので、枚数は1枚のまま
+  // 「必ず初手にある」ことを保証して、毎試合ちょうど1回出てくるようにする。
+  let foeDeck = [...enemy.deck], foeSig = null;
   const selfCard = CHARACTER_OF[app.enemyKey];
   if (free && app.freeDiff === 'extreme' && selfCard) {
     foeDeck = [...Array(EXTREME_SELF_COPIES).fill(selfCard), ...foeDeck.slice(EXTREME_SELF_COPIES)];
+    foeSig = selfCard;
   }
   app.game = createGame({
     decks: [[...app.save.deck], foeDeck],
     seed, names: [myName(), enemy.name],
     startCost: [0, (enemy.startCost || 0) + (diff ? diff.cost : 0)],
+    signature: [null, foeSig],
   });
   app.game.players[1].life = (enemy.life || 20) + (diff ? diff.life : 0);
   app.enemyLifeMax = app.game.players[1].life;
