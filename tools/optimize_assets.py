@@ -34,6 +34,8 @@ EXTS = ('.png', '.jpg', '.jpeg', '.webp')
 # public/ は .gitignore なので、ここに写しておかないとビルドに含まれない。
 COPY_FOLDERS = ['audio', 'ui']
 COPY_SKIP = ('.txt', '.md')
+# 配信しない原本（アイコンの元絵など）。作り直すときに使うので残しておく。
+COPY_SKIP_NAMES = {'icon-source.png'}
 
 
 def convert(src, dst, max_side, quality):
@@ -99,7 +101,7 @@ def copy_as_is(dry=False):
         n = size = 0
         for fn in sorted(os.listdir(d)):
             src = os.path.join(d, fn)
-            if not os.path.isfile(src) or fn.lower().endswith(COPY_SKIP):
+            if not os.path.isfile(src) or fn.lower().endswith(COPY_SKIP) or fn in COPY_SKIP_NAMES:
                 continue
             dst = os.path.join(OUT_ROOT, folder, fn)
             size += os.path.getsize(src); n += 1
