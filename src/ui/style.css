@@ -5,6 +5,15 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
+/* Android の Chrome は「読みにくそうな幅の段落」を見つけると、
+   文字だけを勝手に拡大する（フォントブースティング）。
+   この盤面は 520px の決まった大きさで組んで丸ごと縮小しているので、
+   ブラウザから見ると画面より広い段落に見えてしまい、対象になる。
+   しかも倍率は描き直すたびに計算し直されるため、
+   ボタンや「山札 26」の文字がそのたびに伸び縮みし、
+   押されたサポート枠やモンスターまで動いて見えていた。
+   この指定で拡大を止める。 */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{
   background:radial-gradient(1300px 800px at 50% -12%, #1a2740 0%, var(--bg) 62%);
   color:var(--text);
