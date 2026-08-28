@@ -425,7 +425,7 @@ function renderDeck() {
         <button class="btn small" data-cleardeck>全部外す</button>
         <button class="btn small" data-go="title">戻る</button>
       </div>
-      <div class="hint">カードをドラッグして出し入れ／クリックでも増減${
+      <div class="hint"><span class="hint-mouse">カードをドラッグして出し入れ／クリックでも増減</span><span class="hint-touch">カードをタップで出し入れ／「i」で効果を見る</span>${
         deckDirty() ? '　<b style="color:#ffc07a">未保存の変更があります</b>' : ''}</div>
     </div>
     <div class="poolcol">
