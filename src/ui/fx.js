@@ -152,6 +152,10 @@ export function fxSlash(rect) {
 export function fxShake(power = 1) {
   const el = document.querySelector('.battle');
   if (!el || calm()) return;
+  // スマホの縦持ちでは盤面が画面いっぱいなので、少し揺らすだけでも
+  // サポート枠や山札が小刻みに動いて故障のように見える。
+  // 衝撃は衝撃波・破片・画面の赤みで出しているので、揺れは省く。
+  if (el.classList.contains('portrait')) return;
   // 盤面は scale(...) で画面に合わせてあるので、その倍率を足したまま揺らす。
   // 以前は translate だけを指定していて倍率が消え、揺れるたびに
   // 盤面が原寸へ跳ね上がる（画面アップに見える）不具合になっていた。

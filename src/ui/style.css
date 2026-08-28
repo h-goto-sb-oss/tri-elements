@@ -174,18 +174,38 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .mini.defense{width:142px;height:112px}
 .battle.portrait .pile{width:66px}
 
-/* 手札は横スクロール。1枚を小さくするより、めくって見える方が読める。
+/* ヒントの文が長くなったり、「直接攻撃」ボタンが出入りするたびに
+   この帯の高さが変わり、上下のサポート枠や山札が動いてしまっていた。
+   高さを固定して、盤面がその場から動かないようにする。 */
+.battle.portrait .center{height:60px;min-height:60px;flex-wrap:wrap;align-content:center;
+  gap:8px;row-gap:2px;overflow:hidden}
+.battle.portrait .center .hint{flex-basis:100%;text-align:center;min-height:0;font-size:13.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.battle.portrait .turnlabel{font-size:16px}
+
+/* 手札は少しずつ重ねて並べる。横スクロールもできるが、
+   3枚しか映らないと選びづらいので、重ねて枚数を稼ぐ。
+   隠れるのは右側なので、コスト・攻撃・防御は左に寄せて必ず見えるようにする。
    枠の高さはカードより必ず大きくしておく（足りないと名前とコストが切れる） */
 .battle.portrait .hand{height:216px;justify-content:flex-start;align-items:center;
-  overflow-x:auto;overflow-y:hidden;padding:4px 6px;gap:7px;scrollbar-width:thin}
-.battle.portrait .hand .card{width:128px;height:196px;flex:none}
+  overflow-x:auto;overflow-y:hidden;padding:4px 12px 4px 8px;gap:0;scrollbar-width:thin}
+.battle.portrait .hand .card{width:128px;height:196px;flex:none;position:relative;
+  margin-left:-48px;transition:transform .12s ease}
+.battle.portrait .hand .card:first-child{margin-left:0}
+.battle.portrait .hand .card .cost{left:3px;right:auto}
+.battle.portrait .hand .card .cname{padding:3px 6px 2px 34px}
+.battle.portrait .hand .card .stats{justify-content:flex-start;gap:16px;padding:0 8px}
+.battle.portrait .hand .card .kw{left:3px;right:auto}
+.battle.portrait .hand .card .rarity{display:none}
+/* 押さえている間は前に出して全体を見せる */
+.battle.portrait .hand .card.peek{z-index:30;transform:translateY(-14px)}
 .battle.portrait .hand .card .art{height:90px}
 .battle.portrait .hand .card .cname{font-size:15px;height:30px;padding:3px 27px 2px 6px}
 .battle.portrait .hand .card .cost{width:26px;height:26px;font-size:17px}
 .battle.portrait .hand .card .body{height:46px;font-size:13.5px;line-height:1.26;padding:4px 6px}
 .battle.portrait .hand .card .stats{height:24px;font-size:18px}
 .battle.portrait .hand .card .kw,.battle.portrait .hand .card .rarity{top:29px;font-size:11px}
-.battle.portrait .hand .card.selectable:hover{transform:none}
+.battle.portrait .hand .card.selectable:hover:not(.peek){transform:none}
 
 .battle.portrait .enemybar{min-height:92px;gap:9px;align-items:center}
 .battle.portrait .bar.enemybar>.face{position:relative;left:auto;top:auto;width:84px;height:84px;
@@ -965,6 +985,17 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .foe{width:100%}
   .foe .portrait{height:180px}
   .foe:hover{transform:none}
+
+  /* フリーバトルは相手が24人いる。1列だと延々と下に伸びるので、
+     冒険（3人を大きく見せる）とは別に、詰めて並べる */
+  .adv-stage.adv-free .foes{display:grid;gap:8px;align-items:start;
+    grid-template-columns:repeat(auto-fill,minmax(102px,1fr))}
+  .adv-free .foe{width:auto}
+  .adv-free .foe .portrait{height:110px}
+  .adv-free .foe .fname{font-size:11.5px;padding:5px 6px 1px;line-height:1.25}
+  .adv-free .foe .fdesc{font-size:9.5px;padding:0 6px 4px;min-height:0;line-height:1.35}
+  .adv-free .foe .fmeta{font-size:9.5px;padding:0 6px 5px;gap:5px;flex-wrap:wrap}
+  .adv-free .foe .fbtn{width:calc(100% - 12px);margin:0 6px 6px;padding:6px 4px;font-size:11.5px}
   .adv-foot{flex-wrap:wrap;padding-bottom:4px}
 
   /* タイトルの装飾が画面をはみ出さないように */
@@ -1012,6 +1043,12 @@ button{font-family:inherit;color:inherit;cursor:pointer}
    ============================================================ */
 @media (max-width:720px){
   .modal{padding:14px 12px;border-radius:12px;max-height:calc(100dvh - 24px)}
+
+  /* パック開封は 3枚 + 2枚。5枚が2・2・1だと縦にはみ出すので、
+     カードごと縮めて1画面に収める（中身の文字も一緒に縮むよう transform で） */
+  .packgrid{gap:6px}
+  .packcard{width:100px;height:164px}
+  .packcard .card.big{transform:scale(.6667);transform-origin:top left}
   .modal h2{font-size:20px}
   .modal p{font-size:12px}
   .mull-hand{gap:7px;margin:10px 0}
@@ -1021,6 +1058,12 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .mull-hand .card.big .cost{width:20px;height:20px;font-size:12px}
   .mull-hand .card.big .body{font-size:8.6px;height:42px;padding:4px 5px}
   .modal .row-btn{flex-wrap:wrap}
+}
+
+@media (max-width:359px){
+  .packgrid{gap:5px}
+  .packcard{width:88px;height:145px}
+  .packcard .card.big{transform:scale(.5867);transform-origin:top left}
 }
 
 /* 戦闘中、指のドラッグをブラウザのスクロールに横取りされないようにする。

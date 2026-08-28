@@ -1106,7 +1106,7 @@ function packOverlay() {
   }).join('');
   return `<div class="overlay"><div class="modal" style="max-width:880px">
     <h2>パック開封！</h2>
-    <div class="grid" style="margin:14px 0">${cards}</div>
+    <div class="grid packgrid" style="margin:14px 0">${cards}</div>
     <button class="btn primary" data-closepack>受け取る</button>
   </div></div>`;
 }
@@ -1166,6 +1166,10 @@ function render(opts = {}) {
       if (el) keep[sel] = el.scrollTop;
     });
   }
+  // 手札の横スクロール位置。描き直すたびに先頭へ戻ると、
+  // めくって見ていた場所を見失う。
+  const handEl = document.querySelector('.battle .hand');
+  const handLeft = handEl ? handEl.scrollLeft : 0;
   let html;
   switch (app.screen) {
     case 'adventure': html = renderAdventure(); break;
@@ -1190,6 +1194,8 @@ function render(opts = {}) {
   if (app.screen === 'battle') {
     app.battleMode = battleLayout();
     applyBattleScale();
+    const nh = document.querySelector('.battle .hand');
+    if (nh && handLeft) nh.scrollLeft = handLeft;
     const lp = document.querySelector('[data-logpane]');
     if (lp) lp.scrollTop = lp.scrollHeight;   // 常に最新のログを表示
   }
@@ -1572,6 +1578,15 @@ const TOUCH_HOLD_MS = 200;   // これだけ押さえ続けたら掴む
 const TOUCH_SLOP = 10;       // これ以内は「まだ動いていない」扱い
 const TOUCH_VERT = 14;       // 縦にこれだけ動いたら、運ぶ意図とみなす
 
+/** 押さえている手札を前に出す（重なって隠れていても中身を確かめられる） */
+function setPeek(el) {
+  clearPeek();
+  if (el) el.classList.add('peek');
+}
+function clearPeek() {
+  document.querySelectorAll('.hand .card.peek').forEach(e => e.classList.remove('peek'));
+}
+
 /** 実際に掴む（残像を出して盤面をドロップ待ちの表示にする） */
 function armDrag(d, x, y) {
   d.moved = true;
@@ -1610,6 +1625,7 @@ document.addEventListener('pointerdown', ev => {
     x0: ev.clientX, y0: ev.clientY, moved: false,
     pending, pointerType: ev.pointerType, lastX: ev.clientX, lastY: ev.clientY,
   };
+  if (handCard) setPeek(handCard);
   if (pending) {
     app.dragHold = setTimeout(() => {
       const d = app.drag;
@@ -1630,6 +1646,7 @@ document.addEventListener('pointermove', ev => {
     // 横に払った → 手札をめくりたいので、掴まずブラウザのスクロールに譲る
     if (Math.abs(dx) > TOUCH_SLOP && Math.abs(dx) > Math.abs(dy)) {
       clearTimeout(app.dragHold);
+      clearPeek();
       app.drag = null;
       return;
     }
@@ -1695,6 +1712,7 @@ document.addEventListener('visibilitychange', () => {
 
 document.addEventListener('pointercancel', () => {
   clearTimeout(app.dragHold);
+  clearPeek();
   if (!app.drag) return;
   const moved = app.drag.moved;
   app.drag = null;
@@ -1707,6 +1725,7 @@ document.addEventListener('pointerup', ev => {
   const d = app.drag;
   app.drag = null;
   clearTimeout(app.dragHold);
+  clearPeek();
   killGhost();
   document.querySelectorAll('.slot.hot').forEach(e => e.classList.remove('hot'));
   if (!d) return;
