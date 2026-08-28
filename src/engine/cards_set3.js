@@ -103,8 +103,8 @@ export const SET3 = [
 
   // ---------- サポート ----------
   S('z_sf1', '点火', 'fire', 1, 'bolt', O('点火', {
-    text: 'このターン、自分のモンスター1体を+3/+0する。',
-    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 3, def: 0, duration: 'turn' }],
+    text: 'このターン、自分のモンスター1体を+2/+0する。',
+    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 2, def: 0, duration: 'turn' }],
     flavor: '最初の火花だけは、小さくていい。',
   })),
   S('z_sf2', '流星群', 'fire', 4, 'meteor', O('流星群', {

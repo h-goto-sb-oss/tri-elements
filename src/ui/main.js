@@ -68,7 +68,13 @@ const SCENE_BGM = {
   title: 'bgm_menu', deck: 'bgm_menu', collection: 'bgm_menu', rules: 'bgm_menu', settings: 'bgm_menu',
   adventure: 'bgm_map', free: 'bgm_map', battle: 'bgm_battle',
 };
-function syncBgm() { Audio.playBgm(SCENE_BGM[app.screen] || 'bgm_menu'); }
+/** ここから先の戦闘は後半用の曲に切り替える（黄昏の回廊＝6番目のエリア） */
+const LATE_AREA_FROM = 5;
+function syncBgm() {
+  let key = SCENE_BGM[app.screen] || 'bgm_menu';
+  if (key === 'bgm_battle' && !app.free && app.areaIndex >= LATE_AREA_FROM) key = 'bgm_battle_late';
+  Audio.playBgm(key);
+}
 
 function go(screen) {
   clearTimeout(app.aiTimer);

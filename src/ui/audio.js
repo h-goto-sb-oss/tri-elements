@@ -171,7 +171,8 @@ export function setSeVolume(v) { state.seVol = Math.max(0, Math.min(1, v)); save
 export const AUDIO_FILES = [
   ['bgm_menu', 'タイトル・デッキ編集・カード図鑑・ルール説明'],
   ['bgm_map', '冒険（エリア画面）'],
-  ['bgm_battle', '戦闘画面'],
+  ['bgm_battle', '戦闘画面（前半エリア）'],
+  ['bgm_battle_late', '戦闘画面（黄昏の回廊より先）'],
   ['se_click', 'カード・タブを選ぶ'],
   ['se_confirm', '決定・開始・保存'],
   ['se_error', '使えない操作'],

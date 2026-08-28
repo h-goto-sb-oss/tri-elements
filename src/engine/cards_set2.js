@@ -38,8 +38,8 @@ export const SET2 = [
     flavor: '倒れたあとに、本当の火が来る。',
   }),
   S('x_sf1', '決戦の狼煙', 'fire', 1, 'banner', {
-    set: 2, tier: 2, text: 'このターン、自分の炎モンスター1体を+5/+0する。',
-    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 5, def: 0, duration: 'turn', filter: { element: 'fire' } }],
+    set: 2, tier: 2, text: 'このターン、自分の炎モンスター1体を+3/+0する。',
+    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 3, def: 0, duration: 'turn', filter: { element: 'fire' } }],
     flavor: '合図はひとつ。前へ。',
   }),
   S('x_sf3', '炎の共鳴', 'fire', 3, 'banner', {

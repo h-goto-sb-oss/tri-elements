@@ -144,8 +144,8 @@ const SUPPORTS = [
     effects: [{ op: 'damageFace', side: 'enemy', v: 2 }], flavor: '真っ直ぐ、それだけ。',
   }),
   S('sf2', '灼熱の刃', 'fire', 2, 'sword', {
-    tier: 1, equip: true, text: '装備：自分の炎モンスター1体を+4/+0する。場に残る。',
-    effects: [{ op: 'equip', atk: 4, def: 0, filter: { element: 'fire' } }], flavor: '柄まで焼けるが、構わない。',
+    tier: 1, equip: true, text: '装備：自分の炎モンスター1体を+3/+0する。場に残る。',
+    effects: [{ op: 'equip', atk: 3, def: 0, filter: { element: 'fire' } }], flavor: '柄まで焼けるが、構わない。',
   }),
   S('sf3', '火球', 'fire', 3, 'orb', {
     tier: 2, text: '攻撃力4以下の相手モンスター1体を破壊する。',
