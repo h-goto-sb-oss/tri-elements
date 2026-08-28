@@ -1054,3 +1054,23 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 @media (prefers-reduced-motion:reduce){
   .fxwave,.fxshard,.fxvignette{display:none}
 }
+
+/* ============================================================
+   冒険・フリーバトルのデッキ選択
+   戦う前にここで持ち込むデッキを切り替えられる。
+   ============================================================ */
+.deckpick{display:flex;align-items:center;gap:8px;flex:none;min-width:0;
+  padding:6px 9px;border-radius:11px;background:#0e1723cc;border:1px solid var(--line)}
+.dp-label{font-size:11.5px;font-weight:800;color:var(--gold);letter-spacing:.06em;flex:none}
+.dp-slots{display:flex;gap:5px;overflow-x:auto;flex:1;min-width:0;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.dp-slots::-webkit-scrollbar{display:none}
+.dp-slot{flex:none;display:flex;align-items:baseline;gap:5px;max-width:140px;
+  padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#151d29;
+  color:#c1cede;font-family:inherit;cursor:pointer;line-height:1.15;transition:.12s}
+.dp-slot b{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
+.dp-slot small{font-size:10px;color:var(--muted)}
+.dp-slot:hover{border-color:var(--gold);background:#1e2836}
+.dp-slot.on{border-color:var(--gold);background:#2b2415;color:var(--gold);box-shadow:0 0 8px #f2c15b33}
+.dp-slot.on small{color:#d8bd77}
+.dp-slot.short small{color:#ff9a9a}

@@ -228,6 +228,26 @@ function renderTitle() {
   </div>`;
 }
 
+/**
+ * 保存してあるデッキの切り替え。
+ * 戦う前にここで選べるようにして、いちいちデッキ編集へ行かなくていいようにする。
+ */
+function deckPickerHtml() {
+  const decks = app.save.decks || [];
+  if (decks.length < 1) return '';
+  const active = app.save.activeDeck;
+  return `<div class="deckpick">
+    <span class="dp-label">デッキ</span>
+    <div class="dp-slots">${decks.map((d, i) => {
+      const ready = d.list.length === 30;
+      return `<button class="dp-slot ${i === active ? 'on' : ''} ${ready ? '' : 'short'}"
+        data-usedeck="${i}" ${ready ? '' : 'title="30枚そろっていません"'}>
+        <b>${esc(d.name)}</b><small>${d.list.length}/30</small></button>`;
+    }).join('')}</div>
+    <button class="btn tiny" data-go="deck">編集</button>
+  </div>`;
+}
+
 // ============================================================
 // 冒険（エリアごとに1ページ）
 // ============================================================
@@ -272,6 +292,7 @@ function renderAdventure() {
     .map(([k, n]) => `<button class="btn primary" data-openpack="${k}">${PACK_TYPES[k].name} ×${n} を開ける</button>`).join('');
 
   return `<div class="adventure">
+    ${deckPickerHtml()}
     <div class="adv-head">
       <h2>${esc(area.name)}</h2>
       <div class="desc">${esc(area.desc)}<br><span style="color:#9fb2c8">報酬: ${PACK_TYPES[REWARD[area.id]].name}　／　撃破 ${area.enemies.filter((_, k) => app.save.cleared[`${area.id}:${k}`]).length}/${area.enemies.length}</span></div>
@@ -326,6 +347,7 @@ function renderFree() {
   }).join('');
 
   return `<div class="adventure">
+    ${deckPickerHtml()}
     <div class="adv-head">
       <h2>フリーバトル</h2>
       <div class="desc">一度倒した相手といつでも再戦できます。ここでの勝敗は冒険の戦績には影響しません。<br>
@@ -1751,6 +1773,21 @@ function handleClick(ev) {
     const zid = artZoomEl.dataset.artzoom;
     if (!(app.save.collection[zid] || 0)) return toast('まだ入手していないカードです');
     app.artZoom = zid; return render();
+  }
+
+  // --- 冒険・フリーバトルでのデッキ切り替え ---
+  const useDeck = hit('[data-usedeck]');
+  if (useDeck) {
+    const i = Number(useDeck.dataset.usedeck);
+    const d = app.save.decks[i];
+    if (!d) return;
+    app.save.activeDeck = i;
+    app.save.deck = [...d.list];
+    app.deckDraft = null;           // デッキ編集の下書きは作り直す
+    writeSave(app.save);
+    Audio.playSe('se_click');
+    toast(d.list.length === 30 ? `「${d.name}」で戦います` : `「${d.name}」は${d.list.length}/30枚です`);
+    return render();
   }
 
   // --- 画面遷移など ---

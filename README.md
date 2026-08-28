@@ -112,6 +112,17 @@ node tools/dump_cards.mjs > cards_export.json
 python tools/make_cardlist.py cardlist.html
 ```
 
+効果が重なっているカードの洗い出しは次のコマンドです。
+
+```
+node tools/scan_overlap.mjs
+```
+
+カード名や説明文ではなく `effects` / `onSummon` のデータそのものを突き合わせるので、
+言い回しが違っても「ほぼ同じ札」を取りこぼしません。効かせる相手の属性しばりが違うもの
+（炎デッキ用と水デッキ用など）や、付与するキーワードが違うものは別物として扱います。
+カードを足したり数値をいじったら、これを流して 0 件になることを確認してください。
+
 `assets/art/` へ直接ファイルを置いた場合は `python tools/adopt_art.py` を実行してください。
 「カード名.png」を `<カードID>.png` へ改名し、余白をトリムして `src/ui/art_map.js` を作り直します
 （`--dry` で対応表だけ確認できます）。ファイル名は必ずカードIDかカード名にしてください。

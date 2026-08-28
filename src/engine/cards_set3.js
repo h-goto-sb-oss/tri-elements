@@ -29,7 +29,7 @@ export const SET3 = [
     onSummon: [{ op: 'increaseMaxCost', n: 1 }],
     flavor: '二重の軌道が、新しい力の巡りを生む。',
   })),
-  M('z_f5', '紅蓮の観測儀', 'fire', 4, 3, 4, 'eye', O('紅蓮の観測儀', {
+  M('z_f5', '紅蓮の観測儀', 'fire', 4, 5, 2, 'eye', O('紅蓮の観測儀', {
     keywords: ['observe'], text: '【観測】',
     onSummon: [{ op: 'observe', n: 3 }],
     flavor: 'そのレンズは、まだ生まれていない炎を見る。',
@@ -56,7 +56,7 @@ export const SET3 = [
     keywords: ['guard'], text: '【守護】',
     flavor: '片割れを失っても、門を守る役目は終わらない。',
   })),
-  M('z_w4', 'タイドグラス', 'water', 4, 3, 4, 'orb', O('潮汐の砂時計', {
+  M('z_w4', 'タイドグラス', 'water', 4, 2, 5, 'orb', O('潮汐の砂時計', {
     keywords: ['observe'], text: '【観測】',
     onSummon: [{ op: 'observe', n: 3 }],
     flavor: '落ちる海の中を、未来の魚影が泳ぐ。',
@@ -76,9 +76,9 @@ export const SET3 = [
   M('z_g1', '星種', 'grass', 1, 3, 2, 'crystal', O('星種', {
     flavor: '殻に刻まれた星図どおりに、根を伸ばす。',
   })),
-  M('z_g2', '芽吹きの環', 'grass', 2, 3, 3, 'ward', O('芽吹きの環', {
-    text: '【登場時】攻撃力が最も高い自分のモンスター1体を+2/+0する。',
-    onSummon: [{ op: 'buff', side: 'self', target: 'one', atk: 2, def: 0, duration: 'permanent' }],
+  M('z_g2', '芽吹きの環', 'grass', 2, 1, 3, 'ward', O('芽吹きの環', {
+    text: '【登場時】カードを1枚引く。',
+    onSummon: [{ op: 'draw', side: 'self', n: 1 }],
     flavor: '円は閉じ、命はその内側で芽吹く。',
   })),
   M('z_g3', 'クリスタルツイッグ', 'grass', 3, 4, 3, 'treant', O('結晶樹の若枝', {
@@ -86,7 +86,7 @@ export const SET3 = [
     onSummon: [{ op: 'increaseMaxCost', n: 1 }],
     flavor: '一枚の葉が、森ひとつ分の光を集める。',
   })),
-  M('z_g4', '大地の羅針盤', 'grass', 4, 4, 5, 'orb', O('大地の羅針盤', {
+  M('z_g4', '大地の羅針盤', 'grass', 4, 4, 3, 'orb', O('大地の羅針盤', {
     keywords: ['observe'], text: '【観測】',
     onSummon: [{ op: 'observe', n: 3 }],
     flavor: '針が示すのは北ではなく、次に芽吹く場所。',
@@ -159,8 +159,8 @@ export const SET3 = [
     flavor: '鍵穴は無い。それでも門は、この形を覚えている。',
   })),
   S('z_sn2', '星屑の護符', 'none', 3, 'armor', O('星屑の護符', {
-    equip: true, text: '装備：自分のモンスター1体を+2/+2する。場に残る。',
-    effects: [{ op: 'equip', atk: 2, def: 2 }],
+    equip: true, text: '装備：自分のモンスター1体を+3/+2する。場に残る。',
+    effects: [{ op: 'equip', atk: 3, def: 2 }],
     flavor: '砕けた星をひと粒、胸元に。',
   })),
   S('z_sn3', '天秤の裁定', 'none', 3, 'orb', O('天秤の裁定', {

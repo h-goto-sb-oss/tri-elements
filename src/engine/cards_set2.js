@@ -38,8 +38,8 @@ export const SET2 = [
     flavor: '倒れたあとに、本当の火が来る。',
   }),
   S('x_sf1', '決戦の狼煙', 'fire', 1, 'banner', {
-    set: 2, tier: 2, text: 'このターン、自分の炎モンスター1体を+3/+0する。',
-    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 3, def: 0, duration: 'turn', filter: { element: 'fire' } }],
+    set: 2, tier: 2, text: 'このターン、自分の炎モンスター1体を+5/+0する。',
+    effects: [{ op: 'buff', side: 'self', target: 'one', atk: 5, def: 0, duration: 'turn', filter: { element: 'fire' } }],
     flavor: '合図はひとつ。前へ。',
   }),
   S('x_sf3', '炎の共鳴', 'fire', 3, 'banner', {
@@ -122,8 +122,8 @@ export const SET2 = [
     flavor: '踏まれた場所から芽が出る。',
   }),
   M('x_g2', '若木の戦士', 'grass', 2, 3, 3, 'plant', {
-    set: 2, tier: 2, text: '【登場時】攻撃力が最も高い自分のモンスター1体を+0/+2する。',
-    onSummon: [{ op: 'buff', side: 'self', target: 'one', atk: 0, def: 2, duration: 'permanent' }],
+    set: 2, tier: 2, text: '【登場時】自分のモンスター全てを+0/+1する。',
+    onSummon: [{ op: 'buff', side: 'self', target: 'all', atk: 0, def: 1, duration: 'permanent' }],
     flavor: 'まだ細いが、折れない。',
   }),
   M('x_g3', 'ペタルダンサー', 'grass', 3, 5, 3, 'spirit', {
@@ -159,7 +159,7 @@ export const SET2 = [
     effects: [{ op: 'buff', side: 'enemy', target: 'one', atk: -3, def: 0, duration: 'permanent' }],
     flavor: '触れた手のほうが深く裂ける。',
   }),
-  S('x_sg4', '森の共鳴', 'grass', 3, 'leaf', {
+  S('x_sg4', '森の共鳴', 'grass', 4, 'leaf', {
     set: 2, tier: 2, text: '自分の草モンスター全てを+2/+2する。',
     effects: [{ op: 'buff', side: 'self', target: 'all', atk: 2, def: 2, duration: 'permanent', filter: { element: 'grass' } }],
     flavor: '根がつながっている限り、一緒に育つ。',
