@@ -30,7 +30,8 @@ def norm(s):
 def load_cards():
     """cards.js / cards_set2.js から id・名前・属性を拾う"""
     out = []
-    for path in ('src/engine/cards.js', 'src/engine/cards_set2.js', 'src/engine/cards_set3.js'):
+    for path in ('src/engine/cards.js', 'src/engine/cards_set2.js', 'src/engine/cards_set3.js',
+                 'src/engine/cards_chars.js'):
         src = open(path, encoding='utf-8').read()
         for m in re.finditer(r"[MS]\('([\w]+)', '([^']+)', '(\w+)'", src):
             out.append({'id': m.group(1), 'name': m.group(2), 'element': m.group(3)})

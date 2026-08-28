@@ -3,7 +3,7 @@
 // ============================================================
 import { ALL_CARDS, card, ELEMENTS, KEYWORDS } from '../engine/cards.js';
 import { RARITY } from '../engine/rarity.js';
-import { CHARACTER_OF, CHARACTER_WINS_NEEDED } from '../engine/cards_chars.js';
+import { CHARACTER_OF, CHARACTER_WINS_NEEDED, EXTREME_SELF_COPIES } from '../engine/cards_chars.js';
 import {
   createGame, mulligan, applyAction, legalAttackTargets, canSummon, canPlaySupport,
   canChangeMode, canAttack, supportNeedsTarget, fieldMonsters, effAtk, effDef,
@@ -1215,10 +1215,11 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   const seed = (Math.random() * 1e9) | 0;
   // フリーバトルの「極」では、そのキャラ自身のカードをデッキに混ぜてくる。
   // 狙っているカードを手に入れる前に見られる、という導線でもある。
+  // 30枚に1枚だとほとんど出てこないので、多めに積ませて high 確率で見られるようにする。
   let foeDeck = [...enemy.deck];
   const selfCard = CHARACTER_OF[app.enemyKey];
   if (free && app.freeDiff === 'extreme' && selfCard) {
-    foeDeck = [selfCard, ...foeDeck.slice(1)];
+    foeDeck = [...Array(EXTREME_SELF_COPIES).fill(selfCard), ...foeDeck.slice(EXTREME_SELF_COPIES)];
   }
   app.game = createGame({
     decks: [[...app.save.deck], foeDeck],

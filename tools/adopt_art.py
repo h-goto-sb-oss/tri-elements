@@ -60,7 +60,9 @@ def main():
         f.write('// tools/import_art.py / tools/adopt_art.py が自動生成。手で編集しない。\n')
         f.write('// カードIDごとの差し替えイラスト（透過PNG）。\n')
         f.write('export const ART_MAP = ' +
-                json.dumps({k: f'assets/art/{k}.png' for k in have},
+                # 先頭の / は必須。withBase() が配信base（/tri-elements/ など）を
+                # 前に足すので、相対パスのままだと連結が壊れる。
+                json.dumps({k: f'/assets/art/{k}.png' for k in have},
                            ensure_ascii=False, indent=2) + ';\n')
     print('art_map.js を更新しました')
 

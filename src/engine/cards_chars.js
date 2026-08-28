@@ -197,3 +197,10 @@ export const CHARACTER_OF = {
 
 /** 「極」で本人を何回倒すと、そのキャラのカードが手に入るか */
 export const CHARACTER_WINS_NEEDED = 5;
+
+/**
+ * 「極」で、相手のデッキに混ぜる本人のカードの枚数（30枚中）。
+ * 1枚だと引かれないまま終わる試合がほとんどなので、4枚にして
+ * だいたいの試合で1回は見られるようにしている。
+ */
+export const EXTREME_SELF_COPIES = 4;
