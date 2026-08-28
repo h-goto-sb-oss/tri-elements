@@ -1483,9 +1483,37 @@ function elementUnder(x, y, selector) {
 }
 function killGhostPointerEvents() { /* ghost は pointer-events:none なので何もしなくてよい */ }
 
+// ------------------------------------------------------------
+// 指で手札を触るときの判定
+//   手札は横スクロールするので、「めくりたい」のか「カードを持ちたい」のかを
+//   分けないと、少し払っただけでカードを掴んでスクロールできなくなる。
+//     ・横にすっと払った        → 手札のスクロール（掴まない）
+//     ・そのまま少し押さえた    → カードを掴む
+//     ・盤面へ向けて縦に動かした → カードを掴む
+// ------------------------------------------------------------
+const TOUCH_HOLD_MS = 200;   // これだけ押さえ続けたら掴む
+const TOUCH_SLOP = 10;       // これ以内は「まだ動いていない」扱い
+const TOUCH_VERT = 14;       // 縦にこれだけ動いたら、運ぶ意図とみなす
+
+/** 実際に掴む（残像を出して盤面をドロップ待ちの表示にする） */
+function armDrag(d, x, y) {
+  d.moved = true;
+  let html = '';
+  if (d.from === 'hand') html = cardHtml(card(app.game.players[0].hand[d.index]), {});
+  else if (d.cardId) html = cardHtml(card(d.cardId), {});
+  else if (d.from === 'board') {
+    const m = app.game.players[0].field[d.slot];
+    if (m) html = cardHtml(card(m.id), {});
+  }
+  if (html) makeGhost(html, x, y);
+  if (d.pointerType === 'touch' && navigator.vibrate) navigator.vibrate(8);  // 掴んだ合図
+  render();
+}
+
 document.addEventListener('pointerdown', ev => {
   if (app.drag) return;         // すでに掴んでいる指がある（2本目は無視する）
   killGhost();                  // 何かの拍子に残った残像があれば、ここで必ず消す
+  clearTimeout(app.dragHold);
   const handCard = ev.target.closest('[data-hand]');
   const deckCard = ev.target.closest('[data-deckcard]');
   const poolCard = ev.target.closest('[data-poolcard]');
@@ -1495,31 +1523,50 @@ document.addEventListener('pointerdown', ev => {
   // デッキ編集を指で触るときは、ドラッグより縦スクロールを優先する。
   // （出し入れはタップでできるので、指でのドラッグは無くても困らない）
   if (ev.pointerType === 'touch' && app.screen === 'deck') return;
+  // 指で手札を触ったときだけ、掴むかどうかを保留する
+  const pending = ev.pointerType === 'touch' && !!handCard;
   app.drag = {
     from: handCard ? 'hand' : deckCard ? 'deck' : poolCard ? 'pool' : 'board',
     index: handCard ? Number(handCard.dataset.hand) : undefined,
     cardId: deckCard?.dataset.deckcard || poolCard?.dataset.poolcard,
     slot: boardMon ? Number(boardMon.dataset.slot) : undefined,
     x0: ev.clientX, y0: ev.clientY, moved: false,
+    pending, pointerType: ev.pointerType, lastX: ev.clientX, lastY: ev.clientY,
   };
+  if (pending) {
+    app.dragHold = setTimeout(() => {
+      const d = app.drag;
+      if (!d || !d.pending) return;
+      d.pending = false;
+      armDrag(d, d.lastX, d.lastY);
+    }, TOUCH_HOLD_MS);
+  }
 });
 
 document.addEventListener('pointermove', ev => {
   const d = app.drag;
   if (!d) return;
-  const dist = Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0);
-  if (!d.moved && dist > 7) {
-    d.moved = true;
-    let html = '';
-    if (d.from === 'hand') html = cardHtml(card(app.game.players[0].hand[d.index]), {});
-    else if (d.cardId) html = cardHtml(card(d.cardId), {});
-    else if (d.from === 'board') {
-      const m = app.game.players[0].field[d.slot];
-      if (m) html = cardHtml(card(m.id), {});
+  d.lastX = ev.clientX; d.lastY = ev.clientY;
+  const dx = ev.clientX - d.x0, dy = ev.clientY - d.y0;
+
+  if (d.pending) {
+    // 横に払った → 手札をめくりたいので、掴まずブラウザのスクロールに譲る
+    if (Math.abs(dx) > TOUCH_SLOP && Math.abs(dx) > Math.abs(dy)) {
+      clearTimeout(app.dragHold);
+      app.drag = null;
+      return;
     }
-    if (html) makeGhost(html, ev.clientX, ev.clientY);
-    render();
+    // 盤面へ向かって縦に動いた → 運ぶ意図なので、押さえる時間を待たずに掴む
+    if (Math.abs(dy) > TOUCH_VERT && Math.abs(dy) >= Math.abs(dx)) {
+      clearTimeout(app.dragHold);
+      d.pending = false;
+      armDrag(d, ev.clientX, ev.clientY);
+    } else {
+      return;                                   // まだ様子見
+    }
   }
+
+  if (!d.moved && Math.hypot(dx, dy) > 7) armDrag(d, ev.clientX, ev.clientY);
   if (d.moved) {
     moveGhost(ev.clientX, ev.clientY);
     document.querySelectorAll('.slot.hot').forEach(e => e.classList.remove('hot'));
@@ -1561,6 +1608,7 @@ document.addEventListener('visibilitychange', () => {
 
 // 掴んだままタブを離れる等でも残像を残さない
 ['blur', 'visibilitychange'].forEach(t => window.addEventListener(t, () => {
+  clearTimeout(app.dragHold);
   if (!app.drag && !ghost) return;
   const moved = app.drag && app.drag.moved;
   app.drag = null;
@@ -1569,6 +1617,7 @@ document.addEventListener('visibilitychange', () => {
 }));
 
 document.addEventListener('pointercancel', () => {
+  clearTimeout(app.dragHold);
   if (!app.drag) return;
   const moved = app.drag.moved;
   app.drag = null;
@@ -1580,10 +1629,13 @@ document.addEventListener('pointercancel', () => {
 document.addEventListener('pointerup', ev => {
   const d = app.drag;
   app.drag = null;
+  clearTimeout(app.dragHold);
   killGhost();
   document.querySelectorAll('.slot.hot').forEach(e => e.classList.remove('hot'));
   if (!d) return;
   if (!d.moved) return;      // 動いていなければ click 側で処理する
+  // 長押しで掴んだものの実際には動かさずに離した場合は、ただのタップとして通す
+  if (Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) <= TOUCH_SLOP) { render(); return; }
   // ドラッグ完了時に発生するクリックだけを無視する（次の操作まで残さない）
   suppressClick = true;
   setTimeout(() => { suppressClick = false; }, 0);
