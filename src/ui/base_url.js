@@ -7,7 +7,15 @@
 // ============================================================
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-/** "/assets/..." のようなルート絶対パスに配信base（サブパス）を付ける */
+// 素材はファイル名が変わらないので、絵を差し替えても端末に残った古い画像が
+// そのまま使われ続けてしまう（index.html だけ毎回取りに行っても直らない）。
+// ビルド日時を問い合わせに付けて、公開するたびに取り直させる。
+// 同じ版のあいだは URL が変わらないので、キャッシュはきちんと効く。
+const V = typeof __BUILD__ === 'string' ? __BUILD__.replace(/\D/g, '') : '';
+
+/** "/assets/..." のようなルート絶対パスに配信base（サブパス）と版を付ける */
 export function withBase(path) {
-  return path ? BASE + path : path;
+  if (!path) return path;
+  const url = BASE + path;
+  return V ? url + (url.includes('?') ? '&' : '?') + 'v=' + V : url;
 }
