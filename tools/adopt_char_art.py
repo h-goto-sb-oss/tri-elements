@@ -31,7 +31,8 @@ ENEMIES = 'assets/enemies'
 KEEP = os.path.join(ART, '_chars_src')
 SIZE = 512
 EXTS = ('.png', '.webp', '.jpg', '.jpeg')
-HEAD_BIAS = 0.16     # 頭の上に残す余白。カードの絵枠は上下が切り落とされるので多めに取る
+HEAD_BIAS = 0.19     # 頭の上に残す余白。絵枠は上から約14%を落とすので、その少し上に置く
+WIDE = 0.95          # 中身が横幅のこれだけを占めるように寄せる
 BG_MIN = 210         # これ以上明るく、かつ
 BG_SPREAD = 24       # RGBの差がこれ以下なら「無彩色の背景」とみなす
 
@@ -164,15 +165,20 @@ def solid_bbox(im):
 
 
 def square_bust(im):
-    """全身の立ち絵から、頭～胸あたりを正方形で切り出す。
-    カードの絵枠は横長に切り抜かれるので、全身のままだと顔が枠の外に出てしまう。"""
+    """全身の立ち絵から、カードの絵枠に合う位置を正方形で切り出す。
+
+    絵枠は横長に切り抜かれる（上下が落ちる）ので、
+      ・中身が横幅いっぱいに来るように寄せる（小さく見えるのを防ぐ）
+      ・頭の上には枠が落とすぶんの余白を必ず残す（顔が切れるのを防ぐ）
+    の両方を満たす位置を計算する。"""
     x0, y0, x1, y1 = solid_bbox(im)
-    side = min(x1 - x0, y1 - y0)
+    w, h = x1 - x0, y1 - y0
+    side = int(round(w / WIDE))
+    side = min(side, int(h / 0.55))      # 横に広い絵で寄りすぎないための歯止め
     cx = (x0 + x1) // 2
-    # 枠からはみ出す指定でも良い（PIL が透明で埋めてくれる）。
-    # 頭の上の余白は、絵の外側であっても確保したい。
+    # 枠からはみ出す指定でも良い（PIL が透明で埋めてくれる）
     left = cx - side // 2
-    top = y0 - int(side * HEAD_BIAS)
+    top = y0 - int(round(side * HEAD_BIAS))
     return im.crop((left, top, left + side, top + side))
 
 

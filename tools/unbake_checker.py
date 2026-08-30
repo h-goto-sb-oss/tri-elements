@@ -86,6 +86,51 @@ def unbake(im):
     return Image.fromarray(out, 'RGBA'), float(kill.mean())
 
 
+
+def fill_holes(im, max_frac=0.02):
+    """キャラの内側にできてしまった穴を、周りの色で埋める。
+
+    生成AIの絵は、消しすぎて服や顔に穴が空いていることがある。
+    穴の下には色が残っていないので、いちばん近い不透明な画素の色を引き伸ばす。
+    市松を抜いた跡（淡い色が残っている）は、透けたままにしておく。
+    ※ unbake のすぐ後、縮小する前に呼ぶこと。縮小すると色が混ざって見分けられなくなる。
+    """
+    a = np.asarray(im.convert('RGBA')).astype(np.int16)
+    al, rgb = a[:, :, 3], a[:, :, :3]
+    clear = al < 40
+    lab, n = ndimage.label(clear, structure=np.ones((3, 3)))
+    edge = (set(lab[0].tolist()) | set(lab[-1].tolist())
+            | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist()))
+    edge.discard(0)
+    inner = [i for i in range(1, n + 1) if i not in edge]
+    if not inner:
+        return im.convert('RGBA'), 0
+    total = a.shape[0] * a.shape[1]
+    fill = np.zeros_like(clear)
+    for i in inner:
+        sel = lab == i
+        if int(sel.sum()) > total * max_frac:
+            continue                       # 大きすぎるものは意図した隙間とみなす
+        v = rgb[sel]
+        pale = float(((v.min(1) >= 190) & ((v.max(1) - v.min(1)) <= 35)).mean())
+        if pale > 0.5:
+            continue                       # 市松を抜いた跡。透けたままでよい
+        fill |= sel
+    if not fill.any():
+        return im.convert('RGBA'), 0
+    src = ~fill & (al > 150)
+    idx = ndimage.distance_transform_edt(~src, return_indices=True)[1]
+    out = np.asarray(im.convert('RGBA')).copy()
+    for c in range(3):
+        ch = out[:, :, c]
+        ch[fill] = ch[idx[0][fill], idx[1][fill]]
+    out[:, :, 3] = np.where(fill, 255, out[:, :, 3])
+    for c in range(3):                     # 継ぎ目をならす
+        sm = ndimage.gaussian_filter(out[:, :, c].astype(float), 1.2)
+        out[:, :, c] = np.where(fill, sm, out[:, :, c]).astype(np.uint8)
+    return Image.fromarray(out, 'RGBA'), int(fill.sum())
+
+
 def main():
     args = [x for x in sys.argv[1:] if not x.startswith('--')]
     dry = '--dry' in sys.argv

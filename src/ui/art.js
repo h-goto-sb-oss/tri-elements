@@ -386,7 +386,7 @@ export function cardArtSvg(c) {
     // 透過イラスト + 弾ごとの背景
     return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
       ${backdropSvg(c, uid)}
-      <image href="${src}" x="3" y="1" width="94" height="94" preserveAspectRatio="xMidYMid meet"/>
+      <image href="${src}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>
       <rect width="100" height="100" fill="url(#vg${uid})"/>
     </svg>`;
   }

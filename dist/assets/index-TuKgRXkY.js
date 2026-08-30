@@ -240,7 +240,7 @@
     <rect width="100" height="100" fill="url(#bg${t})"/>
     ${r?`${(Vt[e.element]||Vt.none)(s.a)}<g opacity="0.5">${i}</g>`:`${i}<ellipse cx="50" cy="62" rx="34" ry="9" fill="#000" opacity="0.28"/>`}`}function Ut(e){let t=2166136261;for(let a=0;a<e.length;a++)t^=e.charCodeAt(a),t=Math.imul(t,16777619);return(t>>>0)/4294967296}function Ts(e){const t=parseInt(e.slice(1),16);let a=(t>>16&255)/255,s=(t>>8&255)/255,r=(t&255)/255;const i=Math.max(a,s,r),o=Math.min(a,s,r);let l=0,c=0;const d=(i+o)/2;if(i!==o){const f=i-o;c=d>.5?f/(2-i-o):f/(i+o),l=i===a?(s-r)/f+(s<r?6:0):i===s?(r-a)/f+2:(a-s)/f+4,l*=60}return[l,c,d]}function Ds(e,t,a){e=(e%360+360)%360,t=Math.min(1,Math.max(0,t)),a=Math.min(1,Math.max(0,a));const s=(1-Math.abs(2*a-1))*t,r=s*(1-Math.abs(e/60%2-1)),i=a-s/2,o=e<60?[s,r,0]:e<120?[r,s,0]:e<180?[0,s,r]:e<240?[0,r,s]:e<300?[r,0,s]:[s,0,r],l=c=>Math.round((c+i)*255).toString(16).padStart(2,"0");return`#${l(o[0])}${l(o[1])}${l(o[2])}`}function Ls(e,t){const a=(t-.5)*20,s=(t-.5)*.09,r=(t-.5)*.1,i=o=>{const[l,c,d]=Ts(o);return Ds(l+a,c+r,d+s)};return{...e,body:i(e.body),body2:i(e.body2),dark:i(e.dark)}}function ca(e){return et(e.img||qs[e.id]||"")}function Ve(e){const t=e.id.replace(/[^\w]/g,""),a=ca(e);if(a)return`<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
       ${Yt(e,t)}
-      <image href="${a}" x="3" y="1" width="94" height="94" preserveAspectRatio="xMidYMid meet"/>
+      <image href="${a}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>
       <rect width="100" height="100" fill="url(#vg${t})"/>
     </svg>`;const s=vt[e.element]||vt.none,r=Ut(e.id),i=Ls(s,r),o=Kt[e.art]||Kt.orb,l=.93+r*.16,c=(Ut(e.id+"x")-.5)*7;return`<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" class="card-art-svg">
     ${Yt(e,t)}
@@ -561,7 +561,7 @@
       <button class="tab ${t==="sound"?"on":""}" data-settab="sound">サウンド</button>
     </div>
     <div class="setpanel">${t==="player"?s:r}</div>
-    <div class="hint" style="font-size:11px">ビルド 2026-08-30 20:11</div>
+    <div class="hint" style="font-size:11px">ビルド 2026-08-30 20:53</div>
     <button class="btn" data-go="title">戻る</button>
   </div>`}function Dn(){const e=n.onboard||(n.onboard={name:"",avatar:1}),t=at.map(a=>`
     <button class="avpick ${e.avatar===a.id?"on":""}" data-obavatar="${a.id}">
