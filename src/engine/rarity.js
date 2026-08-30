@@ -76,6 +76,16 @@ export const RARITY_OF = {
   c_riina: 'legend', c_cardan: 'legend', c_ordo: 'legend',
   c_yue: 'legend', c_kairos: 'legend', c_astel: 'legend',
   c_nox: 'legend', c_dione: 'legend', c_astralis: 'legend',
+
+  // ---------------- 第4弾『鉄旗の陣』 ----------------
+  b_f3: 'uncommon', b_f4: 'rare', b_f5: 'rare', b_lf1: 'legend',
+  b_sf2: 'uncommon', b_sf3: 'epic',
+  b_w3: 'uncommon', b_w4: 'rare', b_w5: 'rare', b_lw1: 'legend',
+  b_sw2: 'uncommon', b_sw3: 'rare',
+  b_g3: 'uncommon', b_g4: 'rare', b_g5: 'rare', b_lg1: 'legend',
+  b_sg2: 'uncommon', b_sg3: 'epic',
+  b_n2: 'uncommon', b_n3: 'uncommon', b_n4: 'rare', b_ln1: 'legend',
+  b_sn1: 'uncommon', b_sn2: 'epic',
 };
 
 export const rarityOf = id => RARITY_OF[id] || 'common';

@@ -2,7 +2,8 @@
 // ゲームエンジン（純粋ロジック / ブラウザ・Node 両対応）
 // 状態は plain object。structuredClone でコピーできる形に保つ。
 // ============================================================
-import { card, STRONG_AGAINST } from './cards.js';
+import { card, STRONG_AGAINST, KEYWORDS } from './cards.js';
+const KW_NAME = Object.fromEntries(Object.entries(KEYWORDS).map(([k, v]) => [k, v.name]));
 import { DEFAULT_RULES } from './rules.js';
 
 // ---------- RNG (mulberry32) ----------
@@ -45,6 +46,7 @@ export function createGame({ decks, seed = 1, rules = {}, names = ['あなた', 
   // デッキに何枚も積むより「1枚を必ず持っている」ほうが、
   // 同じキャラが場に並ばず、こちらも毎回それを前提に戦えるので公平。
   if (signature) signature.forEach((id, i) => { if (id) { state.players[i].signature = id; ensureSignature(state, i); } });
+  refreshAuras(state);
   log(state, 'sys', `対戦開始。先攻: ${names[0]}`);
   return state;
 }
@@ -79,14 +81,25 @@ export function makeMonster(state, id, mode = 'attack') {
     uid: state.uid++, id, atk: c.atk, def: c.def, mode,
     hasAttacked: false, attacks: 0, modeChanged: false, tempAtk: 0, tempDef: 0,
     equips: [], grants: [], stunnedUntil: -1,
+    // 第4弾の常時効果（隣接で決まるぶん）。refreshAuras が毎回入れ直す
+    auraAtk: 0, auraDef: 0, auraKw: [], auraEl: [],
   };
 }
-export const eff = m => ({ atk: Math.max(0, m.atk + m.tempAtk), def: Math.max(0, m.def + m.tempDef) });
-export const effAtk = m => Math.max(0, m.atk + m.tempAtk);
-export const effDef = m => Math.max(0, m.def + m.tempDef);
+export const eff = m => ({
+  atk: Math.max(0, m.atk + m.tempAtk + (m.auraAtk || 0)),
+  def: Math.max(0, m.def + m.tempDef + (m.auraDef || 0)),
+});
+export const effAtk = m => Math.max(0, m.atk + m.tempAtk + (m.auraAtk || 0));
+export const effDef = m => Math.max(0, m.def + m.tempDef + (m.auraDef || 0));
 
 /** そのカードが名乗っている属性。【双属】【三属】は複数返る */
 export const elementsOf = c => c.elements || [c.element];
+
+/** 場に出ているモンスターが名乗っている属性。【傭兵】は隣の色も名乗る */
+export const monsterElements = m => {
+  const base = elementsOf(card(m.id));
+  return (m.auraEl && m.auraEl.length) ? [...new Set([...base, ...m.auraEl])] : base;
+};
 
 /**
  * 属性有利の判定。
@@ -95,11 +108,61 @@ export const elementsOf = c => c.elements || [c.element];
  * （常に有利を取れるが、常に不利も受ける、という設計）
  */
 export function elementBonus(state, atkM, defM) {
-  const A = elementsOf(card(atkM.id)), D = elementsOf(card(defM.id));
+  const A = monsterElements(atkM), D = monsterElements(defM);
   return A.some(a => D.some(d => STRONG_AGAINST[a] === d)) ? state.rules.elementBonus : 0;
 }
-export const hasKw = (m, kw) => card(m.id).keywords.includes(kw) || (m.grants || []).includes(kw);
+/** カード本来のキーワードと、効果で与えられたぶん（常時効果は含めない） */
+export const hasBaseKw = (m, kw) => card(m.id).keywords.includes(kw) || (m.grants || []).includes(kw);
+/** 実際にいま持っているキーワード。隣接で得ているぶんも含む */
+export const hasKw = (m, kw) => hasBaseKw(m, kw) || (m.auraKw || []).includes(kw);
 export const maxAttacks = m => (hasKw(m, 'double') ? 2 : 1);
+
+// ------------------------------------------------------------
+// 第4弾『鉄旗の陣』：隣接で決まる常時効果
+//   場は3枠しかないので、両隣がそろうのは中央だけ。
+//   場が変わるたびに全部計算し直す（差分で足し引きすると必ずずれる）。
+// ------------------------------------------------------------
+export function refreshAuras(state) {
+  state.players.forEach(p => {
+    const F = p.field;
+    F.forEach(m => { if (m) { m.auraAtk = 0; m.auraDef = 0; m.auraKw = []; m.auraEl = []; } });
+    const near = i => [F[i - 1], F[i + 1]].filter(Boolean);
+    const alive = F.filter(Boolean).length;
+    // 【軍旗】は場全体に効くので先に調べる
+    const standard = F.some(m => m && hasBaseKw(m, 'standard'));
+
+    F.forEach((m, i) => {
+      if (!m) return;
+      const n = near(i);
+      if (hasBaseKw(m, 'rank')) {                                   // 隊列
+        m.auraAtk += 1 * n.length; m.auraDef += 2 * n.length;
+      }
+      if (hasBaseKw(m, 'rooted') && n.length) m.auraKw.push('guard'); // 根伝い
+      if (hasBaseKw(m, 'lone') && alive === 1) { m.auraAtk += 3; m.auraDef += 2; } // 単騎
+      if (standard) { m.auraAtk += n.length; m.auraDef += n.length; }  // 軍旗
+      if (hasBaseKw(m, 'mercenary')) {                                // 傭兵
+        n.forEach(x => m.auraEl.push(...elementsOf(card(x.id))));
+      }
+    });
+    // 隣へ配るもの
+    F.forEach((m, i) => {
+      if (!m) return;
+      if (hasBaseKw(m, 'banner')) near(i).forEach(x => { x.auraAtk += 1; });   // 旗
+      if (hasBaseKw(m, 'warden')) near(i).forEach(x => { x.auraKw.push('guard'); }); // 衛兵長
+    });
+  });
+}
+
+/** モンスターへのダメージ。防御力を減らし、0以下になったら破壊する */
+export function damageMonster(state, pi, slot, v, srcName = '') {
+  const p = state.players[pi], m = p.field[slot];
+  if (!m || v <= 0) return;
+  m.def -= v;
+  log(state, 'damage', `${card(m.id).name} に ${v} ダメージ（防御力 ${Math.max(0, m.def)}）`,
+    { p: pi, slot, v });
+  if (effDef(m) <= 0) destroyMonster(state, pi, slot, { bySource: srcName });
+  refreshAuras(state);
+}
 export const fieldMonsters = p => p.field.map((m, i) => (m ? { m, i } : null)).filter(Boolean);
 export const emptySlot = p => p.field.findIndex(x => x === null);
 
@@ -148,6 +211,10 @@ export function destroyMonster(state, pi, slot, opts = {}) {
   const p = state.players[pi];
   const m = p.field[slot];
   if (!m) return;
+  if (opts.byCombat && m.invulnUntil === state.turn) {
+    log(state, 'info', `${card(m.id).name} は【氷の防壁】で破壊されなかった`);
+    return;
+  }
   if (!opts.ignoreFog && opts.byCombat && state.turn <= p.fogUntil
     && (!p.fogElement || card(m.id).element === p.fogElement)) {
     log(state, 'info', `${card(m.id).name} は【森の加護】で破壊されなかった`);
@@ -160,6 +227,7 @@ export function destroyMonster(state, pi, slot, opts = {}) {
   });
   p.grave.push(m.id);
   log(state, 'destroy', `${card(m.id).name} が破壊された`, { p: pi, cardId: m.id, slot });
+  refreshAuras(state);   // 抜けた穴のぶん、隣の効き方が変わる
   const od = card(m.id).onDeath;
   if (od) runEffects(state, pi, od, { auto: true, sourceName: card(m.id).name });
 }
@@ -170,6 +238,7 @@ export function runEffects(state, pi, ops, ctx = {}) {
   for (const op of ops) {
     if (state.winner !== null) return;
     applyOp(state, pi, op, ctx);
+    refreshAuras(state);   // 場が動いたら隣接の効き方も変わる
   }
 }
 
@@ -190,7 +259,7 @@ export function matchFilter(m, filter) {
   if (filter.maxDef != null && effDef(m) > filter.maxDef) return false;
   if (filter.minCost != null && card(m.id).cost < filter.minCost) return false;
   if (filter.mode && m.mode !== filter.mode) return false;
-  if (filter.element && card(m.id).element !== filter.element) return false;
+  if (filter.element && !monsterElements(m).includes(filter.element)) return false;
   return true;
 }
 
@@ -260,6 +329,102 @@ function applyOp(state, pi, op, ctx) {
         log(state, 'buff', `${card(m.id).name} が +${op.atk}/+${op.def}`,
           { p: tps, slot: sl, atk: op.atk, def: op.def });
       });
+      break;
+    }
+    // ---------- 第4弾『鉄旗の陣』 ----------
+    // 隣のモンスターを強化する（自分自身の隣。ctx.self が出どころ）
+    case 'buffAdj': {
+      const me2 = state.players[pi];
+      const i = me2.field.findIndex(x => x && ctx.self && x.uid === ctx.self.uid);
+      if (i < 0) break;
+      let list = [me2.field[i - 1], me2.field[i + 1]].filter(Boolean);
+      if (op.n) list = list.slice(0, op.n);
+      list.forEach(m => {
+        m.atk += (op.atk || 0); m.def += (op.def || 0);
+        log(state, 'buff', `${card(m.id).name} が +${op.atk || 0}/+${op.def || 0}`,
+          { p: pi, slot: me2.field.indexOf(m), atk: op.atk || 0, def: op.def || 0 });
+      });
+      break;
+    }
+    // 相手1体とその隣にダメージ
+    case 'splashDamage': {
+      const tps = resolveSide(pi, op.side || 'enemy'), tp = state.players[tps];
+      const sl = pickSlot(state, pi, op, ctx);
+      if (sl == null || !tp.field[sl]) break;
+      const adj = [sl - 1, sl + 1].filter(k => k >= 0 && k < tp.field.length && tp.field[k]);
+      damageMonster(state, tps, sl, op.v || 0, ctx.sourceName);
+      adj.forEach(k => damageMonster(state, tps, k, op.adjV || 0, ctx.sourceName));
+      break;
+    }
+    // キーワードを与える
+    case 'grantKw': {
+      const tps = resolveSide(pi, op.side || 'self'), tp = state.players[tps];
+      if (op.cond === 'full' && !tp.field.every(x => x !== null)) break;
+      let list;
+      if (op.target === 'all') list = fieldMonsters(tp).map(x => x.i);
+      else if (op.target === 'others') {
+        list = fieldMonsters(tp).filter(({ m }) => !(ctx.self && m.uid === ctx.self.uid)).map(x => x.i);
+      } else list = [pickSlot(state, pi, op, ctx)].filter(x => x != null);
+      list.forEach(sl => {
+        const m = tp.field[sl]; if (!m || hasBaseKw(m, op.kw)) return;
+        m.grants = m.grants || [];
+        m.grants.push(op.kw);
+        if (op.duration === 'turn') (m.turnGrants = m.turnGrants || []).push(op.kw);
+        log(state, 'buff', `${card(m.id).name} が【${KW_NAME[op.kw] || op.kw}】を得た`, { p: tps, slot: sl });
+      });
+      break;
+    }
+    // 隣り合う自分の2体を強化する
+    case 'buffPairAdj': {
+      const tp = state.players[resolveSide(pi, op.side || 'self')];
+      const F = tp.field;
+      let pair = null;
+      for (let i = 0; i + 1 < F.length; i++) if (F[i] && F[i + 1]) { pair = [i, i + 1]; break; }
+      if (!pair) break;
+      pair.forEach(sl => {
+        const m = F[sl];
+        m.atk += (op.atk || 0); m.def += (op.def || 0);
+        log(state, 'buff', `${card(m.id).name} が +${op.atk || 0}/+${op.def || 0}`,
+          { p: tp === state.players[pi] ? pi : other(pi), slot: sl, atk: op.atk || 0, def: op.def || 0 });
+      });
+      break;
+    }
+    // 条件つきの全体増減（cond: 'adjacent' 隣がいる / 'full' 場が3体そろっている）
+    case 'buffCond': {
+      const tps = resolveSide(pi, op.side || 'self'), tp = state.players[tps];
+      const F = tp.field;
+      const full = F.every(x => x !== null);
+      fieldMonsters(tp).forEach(({ m, i }) => {
+        const near = !!(F[i - 1] || F[i + 1]);
+        const ok = op.cond === 'full' ? full : near;
+        const a = (op.atk || 0) + (ok ? (op.bonusAtk || 0) : 0);
+        const d = (op.def || 0) + (ok ? (op.bonusDef || 0) : 0);
+        if (op.duration === 'turn') { m.tempAtk += a; m.tempDef += d; }
+        else { m.atk += a; m.def += d; }
+        log(state, 'buff', `${card(m.id).name} が ${a >= 0 ? '+' : ''}${a}/${d >= 0 ? '+' : ''}${d}`,
+          { p: tps, slot: i, atk: a, def: d });
+        if (effDef(m) <= 0) destroyMonster(state, tps, i);
+      });
+      break;
+    }
+    // 自分の場のモンスター1体につき自分を強化する
+    case 'buffPerAlly': {
+      const me3 = state.players[pi];
+      const self = ctx.self; if (!self) break;
+      const n = me3.field.filter(Boolean).length;
+      self.atk += (op.atk || 0) * n; self.def += (op.def || 0) * n;
+      log(state, 'buff', `${card(self.id).name} が +${(op.atk || 0) * n}/+${(op.def || 0) * n}`,
+        { p: pi, slot: me3.field.indexOf(self), atk: (op.atk || 0) * n, def: (op.def || 0) * n });
+      break;
+    }
+    // 隣にモンスターがいる味方は、このターン戦闘で破壊されない
+    case 'invulnAdj': {
+      const tp = state.players[resolveSide(pi, op.side || 'self')];
+      const F = tp.field;
+      fieldMonsters(tp).forEach(({ m, i }) => {
+        if (F[i - 1] || F[i + 1]) m.invulnUntil = state.turn;
+      });
+      log(state, 'info', '隣り合ったモンスターは、このターン戦闘で破壊されない');
       break;
     }
     case 'destroy': {
@@ -493,8 +658,13 @@ export function startTurn(state) {
   p.field.forEach(m => {
     if (!m) return;
     m.hasAttacked = false; m.attacks = 0; m.modeChanged = false; m.tempAtk = 0; m.tempDef = 0;
+    if (m.turnGrants && m.turnGrants.length) {
+      m.grants = (m.grants || []).filter(k => !m.turnGrants.includes(k));
+      m.turnGrants = [];
+    }
     if (m.stunnedUntil != null && state.turn > m.stunnedUntil) m.stunnedUntil = -1;
   });
+  refreshAuras(state);
   log(state, 'turn', `── ${p.name} のターン ${state.turn}（コスト ${p.cost}）`, { p: pi });
 
   // ターン開始時トリガー
@@ -611,6 +781,7 @@ export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
   const m = makeMonster(state, id, mode);
   if (!R.summonModeIsFree && mode === 'defense') m.modeChanged = true;
   p.field[slot] = m;
+  refreshAuras(state);   // 並びが変わったので、隣接の効き方を入れ直す
   log(state, 'summon', `${p.name} が ${card(id).name} を${mode === 'attack' ? '攻撃' : '防御'}モードで召喚`,
     { p: pi, cardId: id, mode });
   const os = card(id).onSummon;
@@ -747,6 +918,17 @@ export function attack(state, pi, slot, target) {
   const aDmg = effAtk(A) + bonus;
   log(state, 'attack', `${card(A.id).name}(${aAtk}${bonus ? ' 属性有利' : ''}) → ${card(D.id).name}`,
     { p: pi, slot, target, bonus, element: card(A.id).element });
+
+  // 【突撃】並んでいる相手を巻き込む。戦闘の勝ち負けとは別に、先に飛ぶ
+  if (hasKw(A, 'charge')) {
+    const splash = Math.floor(effAtk(A) / 2);
+    if (splash > 0) {
+      [target - 1, target + 1]
+        .filter(k => k >= 0 && k < opp.field.length && opp.field[k])
+        .forEach(k => damageMonster(state, oi, k, splash, `${card(A.id).name}の突撃`));
+    }
+  }
+  if (!opp.field[target]) return true;   // 巻き込みで対象ごと落ちた場合
 
   if (D.mode === 'attack') {
     const dAtk = effAtk(D);

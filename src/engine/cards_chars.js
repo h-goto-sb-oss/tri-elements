@@ -11,7 +11,8 @@
 // ============================================================
 import { M } from './cardbuild.js';
 
-const C = (opt = {}) => ({ set: 4, hidden: true, maxCopies: 1, tier: 3, ...opt });
+// set 9 は図鑑の「キャラクター」枠。第4弾『鉄旗の陣』とは別扱いにする
+const C = (opt = {}) => ({ set: 9, hidden: true, maxCopies: 1, tier: 3, ...opt });
 
 export const CHARACTERS = [
   // ---------- はじまりの草原 ----------

@@ -7,6 +7,7 @@
 import { M, S } from './cardbuild.js';
 import { SET2 } from './cards_set2.js';
 import { SET3 } from './cards_set3.js';
+import { SET4 } from './cards_set4.js';
 import { CHARACTERS } from './cards_chars.js';
 import { rarityOf } from './rarity.js';
 
@@ -28,6 +29,15 @@ export const KEYWORDS = {
   observe: { name: '観測', desc: '登場時、山札の上から3枚を見て1枚を手札に加え、残りを山札の底へ戻す。' },
   dual:   { name: '双属', desc: '炎としても水としても扱う。有利を取りやすいが、不利も受けやすい。' },
   tri:    { name: '三属', desc: '三属性すべてとして扱う。常に有利を取れるが、常に不利も受ける。' },
+  // ---- 第4弾『鉄旗の陣』。場は3枠なので、両隣がそろうのは中央だけ ----
+  charge: { name: '突撃', desc: '攻撃したとき、その相手の隣にいるモンスターにも攻撃力の半分のダメージ。' },
+  rank:   { name: '隊列', desc: '隣にいるモンスター1体につき、攻撃力+1・防御力+2。中央なら+2/+4。' },
+  banner: { name: '旗',   desc: 'このカードがいるあいだ、隣のモンスターは攻撃力+1。' },
+  mercenary: { name: '傭兵', desc: '隣にいるモンスターの属性としても扱う。雇い主の色に染まる。' },
+  rooted: { name: '根伝い', desc: '隣にモンスターがいるあいだ、【守護】を持つ。' },
+  lone:   { name: '単騎', desc: '自分の場に他のモンスターがいないとき、+3/+2する。' },
+  warden: { name: '衛兵長', desc: '隣のモンスターも【守護】を持つ。' },
+  standard: { name: '軍旗', desc: '自分のモンスター全ては、隣にいるモンスター1体につき+1/+1する。' },
 };
 
 // ------------------------------------------------------------
@@ -259,7 +269,7 @@ const SUPPORTS = [
 ];
 
 export const ALL_CARDS = [...FIRE_MONSTERS, ...WATER_MONSTERS, ...GRASS_MONSTERS, ...SUPPORTS,
-  ...SET2, ...SET3, ...CHARACTERS]
+  ...SET2, ...SET3, ...SET4, ...CHARACTERS]
   .map(c => ({ ...c, rarity: rarityOf(c.id) }));
 /** パックにも図鑑にも普段は出ないカード（キャラクターカード） */
 export const HIDDEN_CARDS = ALL_CARDS.filter(c => c.hidden);

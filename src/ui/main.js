@@ -504,7 +504,8 @@ function renderCollection() {
     1: { name: '第1弾', sub: '三属の目覚め' },
     2: { name: '第2弾', sub: '嵐の来訪者' },
     3: { name: '第3弾', sub: '星辰の門' },
-    4: { name: 'キャラクター', sub: '極の果てに現れる者たち' },
+    4: { name: '第4弾', sub: '鉄旗の陣' },
+    9: { name: 'キャラクター', sub: '極の果てに現れる者たち' },
   };
   // キャラクターカードは隠し。1枚でも入手するまで弾のタブごと出さない
   const charOwned = ALL_CARDS.filter(c => c.hidden && app.save.collection[c.id]).length;

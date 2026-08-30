@@ -271,27 +271,22 @@ export const AREAS = [
 // ---------- パック ----------
 // パックの中身は第2弾『嵐の来訪者』が中心。
 // 第1弾のカードも一定割合で出る（デッキの土台を厚くするため）。
+// 弾ごとのパック。「質の段階」から「欲しい弾を狙う」へ切り替えた。
+// 中身のレア度の出かたは全弾で共通にして、迷いどころを弾選びだけにする。
+const SET_WEIGHTS  = { common: 44, uncommon: 34, rare: 18, epic: 3, legend: 1 };
+const SET_LASTSLOT = { common: 0,  uncommon: 52, rare: 35, epic: 10, legend: 3 };
+const setPack = (name, set) => ({ name, size: 5, set, weights: SET_WEIGHTS, lastSlot: SET_LASTSLOT });
+
 export const PACK_TYPES = {
-  // ブロンズは第1弾のみ。第2弾はシルバー（燃える丘クリア）から解禁する
-  bronze: {
-    name: 'ブロンズパック', size: 5, set2Rate: 0,
-    weights: { common: 68, uncommon: 27, rare: 5, epic: 0 },
-    lastSlot: { common: 0, uncommon: 80, rare: 20, epic: 0 },
-  },
-  silver: {
-    name: 'シルバーパック', size: 5, set2Rate: 0.55,
-    weights: { common: 45, uncommon: 38, rare: 16, epic: 1 },
-    lastSlot: { common: 0, uncommon: 55, rare: 38, epic: 7 },
-  },
-  gold: {
-    name: 'ゴールドパック', size: 5, set2Rate: 0.75,
-    weights: { common: 22, uncommon: 42, rare: 32, epic: 4 },
-    lastSlot: { common: 0, uncommon: 20, rare: 62, epic: 18 },
-  },
+  set1: setPack('はじまりの群れ', 1),
+  set2: setPack('共鳴する大地', 2),
+  set3: setPack('星辰の観測', 3),
+  set4: setPack('鉄旗の陣', 4),
+  // 全弾から出る特別枠。レア以上しか入らない
   prism: {
-    name: 'プリズムパック', size: 5, set: 3,
-    weights: { common: 28, uncommon: 38, rare: 25, epic: 8, legend: 1 },
-    lastSlot: { common: 0, uncommon: 22, rare: 48, epic: 24, legend: 6 },
+    name: 'プリズムパック', size: 5, anySet: true,
+    weights: { rare: 66, epic: 26, legend: 8 },
+    lastSlot: { rare: 40, epic: 44, legend: 16 },
   },
 };
 
@@ -303,22 +298,26 @@ function pickWeighted(w, rand) {
 }
 
 export function openPack(type, rand = Math.random) {
-  const t = PACK_TYPES[type] || PACK_TYPES.bronze;
+  const t = PACK_TYPES[type] || PACK_TYPES.set1;
   const out = [];
   for (let i = 0; i < t.size; i++) {
     // 最後の1枚は必ずアンコモン以上（当たり枠）
     const rarity = pickWeighted(i === t.size - 1 ? t.lastSlot : t.weights, rand);
-    const wantSet2 = rand() < (t.set2Rate || 0);
-    const wantSet = t.set || (wantSet2 ? 2 : 1);
     // キャラクターカードは隠しなのでパックからは絶対に出さない
-    const packable = ALL_CARDS.filter(c => !c.hidden);
-    let pool = packable.filter(c => c.rarity === rarity && c.set === wantSet);
-    // その弾に該当レア度が無ければ、同じ弾の1段下のレア度へ落とす（弾の壁は越えない）
-    const order = ['legend', 'epic', 'rare', 'uncommon', 'common'];
-    for (let k = order.indexOf(rarity) + 1; !pool.length && k < order.length; k++) {
-      pool = packable.filter(c => c.rarity === order[k] && c.set === wantSet);
+    const packable = ALL_CARDS.filter(c => !c.hidden && (t.anySet || (c.set || 1) === t.set));
+    // その弾に該当レア度が無いことがある（第2弾にコモンは無い）。
+    // その場合はいちばん近いレア度へ寄せる。弾の壁は絶対に越えない。
+    const order = ['common', 'uncommon', 'rare', 'epic', 'legend'];
+    const want = order.indexOf(rarity);
+    let pool = [];
+    for (let d = 0; d < order.length && !pool.length; d++) {
+      for (const k of [want - d, want + d]) {
+        if (k < 0 || k >= order.length) continue;
+        pool = packable.filter(c => c.rarity === order[k]);
+        if (pool.length) break;
+      }
     }
-    if (!pool.length) pool = packable.filter(c => c.rarity === 'common');
+    if (!pool.length) pool = packable;
     out.push(pool[Math.floor(rand() * pool.length)].id);
   }
   return out;
@@ -334,18 +333,20 @@ export const FREE_DIFFICULTY = {
 
 // 星屑とパックの交換レート
 export const DUST_SHOP = [
-  { pack: 'bronze', cost: 2 },
-  { pack: 'silver', cost: 5 },
-  { pack: 'gold', cost: 8 },
-  { pack: 'prism', cost: 10, unlockAfter: 'a5' },
+  { pack: 'set1', cost: 4 },
+  { pack: 'set2', cost: 5 },
+  { pack: 'set3', cost: 5 },
+  { pack: 'set4', cost: 5 },
+  { pack: 'prism', cost: 12, unlockAfter: 'a5' },
 ];
 
 // 同じ相手からパックをもらえる回数
 export const REWARD_LIMIT = 3;
 
+// エリアを進むほど、新しい弾のパックがもらえる
 export const REWARD = {
-  a1: 'bronze', a2: 'silver', a3: 'silver', a4: 'gold', a5: 'gold',
-  a6: 'prism', a7: 'prism', a8: 'prism',
+  a1: 'set1', a2: 'set1', a3: 'set2', a4: 'set2', a5: 'set3',
+  a6: 'set3', a7: 'set4', a8: 'set4',
 };
 
 export function prismUnlocked(save) {
