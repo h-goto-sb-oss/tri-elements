@@ -561,7 +561,7 @@
       <button class="tab ${t==="sound"?"on":""}" data-settab="sound">サウンド</button>
     </div>
     <div class="setpanel">${t==="player"?s:r}</div>
-    <div class="hint" style="font-size:11px">ビルド 2026-08-30 20:53</div>
+    <div class="hint" style="font-size:11px">ビルド 2026-08-30 21:58</div>
     <button class="btn" data-go="title">戻る</button>
   </div>`}function Dn(){const e=n.onboard||(n.onboard={name:"",avatar:1}),t=at.map(a=>`
     <button class="avpick ${e.avatar===a.id?"on":""}" data-obavatar="${a.id}">
