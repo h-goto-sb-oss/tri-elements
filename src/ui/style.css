@@ -149,6 +149,9 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .costpips{display:flex;gap:4px;flex-wrap:wrap;max-width:190px}
 .pip{width:15px;height:15px;border-radius:50%;background:#242e3d;border:1px solid #3b485c}
 .pip.on{background:radial-gradient(circle at 35% 30%,#ffe9a8,#c9922f);border-color:#e0b258;box-shadow:0 0 5px #f2c15b88}
+/* 自分の最大コストを超えたぶん。相手と数を揃えるためだけの枠なので、
+   満タンかどうかの判断を邪魔しないよう、ほとんど見えない濃さにする */
+.pip.ghost{opacity:.16;box-shadow:none}
 .meta{font-size:16px;color:#c1cede}
 .meta b{color:var(--text)}
 .battle .btn{font-size:16px;padding:9px 16px}
@@ -257,7 +260,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .playerbar .btn.primary{font-size:19px;padding:11px 22px;font-weight:900}
 .battle.portrait .playerbar .face{width:36px;height:36px;font-size:20px}
 .battle.portrait .playerbar .who{font-size:15px}
-.battle.portrait .playerbar .meta{display:none}
+/* コストの数字は、玉の数を数えなくても分かるよう縦持ちでも出す */
+.battle.portrait .playerbar .meta{font-size:12.5px;white-space:nowrap}
 .battle.portrait .battle-actions{gap:5px;flex-wrap:wrap;justify-content:flex-end}
 .battle.portrait .btn.small,.battle.portrait .btn.tiny{font-size:13px;padding:5px 10px}
 .battle.portrait .btn.primary{font-size:14px;padding:6px 13px}

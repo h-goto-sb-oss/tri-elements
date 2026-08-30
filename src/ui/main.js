@@ -809,8 +809,13 @@ function renderBattle() {
     });
   }).join('');
 
+  // コストの玉は、相手と見比べられるよう両者とも同じ数だけ並べる。
+  // ただし自分の最大を超えたぶんは「そもそも無い枠」として薄く描く。
+  // これをしないと、相手の最大コストが自分より多いあいだ、
+  // こちらは満タンでも玉が余って見え、回復し損ねたように見えてしまう。
   const maxPips = Math.max(op.maxCost, me.maxCost, 1);
-  const pips = n => Array.from({ length: maxPips }, (_, i) => `<div class="pip ${i < n ? 'on' : ''}"></div>`).join('');
+  const pips = (cur, max) => Array.from({ length: maxPips }, (_, i) =>
+    `<div class="pip ${i < cur ? 'on' : ''} ${i >= max ? 'ghost' : ''}"></div>`).join('');
   const logHtml = g.log.slice(-60).map(l => `<div class="l ${l.kind}">${esc(l.text)}</div>`).join('');
 
   const bg = app.free ? (AREA_BG.common || AREA_BG[AREAS[app.areaIndex]?.id])
@@ -837,7 +842,7 @@ function renderBattle() {
       <div class="foeinfo">
         <span class="pname">${esc(op.name)}</span>
         ${foeLife}
-        <div class="foesub"><div class="costpips">${pips(op.cost)}</div><span class="meta">手札 <b>${op.hand.length}</b></span></div>
+        <div class="foesub"><div class="costpips">${pips(op.cost, op.maxCost)}</div><span class="meta">手札 <b>${op.hand.length}</b></span></div>
       </div>
       <div class="battle-actions">
         <button class="btn tiny paneltab ${drawer === 'info' ? 'on' : ''}" data-toggle-info>🔍<small>情報</small></button>
@@ -848,7 +853,7 @@ function renderBattle() {
     <div class="bar enemybar">
       <div class="who"><div class="face">${foeFace}</div><span class="pname">${esc(op.name)}</span></div>
       ${foeLife}
-      <div class="costpips">${pips(op.cost)}</div>
+      <div class="costpips">${pips(op.cost, op.maxCost)}</div>
       <span class="meta">手札 <b>${op.hand.length}</b></span>
       <div class="battle-actions">
         <button class="btn tiny" data-toggle-log>${app.logOpen ? 'ログ非表示' : 'ログ'}</button>
@@ -885,7 +890,7 @@ function renderBattle() {
       <div class="who"><div class="face">${avatarHtml(myAvatar())}</div>${esc(myName())}</div>
       <div class="lifebox"><span class="lifeval">${me.life}</span>
         <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, me.life / 20 * 100))}%"></div></div></div>
-      <div class="costpips">${pips(me.cost)}</div>
+      <div class="costpips">${pips(me.cost, me.maxCost)}</div>
       <span class="meta">コスト <b>${me.cost}/${me.maxCost}</b></span>
       <div class="battle-actions">
         ${discardMode ? '<span class="hint" style="color:var(--gold)">手札が多すぎます。捨てるカードを選んでください</span>' : ''}
