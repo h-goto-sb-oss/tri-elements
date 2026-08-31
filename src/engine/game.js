@@ -211,7 +211,7 @@ export function destroyMonster(state, pi, slot, opts = {}) {
   const p = state.players[pi];
   const m = p.field[slot];
   if (!m) return;
-  if (opts.byCombat && m.invulnUntil === state.turn) {
+  if (opts.byCombat && state.turn <= m.invulnUntil) {
     log(state, 'info', `${card(m.id).name} は【氷の防壁】で破壊されなかった`);
     return;
   }
@@ -422,7 +422,9 @@ function applyOp(state, pi, op, ctx) {
       const tp = state.players[resolveSide(pi, op.side || 'self')];
       const F = tp.field;
       fieldMonsters(tp).forEach(({ m, i }) => {
-        if (F[i - 1] || F[i + 1]) m.invulnUntil = state.turn;
+        // このターン + 次の相手ターン（【森の加護】と同じ数え方）。
+        // 自分のターンだけ守っても、壊されるのは相手のターンなので意味がない
+        if (F[i - 1] || F[i + 1]) m.invulnUntil = state.turn + 1;
       });
       log(state, 'info', '隣り合ったモンスターは、このターン戦闘で破壊されない');
       break;

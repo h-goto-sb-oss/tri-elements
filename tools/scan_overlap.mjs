@@ -105,4 +105,42 @@ for (const [s, cs] of groups) {
     }
   }
 }
+// ------------------------------------------------------------
+// 効果を持たないカードどうしの比較。
+//   上のふるいは「効果のかたち」でまとめるので、効果のないカードは
+//   最初から対象外になっていた。素の数値とキーワードだけで
+//   勝ち負けが決まるカードは、ここで拾う。
+// ------------------------------------------------------------
+const kwOf = c => (c.keywords || []).slice().sort().join(',');
+const byRole = new Map();
+for (const c of ALL_CARDS) {
+  if (c.type !== 'monster') continue;
+  const k = `${c.element}|${kwOf(c)}`;
+  if (!byRole.has(k)) byRole.set(k, []);
+  byRole.get(k).push(c);
+}
+for (const [k, cs] of byRole) {
+  for (const a of cs) {
+    for (const b of cs) {
+      if (a.id >= b.id) continue;
+      // 見たいのは「負ける側に効果がまったく無い」組み合わせだけ。
+      // 効果を持つカードどうしは上のふるいの担当なので、ここでは扱わない
+      const na = ops(a).length, nb = ops(b).length;
+      if (na > 0 && nb > 0) continue;
+      const win = (x, y, nx, ny) =>
+        ny === 0 && x.cost <= y.cost && x.atk >= y.atk && x.def >= y.def
+        && (x.cost < y.cost || x.atk > y.atk || x.def > y.def || nx > 0);
+      if (win(a, b, na, nb)) {
+        console.log(`■ 素の数値で上位互換  ${desc(a)}  >  ${desc(b)}`);
+        console.log(`   ${k.replace('|', ' / キーワード ')}`);
+        hits++;
+      } else if (win(b, a, nb, na)) {
+        console.log(`■ 素の数値で上位互換  ${desc(b)}  >  ${desc(a)}`);
+        console.log(`   ${k.replace('|', ' / キーワード ')}`);
+        hits++;
+      }
+    }
+  }
+}
+
 console.log(hits ? `\n合計 ${hits} 件` : '\n重なりは見つかりませんでした');

@@ -52,7 +52,7 @@ export const SET3 = [
     onSummon: [{ op: 'heal', side: 'self', v: 3 }],
     flavor: '月の無い夜にも、潮はこれを見て満ちる。',
   })),
-  M('z_w3', '氷晶の門柱', 'water', 3, 2, 5, 'golem', O('氷晶の門柱', {
+  M('z_w3', '氷晶の門柱', 'water', 3, 1, 6, 'golem', O('氷晶の門柱', {
     keywords: ['guard'], text: '【守護】',
     flavor: '片割れを失っても、門を守る役目は終わらない。',
   })),

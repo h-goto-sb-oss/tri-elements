@@ -108,13 +108,13 @@ export const SET4 = [
     flavor: '線を引く。あとはそこに立つだけ。',
   })),
   S('b_sw2', '氷の防壁', 'water', 3, 'ward', F({
-    text: 'このターン、隣にモンスターがいる自分のモンスターは戦闘で破壊されない。',
+    text: '次の相手のターンが終わるまで、隣にモンスターがいる自分のモンスターは戦闘で破壊されない。',
     effects: [{ op: 'invulnAdj', side: 'self' }],
     flavor: '独りぼっちの壁は、ただの氷だ。',
   })),
   S('b_sw3', '陣崩し', 'water', 4, 'wave', F({
-    text: '相手モンスター全ての防御力を-2する。相手の場が3体そろっているなら、さらに-2する。',
-    effects: [{ op: 'buffCond', side: 'enemy', atk: 0, def: -2, bonusAtk: 0, bonusDef: -2, cond: 'full' }],
+    text: '相手モンスター全ての攻撃力を-2する。相手の場が3体そろっているなら、さらに-2する。',
+    effects: [{ op: 'buffCond', side: 'enemy', atk: -2, def: 0, bonusAtk: -2, bonusDef: 0, cond: 'full' }],
     flavor: '揃った列ほど、崩れ方はきれいだ。',
   })),
 
