@@ -5,6 +5,7 @@ import { ELEMENTS, KEYWORDS, card } from '../engine/cards.js';
 import { RARITY } from '../engine/rarity.js';
 import { cardArtSvg } from './art.js';
 import { effAtk, effDef, hasKw, maxAttacks } from '../engine/game.js';
+import { icon } from './icons.js';
 
 export const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -22,14 +23,14 @@ export function cardHtml(c, opts = {}) {
   // モンスターは ⚔/🛡、サポートは種別の帯。下辺を見るだけで区別できる。
   const stats = sup
     ? `<div class="stats suptype">${c.equip ? '🔗 装備' : '✦ サポート'}</div>`
-    : `<div class="stats"><span class="atk">⚔${c.atk}</span><span class="def">🛡${c.def}</span></div>`;
+    : `<div class="stats"><span class="atk">${icon('atk')}${c.atk}</span><span class="def">${icon('def')}${c.def}</span></div>`;
   const r = RARITY[c.rarity || 'common'];
   return `<div class="${cls}" ${opts.attr || ''} data-card="${c.id}">
     <div class="shine"></div>
     <div class="cost">${c.cost}</div>
     <div class="cname">${esc(c.name)}</div>
     <div class="art" ${opts.artAttr || ''}>${cardArtSvg(c)}<div class="elem">${
-      (c.elements || [c.element]).map(e => ELEMENTS[e].icon).join('')}</div></div>
+      (c.elements || [c.element]).map(e => icon(e)).join('')}</div></div>
     ${kw}
     <div class="rarity" style="color:${r.color};border-color:${r.color}66">${r.short}</div>
     <div class="body">${esc(c.text || c.flavor)}</div>
@@ -59,7 +60,7 @@ export function monsterHtml(m, side, slot, opts = {}) {
       ${hasKw(m, 'double') ? '<div class="gmark dbl">連撃</div>' : ''}
       ${(m.stunnedUntil || -1) >= 0 ? '<div class="gmark stunned">停止</div>' : ''}
       <div class="mstat ${buffed ? 'buffed' : ''}">
-        <span class="atk">⚔${effAtk(m)}</span><span class="def">🛡${effDef(m)}</span>
+        <span class="atk">${icon('atk')}${effAtk(m)}</span><span class="def">${icon('def')}${effDef(m)}</span>
       </div>
     </div>
     <div class="modetag">${def ? '守' : '攻'}</div>
@@ -92,9 +93,9 @@ export function detailHtml(c, extra = '', opts = {}) {
     <div class="d-body">
       <div class="d-name">${esc(c.name)}</div>
       <div class="d-meta">
-        <span>${ELEMENTS[c.element].icon} ${ELEMENTS[c.element].name}</span>
+        <span>${icon(c.element)} ${ELEMENTS[c.element].name}</span>
         <span>コスト ${c.cost}</span>
-        ${c.type === 'monster' ? `<span class="atk">⚔ ${c.atk}</span><span class="def">🛡 ${c.def}</span>` : '<span>サポート</span>'}
+        ${c.type === 'monster' ? `<span class="atk">${icon('atk')} ${c.atk}</span><span class="def">${icon('def')} ${c.def}</span>` : '<span>サポート</span>'}
         <span style="color:${r.color}">${r.name}</span>
         <span>第${c.set || 1}弾</span>
       </div>

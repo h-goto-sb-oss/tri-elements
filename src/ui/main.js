@@ -4,6 +4,7 @@
 import { ALL_CARDS, card, ELEMENTS, KEYWORDS } from '../engine/cards.js';
 import { RARITY } from '../engine/rarity.js';
 import { CHARACTER_OF, CHARACTER_WINS_NEEDED, EXTREME_SELF_COPIES } from '../engine/cards_chars.js';
+import { icon, packIcon } from './icons.js';
 import {
   createGame, mulligan, applyAction, legalAttackTargets, canSummon, canPlaySupport,
   canChangeMode, canAttack, supportNeedsTarget, fieldMonsters, effAtk, effDef,
@@ -191,17 +192,17 @@ const myAvatar = () => (app.save.profile?.avatar || 1);
 // スマホ用の下メニュー（戦闘中は出さない）
 // ============================================================
 const NAV_ITEMS = [
-  { go: 'adventure', icon: '⚔️', label: '冒険' },
-  { go: 'free', icon: '🏟️', label: 'フリー' },
-  { go: 'deck', icon: '🃏', label: 'デッキ' },
-  { go: 'collection', icon: '📖', label: '図鑑' },
-  { go: 'title', icon: '🏠', label: 'タイトル' },
+  { go: 'adventure', icon: 'adventure', label: '冒険' },
+  { go: 'free', icon: 'freebattle', label: 'フリー' },
+  { go: 'deck', icon: 'deck', label: 'デッキ' },
+  { go: 'collection', icon: 'collection', label: '図鑑' },
+  { go: 'title', icon: 'home', label: 'タイトル' },
 ];
 function bottomNavHtml() {
   if (app.screen === 'battle' || !isNarrow()) return '';
   return `<nav class="bottomnav">${NAV_ITEMS.map(n => `
     <button class="bnav ${app.screen === n.go ? 'on' : ''}" data-go="${n.go}">
-      <span class="bn-icon">${n.icon}</span><span class="bn-label">${n.label}</span>
+      <span class="bn-icon">${icon(n.icon)}</span><span class="bn-label">${n.label}</span>
     </button>`).join('')}</nav>`;
 }
 
@@ -217,7 +218,7 @@ function renderTitle() {
       <img class="title-logo" src="${withBase('/assets/ui/title-logo.svg')}" alt="TRI-ELEMENTS 三属の戦記">
       <p class="title-tagline">三つの力を束ね、まだ見ぬカードと世界へ。</p>
       <div class="title-elements" aria-label="炎・水・草の三属性">
-        <span class="fire">🔥 炎</span><span class="water">💧 水</span><span class="grass">🌿 草</span>
+        <span class="fire">${icon('fire')} 炎</span><span class="water">${icon('water')} 水</span><span class="grass">${icon('grass')} 草</span>
       </div>
     </div>
     <div class="title-panel">
@@ -226,13 +227,13 @@ function renderTitle() {
         <div class="titleprof-text"><b>${esc(myName())}</b><div>${app.save.stats.wins}勝 ${app.save.stats.losses}敗　<span>所持 ${owned}枚</span></div></div>
       </div>
       <div class="title-menu">
-        <button class="title-action main" data-go="adventure"><span class="ta-icon">⚔️</span><span><b>冒険へ出る</b><small>物語を進める</small></span></button>
-        <button class="title-action" data-go="free"><span class="ta-icon">🏟️</span><span><b>フリーバトル</b><small>好きな相手と対戦</small></span></button>
-        <button class="title-action" data-go="deck"><span class="ta-icon">🃏</span><span><b>デッキ編集</b><small>30枚を編成</small></span></button>
-        <button class="title-action" data-go="collection"><span class="ta-icon">📖</span><span><b>カード図鑑</b><small>全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める</small></span></button>
-        <button class="title-action" data-go="shop"><span class="ta-icon">🛒</span><span><b>カードショップ</b><small>星屑 ✦${app.save.stardust || 0} でパックと交換</small></span></button>
-        <button class="title-action" data-go="rules"><span class="ta-icon">📜</span><span><b>ルール説明</b><small>遊び方を確認</small></span></button>
-        <button class="title-action quiet" data-go="settings"><span class="ta-icon">⚙️</span><span><b>設定</b><small>音量・プロフィール</small></span></button>
+        <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>冒険へ出る</b><small>物語を進める</small></span></button>
+        <button class="title-action" data-go="free"><span class="ta-icon">${icon('freebattle')}</span><span><b>フリーバトル</b><small>好きな相手と対戦</small></span></button>
+        <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>デッキ編集</b><small>30枚を編成</small></span></button>
+        <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>カード図鑑</b><small>全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める</small></span></button>
+        <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>カードショップ</b><small>星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換</small></span></button>
+        <button class="title-action" data-go="rules"><span class="ta-icon">${icon('rules')}</span><span><b>ルール説明</b><small>遊び方を確認</small></span></button>
+        <button class="title-action quiet" data-go="settings"><span class="ta-icon">${icon('settings')}</span><span><b>設定</b><small>音量・プロフィール</small></span></button>
       </div>
     </div>
   </div>`;
@@ -270,7 +271,7 @@ function renderAdventure() {
     const ok = areaUnlocked(app.save, i);
     const done = a.enemies.every((_, k) => app.save.cleared[`${a.id}:${k}`]);
     return `<button class="adv-tab ${i === ai ? 'on' : ''} ${ok ? '' : 'locked'}"
-      ${ok ? `data-area="${i}"` : 'disabled'}>${ok ? '' : '🔒'}${esc(a.name)}${done ? ' ✓' : ''}</button>`;
+      ${ok ? `data-area="${i}"` : 'disabled'}>${ok ? '' : icon('lock')}${esc(a.name)}${done ? ' ✓' : ''}</button>`;
   }).join('');
 
   const foes = area.enemies.map((e, i) => {
@@ -282,14 +283,14 @@ function renderAdventure() {
     const left = Math.max(0, REWARD_LIMIT - cnt);
     return `<div class="foe ${cleared ? 'cleared' : ''} ${open ? '' : 'locked'}">
       ${cleared ? `<div class="badge">${left ? `報酬 あと${left}回` : 'クリア済'}</div>` : ''}
-      ${open ? '' : '<div class="lockicon">🔒</div>'}
+      ${open ? '' : `<div class="lockicon">${icon('lock')}</div>`}
       ${portraitHtml(area.id, i, e)}
       <div class="fname">${esc(e.name)}</div>
       <div class="fdesc">${esc(e.desc)}</div>
       <div class="fmeta">
         <span>ライフ <b>${e.life || 20}</b></span>
         ${e.startCost ? `<span>開始 <b>${e.startCost}</b>コスト</span>` : ''}
-        ${e.weak ? `<span>${ELEMENTS[e.weak].icon}が有効</span>` : ''}
+        ${e.weak ? `<span>${icon(e.weak)}が有効</span>` : ''}
         ${i === area.enemies.length - 1 ? '<span style="color:#ffd27a">ボス</span>' : ''}
       </div>
       <button class="btn ${cleared && !left ? '' : 'primary'} fbtn" ${open ? `data-fight="${ai}:${i}"` : 'disabled'}>
@@ -343,20 +344,21 @@ function renderShop() {
     const enough = dust >= x.cost;
     const area = x.unlockAfter ? AREAS.find(a => a.id === x.unlockAfter) : null;
     return `<div class="shopitem ${open ? '' : 'locked'}">
-      <div class="shopname">${open ? esc(pack.name) : '🔒 ？？？'}</div>
+      <div class="shopart">${open ? packIcon(x.pack) : icon('lock')}</div>
+      <div class="shopname">${open ? esc(pack.name) : '？？？'}</div>
       <div class="shopdesc">${open ? esc(PACK_BLURB[x.pack] || `${pack.size}枚入り`)
         : `${esc(area ? area.name : '')}の相手を全員倒すと並びます`}</div>
       <button class="btn ${open && enough ? 'primary' : ''}" ${open && enough ? `data-buypack="${x.pack}"` : 'disabled'}>
-        ✦${x.cost} ${open ? (enough ? 'で交換' : 'ぶん足りません') : ''}</button>
+        ${icon('stardust')}${x.cost} ${open ? (enough ? 'で交換' : 'ぶん足りません') : ''}</button>
     </div>`;
   }).join('');
 
   return `<div class="adventure">
     <div class="adv-head">
       <h2>カードショップ</h2>
-      <div class="desc">星屑 ✦ をパックと交換できます。<br>
+      <div class="desc">星屑 ${icon('stardust')} をパックと交換できます。<br>
         <span style="color:#9fb2c8">星屑はフリーバトルで勝つと貯まります。難易度が高いほど多くもらえます。</span></div>
-      <div class="dust">✦ ${dust}</div>
+      <div class="dust">${icon('stardust')} ${dust}</div>
     </div>
     <div class="adv-stage adv-shop" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
       ${AREA_BG.common ? '<div class="stagebg"></div>' : ''}
@@ -390,7 +392,7 @@ function renderFree() {
       <div class="fdesc">${esc(a.name)}</div>
       <div class="fmeta">
         <span>${st.w}勝 ${st.l}敗</span>
-        ${e.weak ? `<span>${ELEMENTS[e.weak].icon}が有効</span>` : ''}
+        ${e.weak ? `<span>${icon(e.weak)}が有効</span>` : ''}
       </div>
       ${charLeft > 0 ? `<div class="charprog">🎴「極」であと${charLeft}勝でカードを入手</div>` : ''}
       <button class="btn primary fbtn" data-freefight="${ai}:${ei}">戦う</button>
@@ -402,15 +404,15 @@ function renderFree() {
     <div class="adv-head">
       <h2>フリーバトル</h2>
       <div class="desc">一度倒した相手といつでも再戦できます。ここでの勝敗は冒険の戦績には影響しません。<br>
-        <span style="color:#9fb2c8">勝つと星屑 ✦ が貯まり、パックと交換できます。</span></div>
-      <div class="dust">✦ ${app.save.stardust || 0}</div>
+        <span style="color:#9fb2c8">勝つと星屑 ${icon('stardust')} が貯まり、パックと交換できます。</span></div>
+      <div class="dust">${icon('stardust')} ${app.save.stardust || 0}</div>
     </div>
     <div class="freebar">
       <span class="hint" style="min-height:0">難易度</span>
       <div class="tabs">${diffTabs}</div>
       ${app.freeDiff === 'extreme' ? '<span class="hint xrule">極では、相手は自分のカードを1枚だけ必ず初手に持って現れます</span>' : ''}
       <span style="margin-left:auto"></span>
-      <button class="btn small" data-go="shop">🛒 カードショップ（✦${app.save.stardust || 0}）</button>
+      <button class="btn small" data-go="shop">${icon('shop')} カードショップ（${icon('stardust')}${app.save.stardust || 0}）</button>
     </div>
     <div class="adv-stage adv-free" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
       ${AREA_BG.common ? '<div class="stagebg"></div>' : ''}
@@ -566,7 +568,7 @@ function renderCollection() {
       <b>${info.name}</b><small>${esc(info.sub)}　${have}/${cards.length}</small>
     </button>`;
   }).join('');
-  const groups = [['fire', '🔥 炎'], ['water', '💧 水'], ['grass', '🌿 草'], ['none', '✦ 汎用']];
+  const groups = [['fire', `${icon('fire')} 炎`], ['water', `${icon('water')} 水`], ['grass', `${icon('grass')} 草`], ['none', `${icon('none')} 汎用`]];
   const html = groups.map(([el, label]) => {
     const cs = setCards.filter(c => c.element === el);
     if (!cs.length) return '';
@@ -723,8 +725,8 @@ function playEntryHtml(e) {
       <div class="ip-side">
         <div class="ip-name">${esc(c.name)}</div>
         <div class="ip-meta">
-          <span>${ELEMENTS[c.element].icon}</span><span>コスト ${c.cost}</span>
-          ${c.type === 'monster' ? `<span class="atkc">⚔ ${c.atk}</span><span class="defc">🛡 ${c.def}</span>` : '<span>サポート</span>'}
+          <span>${icon(c.element)}</span><span>コスト ${c.cost}</span>
+          ${c.type === 'monster' ? `<span class="atkc">${icon('atk')} ${c.atk}</span><span class="defc">${icon('def')} ${c.def}</span>` : '<span>サポート</span>'}
         </div>
         <div class="ip-text">${esc(c.text || '効果はありません（バニラ）。')}</div>
         ${kw}
@@ -750,9 +752,9 @@ function inspectPanelHtml() {
       <div class="ip-title">カード情報</div>
       <div class="ip-hint">カードにカーソルを合わせると、ここに詳しい内容が出ます。</div>
       <div class="ip-legend">
-        <div><b class="atkc">⚔ 攻撃モード</b>（縦置き）<br>殴れる。相手の攻撃モンスターとぶつかると弱い方が破壊。</div>
-        <div><b class="defc">🛡 防御モード</b>（横置き）<br>攻撃できないが、🛡の分だけダメージを受け止める。</div>
-        <div><b class="gold">属性相性</b><br>🔥→🌿→💧→🔥 有利な属性で攻撃すると ⚔+2。</div>
+        <div><b class="atkc">${icon('atk')} 攻撃モード</b>（縦置き）<br>殴れる。相手の攻撃モンスターとぶつかると弱い方が破壊。</div>
+        <div><b class="defc">${icon('def')} 防御モード</b>（横置き）<br>攻撃できないが、${icon('def')}の分だけダメージを受け止める。</div>
+        <div><b class="gold">属性相性</b><br>${icon('fire')}→${icon('grass')}→${icon('water')}→${icon('fire')} 有利な属性で攻撃すると ${icon('atk')}+2。</div>
       </div>
     </div>`;
   }
@@ -764,9 +766,9 @@ function inspectPanelHtml() {
     <div class="ip-card">${cardHtml(c, { cls: 'big' })}</div>
     <div class="ip-name">${esc(c.name)}</div>
     <div class="ip-meta">
-      <span>${ELEMENTS[c.element].icon} ${ELEMENTS[c.element].name}</span>
+      <span>${icon(c.element)} ${ELEMENTS[c.element].name}</span>
       <span>コスト ${c.cost}</span>
-      ${c.type === 'monster' ? `<span class="atkc">⚔ ${c.atk}</span><span class="defc">🛡 ${c.def}</span>` : '<span>サポート</span>'}
+      ${c.type === 'monster' ? `<span class="atkc">${icon('atk')} ${c.atk}</span><span class="defc">${icon('def')} ${c.def}</span>` : '<span>サポート</span>'}
       <span style="color:${r.color}">${r.name}</span>
     </div>
     <div class="ip-text">${esc(c.text || 'このカードに効果はありません（バニラ）。')}</div>
@@ -892,9 +894,9 @@ function renderBattle() {
         <div class="foesub"><div class="costpips">${pips(op.cost, op.maxCost)}</div><span class="meta">手札 <b>${op.hand.length}</b></span></div>
       </div>
       <div class="battle-actions">
-        <button class="btn tiny paneltab ${drawer === 'info' ? 'on' : ''}" data-toggle-info>🔍<small>情報</small></button>
-        <button class="btn tiny paneltab ${drawer === 'log' ? 'on' : ''}" data-toggle-log>📜<small>ログ</small></button>
-        <button class="btn tiny paneltab quit" data-surrender>🏳<small>投了</small></button>
+        <button class="btn tiny paneltab ${drawer === 'info' ? 'on' : ''}" data-toggle-info>${icon('info')}<small>情報</small></button>
+        <button class="btn tiny paneltab ${drawer === 'log' ? 'on' : ''}" data-toggle-log>${icon('rules')}<small>ログ</small></button>
+        <button class="btn tiny paneltab quit" data-surrender>${icon('surrender')}<small>投了</small></button>
       </div>
     </div>` : `
     <div class="bar enemybar">
@@ -943,7 +945,7 @@ function renderBattle() {
         ${discardMode ? '<span class="hint" style="color:var(--gold)">手札が多すぎます。捨てるカードを選んでください</span>' : ''}
         ${app.sel ? '<button class="btn small" data-cancel>選択解除</button>' : ''}
         <button class="btn small" data-forge ${myTurn && g.phase === 'main' && canForge(g, 0) ? '' : 'disabled'}
-          title="余ったコストでカードを1枚引く">🔨 鍛錬 <small>${g.rules.forgeCost}コストで1枚引く</small></button>
+          title="余ったコストでカードを1枚引く">${icon('forge')} 鍛錬 <small>${g.rules.forgeCost}コストで1枚引く</small></button>
         <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>ターン終了</button>
       </div>
     </div>
@@ -963,9 +965,9 @@ function popupHtml() {
     const cost = summonCostOf(g, 0, p.hand, p.slot);
     return `<div class="modepick" style="${style}">
       ${victim ? `<div class="tip warn">${esc(card(victim.id).name)} を墓地へ送って入れ替え<br>コスト ${cost}（+${g.rules.replaceSummonCost}）</div>` : ''}
-      <button class="mp-atk" data-summon="attack">⚔ 攻撃モード <b>${c.atk}</b></button>
-      <button class="mp-def" data-summon="defense">🛡 防御モード <b>${c.def}</b></button>
-      <div class="tip">攻撃モードは縦置き・殴れる／防御モードは横置き・🛡でダメージを受け止める</div>
+      <button class="mp-atk" data-summon="attack">${icon('atk')} 攻撃モード <b>${c.atk}</b></button>
+      <button class="mp-def" data-summon="defense">${icon('def')} 防御モード <b>${c.def}</b></button>
+      <div class="tip">攻撃モードは縦置き・殴れる／防御モードは横置き・${icon('def')}の分だけダメージを受け止める</div>
     </div>`;
   }
   if (p.type === 'own') {
@@ -973,10 +975,10 @@ function popupHtml() {
     if (!m) return '';
     const acts = [];
     if (canAttack(g, 0, p.slot) && app.phase === 'play' && g.active === 0)
-      acts.push('<button data-act="attack">⚔ 攻撃する</button>');
+      acts.push(`<button data-act="attack">${icon('atk')} 攻撃する</button>`);
     if (canChangeMode(g, 0, p.slot) && app.phase === 'play' && g.active === 0)
-      acts.push(`<button data-act="mode">🔄 ${m.mode === 'attack' ? '防御' : '攻撃'}モードへ</button>`);
-    acts.push('<button data-act="detail">🔍 カードを見る</button>');
+      acts.push(`<button data-act="mode">${icon('modeswitch')} ${m.mode === 'attack' ? '防御' : '攻撃'}モードへ</button>`);
+    acts.push(`<button data-act="detail">${icon('info')} カードを見る</button>`);
     return `<div class="modepick" style="${style}">${acts.join('')}</div>`;
   }
   return '';
@@ -1043,8 +1045,8 @@ function detailOverlay() {
   const zoomable = app.screen === 'collection' && owned;
   const extra = app.screen !== 'collection' ? ''
     : owned
-      ? `<button class="zoom-open" data-artzoom="${esc(c.id)}">🔍 イラストを拡大</button>`
-      : '<div class="zoom-locked">🔒 入手するとイラストを拡大できます</div>';
+      ? `<button class="zoom-open" data-artzoom="${esc(c.id)}">${icon('info')} イラストを拡大</button>`
+      : `<div class="zoom-locked">${icon('lock')} 入手するとイラストを拡大できます</div>`;
   return `<div class="overlay" data-closedetail><div class="modal">
     ${detailHtml(c, extra, { zoomable })}
     <div class="row-btn"><button class="btn" data-closedetail>閉じる</button></div>
@@ -1112,10 +1114,10 @@ function resultOverlay() {
     <h2 style="font-size:30px">${r.win ? '勝利！' : '敗北…'}</h2>
     <p>${esc(r.reason)}</p>
     ${r.reward ? `<p style="color:var(--gold);font-size:15px">報酬: ${PACK_TYPES[r.reward].name} を1つ獲得！</p>` : ''}
-    ${r.dust ? `<p style="color:var(--gold);font-size:15px">星屑 ✦${r.dust} を獲得！（所持 ✦${app.save.stardust}）</p>` : ''}
+    ${r.dust ? `<p style="color:var(--gold);font-size:15px">星屑 ${icon('stardust')}${r.dust} を獲得！（所持 ${icon('stardust')}${app.save.stardust}）</p>` : ''}
     ${r.unlocked ? `<p style="color:#8fe0a8">「${esc(r.unlocked)}」が解放されました！</p>` : ''}
     ${r.charCard ? `<div class="charget">
-      <div class="charget-label">✦ キャラクターカードを入手 ✦</div>
+      <div class="charget-label">${icon('stardust')} キャラクターカードを入手 ${icon('stardust')}</div>
       ${cardHtml(card(r.charCard), { cls: 'big' })}
       <div class="charget-name">${esc(card(r.charCard).name)}</div>
     </div>` : ''}

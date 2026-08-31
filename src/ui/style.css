@@ -1230,14 +1230,20 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 
 /* ---------- カードショップ ---------- */
 .shoplist{display:flex;flex-direction:column;gap:10px;padding:12px 14px}
-.shopitem{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;
+.shopitem{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;
   background:#141a26;border:1px solid #26324a;border-radius:12px;padding:12px 14px}
-.shopitem .shopname{grid-column:1;font-weight:700;color:var(--gold);font-size:15px}
-.shopitem .shopdesc{grid-column:1;color:#9fb2c8;font-size:12.5px;line-height:1.5}
-.shopitem .btn{grid-column:2;grid-row:1 / span 2;white-space:nowrap}
+.shopitem .shopart{grid-column:1;grid-row:1 / span 2;width:46px;height:46px}
+.shopitem .shopart .gi{width:100%;height:100%}
+.shopitem .shopname{grid-column:2;font-weight:700;color:var(--gold);font-size:15px}
+.shopitem .shopdesc{grid-column:2;color:#9fb2c8;font-size:12.5px;line-height:1.5}
+.shopitem .btn{grid-column:3;grid-row:1 / span 2;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.shopitem .btn .gi{width:15px;height:15px}
 .shopitem.locked{opacity:.55}
 .shopitem.locked .shopname{color:#8fa0b6}
 .adv-shop .shoplist{position:relative;z-index:1}
 .shopitem{backdrop-filter:blur(2px);background:#141a26e8}
 .foe.free .charprog{font-size:11.5px;color:var(--gold);background:#2a2013;border:1px solid #5a4620;
   border-radius:8px;padding:3px 8px;margin-top:2px}
+
+/* ---------- 絵文字の代わりのアイコン画像 ---------- */
+.gi{display:inline-block;width:1em;height:1em;vertical-align:-0.15em;object-fit:contain;flex:none}
