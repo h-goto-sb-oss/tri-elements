@@ -7,7 +7,7 @@ import { CHARACTER_OF, CHARACTER_WINS_NEEDED, EXTREME_SELF_COPIES } from '../eng
 import {
   createGame, mulligan, applyAction, legalAttackTargets, canSummon, canPlaySupport,
   canChangeMode, canAttack, supportNeedsTarget, fieldMonsters, effAtk, effDef,
-  isMonster, matchFilter, hasKw, emptySlot, canForge, canSummonAt, summonCostOf, canEquipTo,
+  isMonster, matchFilter, hasKw, canForge, canSummonAt, summonCostOf, canEquipTo,
 } from '../engine/game.js';
 import { aiChooseAction } from '../engine/ai.js';
 import { cardArtSource, cardArtSvg } from './art.js';
@@ -15,7 +15,7 @@ import { cardHtml, monsterHtml, supportHtml, detailHtml, esc } from './cardview.
 import {
   AREAS, REWARD, openPack, PACK_TYPES, loadSave, writeSave,
   areaUnlocked, addCards, deckCurve, STARTER_DECK, AVATARS,
-  FREE_DIFFICULTY, DUST_SHOP, REWARD_LIMIT, prismUnlocked,
+  FREE_DIFFICULTY, DUST_SHOP, REWARD_LIMIT, shopUnlocked,
   MAX_DECKS, ensureDecks,
 } from '../game/campaign.js';
 import * as Audio from './audio.js';
@@ -42,7 +42,7 @@ const app = {
   game: null,
   enemy: null, enemyKey: null, areaIndex: 0,
   phase: null,          // 'mulligan' | 'start' | 'play'
-  sel: null,            // {kind:'attack', slot} 攻撃対象選択中
+  sel: null,            // {kind:'attack'|'place'|'target', ...} 選択中の操作
   popup: null,          // {type, x, y, ...} 盤面の小ポップアップ
   detail: null,         // 詳細表示中のカードID
   artZoom: null,        // 図鑑で拡大表示中のカードID
@@ -55,6 +55,7 @@ const app = {
   freeDiff: 'normal',
   logOpen: false,       // 戦闘開始時は畳んでおく（盤面を隠さない）
   drag: null,           // ドラッグ中の情報
+  quitArm: false,       // 投了ボタンを1度押した状態（2度押しで確定）
   audioInfo: null,
   playLog: [],          // 直近に召喚・発動されたカード（最大2件、新しい順）
 };
@@ -228,6 +229,7 @@ function renderTitle() {
         <button class="title-action" data-go="free"><span class="ta-icon">🏟️</span><span><b>フリーバトル</b><small>好きな相手と対戦</small></span></button>
         <button class="title-action" data-go="deck"><span class="ta-icon">🃏</span><span><b>デッキ編集</b><small>30枚を編成</small></span></button>
         <button class="title-action" data-go="collection"><span class="ta-icon">📖</span><span><b>カード図鑑</b><small>全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める</small></span></button>
+        <button class="title-action" data-go="shop"><span class="ta-icon">🛒</span><span><b>カードショップ</b><small>星屑 ✦${app.save.stardust || 0} でパックと交換</small></span></button>
         <button class="title-action" data-go="rules"><span class="ta-icon">📜</span><span><b>ルール説明</b><small>遊び方を確認</small></span></button>
         <button class="title-action quiet" data-go="settings"><span class="ta-icon">⚙️</span><span><b>設定</b><small>音量・プロフィール</small></span></button>
       </div>
@@ -321,6 +323,49 @@ function renderAdventure() {
 // ============================================================
 // フリーバトル
 // ============================================================
+// ---------- カードショップ ----------
+// 以前はフリーバトル画面のバーの端に押し込まれていて、まず気づけなかった。
+// 星屑の貯め方と、次に何を開けば新しい弾が並ぶのかも、ここに書いておく。
+const PACK_BLURB = {
+  set1: '第1弾。炎・水・草の基本が一通りそろいます。',
+  set2: '第2弾。断末魔や装備など、仕掛けのあるカードが増えます。',
+  set3: '第3弾。観測・加速など、引きと展開を助けるカード。',
+  set4: '第4弾。隣に誰を置くかで強さが変わる、陣形のカード。',
+  prism: '全弾から、レア以上だけが5枚出ます。',
+};
+
+function renderShop() {
+  const dust = app.save.stardust || 0;
+  const items = DUST_SHOP.map(x => {
+    const open = shopUnlocked(app.save, x);
+    const pack = PACK_TYPES[x.pack];
+    const enough = dust >= x.cost;
+    const area = x.unlockAfter ? AREAS.find(a => a.id === x.unlockAfter) : null;
+    return `<div class="shopitem ${open ? '' : 'locked'}">
+      <div class="shopname">${open ? esc(pack.name) : '🔒 ？？？'}</div>
+      <div class="shopdesc">${open ? esc(PACK_BLURB[x.pack] || `${pack.size}枚入り`)
+        : `${esc(area ? area.name : '')}の相手を全員倒すと並びます`}</div>
+      <button class="btn ${open && enough ? 'primary' : ''}" ${open && enough ? `data-buypack="${x.pack}"` : 'disabled'}>
+        ✦${x.cost} ${open ? (enough ? 'で交換' : 'ぶん足りません') : ''}</button>
+    </div>`;
+  }).join('');
+
+  return `<div class="adventure">
+    <div class="adv-head">
+      <h2>カードショップ</h2>
+      <div class="desc">星屑 ✦ をパックと交換できます。<br>
+        <span style="color:#9fb2c8">星屑はフリーバトルで勝つと貯まります。難易度が高いほど多くもらえます。</span></div>
+      <div class="dust">✦ ${dust}</div>
+    </div>
+    <div class="adv-stage adv-shop" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
+      ${AREA_BG.common ? '<div class="stagebg"></div>' : ''}
+      <div class="shoplist">${items}</div>
+    </div>
+    <div class="hint" style="font-size:13px;padding:10px 14px">
+      新しい弾は、冒険を進めると並びます。手前の弾から順に覚えていくのがおすすめです。</div>
+  </div>`;
+}
+
 function renderFree() {
   const beaten = [];
   AREAS.forEach((a, ai) => a.enemies.forEach((e, ei) => {
@@ -331,13 +376,6 @@ function renderFree() {
     <button class="tab ${app.freeDiff === k ? 'on' : ''}" data-freediff="${k}">
       ${d.name}${d.life ? `（敵ライフ+${d.life}・開始コスト+${d.cost}）` : ''}
     </button>`).join('');
-
-  const shop = DUST_SHOP.map(x => {
-    const unlocked = !x.unlockAfter || prismUnlocked(app.save);
-    const ok = unlocked && (app.save.stardust || 0) >= x.cost;
-    return `<button class="btn small ${ok ? 'primary' : ''}" ${ok ? `data-buypack="${x.pack}"` : 'disabled'}>
-      ${unlocked ? PACK_TYPES[x.pack].name : '🔒 プリズム（エリア5クリア）'} ／ ✦${x.cost}</button>`;
-  }).join('');
 
   const cards = beaten.map(({ a, ai, e, ei, key }) => {
     const st = app.save.freeStats?.[key] || { w: 0, l: 0 };
@@ -366,8 +404,7 @@ function renderFree() {
       <div class="tabs">${diffTabs}</div>
       ${app.freeDiff === 'extreme' ? '<span class="hint xrule">極では、相手は自分のカードを1枚だけ必ず初手に持って現れます</span>' : ''}
       <span style="margin-left:auto"></span>
-      <span class="hint" style="min-height:0">交換</span>
-      ${shop}
+      <button class="btn small" data-go="shop">🛒 カードショップ（✦${app.save.stardust || 0}）</button>
     </div>
     <div class="adv-stage adv-free" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
       ${AREA_BG.common ? '<div class="stagebg"></div>' : ''}
@@ -768,14 +805,17 @@ function renderBattle() {
     targetSlots = t.filter(x => x !== 'face');
     faceTargetable = t.includes('face');
   }
-  // ドラッグ中のドロップ候補
+  // 置ける場所・対象にできる相手を光らせる。
+  // ドラッグ中だけでなく、タップで選んでいる最中も同じ見せ方にする
   let dropMonster = [], dropSelf = [], dropEnemy = [];
-  if (app.drag && app.drag.from === 'hand') {
-    const id = me.hand[app.drag.index];
+  const picking = app.drag && app.drag.from === 'hand' ? app.drag.index
+    : app.sel && (app.sel.kind === 'place' || app.sel.kind === 'target') ? app.sel.hand : null;
+  if (picking != null) {
+    const id = me.hand[picking];
     if (id && isMonster(id)) {
-      dropMonster = me.field.map((_, i) => i).filter(i => canSummonAt(g, 0, app.drag.index, i));
+      dropMonster = me.field.map((_, i) => i).filter(i => canSummonAt(g, 0, picking, i));
     } else if (id) {
-      const t = supportTargetSlots(g, app.drag.index);
+      const t = supportTargetSlots(g, picking);
       dropSelf = t.self; dropEnemy = t.enemy;
     }
   }
@@ -897,7 +937,7 @@ function renderBattle() {
         ${discardMode ? '<span class="hint" style="color:var(--gold)">手札が多すぎます。捨てるカードを選んでください</span>' : ''}
         ${app.sel ? '<button class="btn small" data-cancel>選択解除</button>' : ''}
         <button class="btn small" data-forge ${myTurn && g.phase === 'main' && canForge(g, 0) ? '' : 'disabled'}
-          title="余ったコストでカードを1枚引く">🔨 鍛錬 ${g.rules.forgeCost}→1枚</button>
+          title="余ったコストでカードを1枚引く">🔨 鍛錬 <small>${g.rules.forgeCost}コストで1枚引く</small></button>
         <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>ターン終了</button>
       </div>
     </div>
@@ -1230,6 +1270,7 @@ function render(opts = {}) {
     case 'free': html = renderFree(); break;
     case 'deck': html = renderDeck(); break;
     case 'collection': html = renderCollection(); break;
+    case 'shop': html = renderShop(); break;
     case 'rules': html = renderRules(); break;
     case 'settings': html = renderSettings(); break;
     case 'battle': html = renderBattle() + popupHtml(); break;
@@ -1934,7 +1975,7 @@ function handleClick(ev) {
   const bp = hit('[data-buypack]');
   if (bp) {
     const item = DUST_SHOP.find(x => x.pack === bp.dataset.buypack);
-    if (!item || (item.unlockAfter && !prismUnlocked(app.save)) || (app.save.stardust || 0) < item.cost) return;
+    if (!item || !shopUnlocked(app.save, item) || (app.save.stardust || 0) < item.cost) return;
     app.save.stardust -= item.cost;
     app.packResult = openPack(item.pack);
     addCards(app.save, app.packResult); writeSave(app.save);
@@ -2052,7 +2093,18 @@ function handleClick(ev) {
     return render();
   }
   if (hit('[data-closedrawer]')) { app.drawer = null; return render(); }
-  if (hit('[data-surrender]')) { clearTimeout(app.aiTimer); return go(app.free ? 'free' : 'adventure'); }
+  if (hit('[data-surrender]')) {
+    // 誤爆すると即敗北なので、2回押させる（デッキ切り替えと同じ作法）
+    if (!app.quitArm) {
+      app.quitArm = true;
+      toast('もう一度押すと投了します');
+      setTimeout(() => { app.quitArm = false; }, 4000);
+      return;
+    }
+    app.quitArm = false;
+    clearTimeout(app.aiTimer);
+    return go(app.free ? 'free' : 'adventure');
+  }
   const gv = hit('[data-grave]');
   if (gv) { app.graveView = Number(gv.dataset.grave); return render(); }
 
@@ -2091,10 +2143,11 @@ function handleClick(ev) {
     if (!id) return;
     if (isMonster(id)) {
       if (!canSummon(g, 0, i)) { toast('今は出せません（コストが足りません）'); return; }
-      const empty = emptySlot(g.players[0]);
-      if (empty < 0) { toast('場が満杯です。入れ替えたいモンスターにドラッグしてください'); return; }
-      const slotEl = document.querySelector(`[data-mslot="${empty}"]`);
-      if (slotEl) return openModePick(i, slotEl);
+      // どの枠に置くかで強さが変わる（【隊列】【旗】）。
+      // 勝手に空き枠へ置かず、必ず自分で選んでもらう
+      app.sel = { kind: 'place', hand: i };
+      app.hint = 'どの枠に出しますか？　隣に誰がいるかで強さが変わります';
+      return render();
     } else {
       if (!canPlaySupport(g, 0, i)) { toast('今は使えません'); return; }
       const gc = graveChoices(g, i);
@@ -2103,10 +2156,47 @@ function handleClick(ev) {
         app.gravePick = { hand: i, indices: gc.indices };
         return render();
       }
-      if (supportNeedsTarget(id)) { toast('対象のモンスターにドラッグしてください'); return; }
+      if (supportNeedsTarget(id)) {
+        const t = supportTargetSlots(g, i);
+        if (!t.self.length && !t.enemy.length) { toast('対象にできるモンスターがいません'); return; }
+        app.sel = { kind: 'target', hand: i };
+        app.hint = '効果をかける相手を選んでください';
+        return render();
+      }
       return actWithFx(0, { type: 'support', hand: i }).then(afterAction);
     }
     return;
+  }
+
+  // --- 置き場所を選んでいる最中 ---
+  if (app.sel && app.sel.kind === 'place') {
+    const slotEl = hit('[data-mslot]');
+    if (slotEl) {
+      const slot = Number(slotEl.dataset.mslot);
+      if (!canSummonAt(g, 0, app.sel.hand, slot)) {
+        toast(g.players[0].field[slot]
+          ? 'そこは埋まっています（入れ替えるにはコストが+1必要です）'
+          : 'そこには出せません');
+        return;
+      }
+      const hand = app.sel.hand;
+      app.sel = null; app.hint = '';
+      return openModePick(hand, slotEl);
+    }
+  }
+  // --- サポートの対象を選んでいる最中 ---
+  if (app.sel && app.sel.kind === 'target') {
+    const mEl = hit('.mini');
+    if (mEl) {
+      const side = Number(mEl.dataset.side), slot = Number(mEl.dataset.slot);
+      const t = supportTargetSlots(g, app.sel.hand);
+      if (!(side === 0 ? t.self : t.enemy).includes(slot)) {
+        toast('そのモンスターは対象にできません'); return;
+      }
+      const hand = app.sel.hand;
+      app.sel = null; app.hint = '';
+      return actWithFx(0, { type: 'support', hand, target: { slot } }).then(afterAction);
+    }
   }
 
   // --- 盤面 ---

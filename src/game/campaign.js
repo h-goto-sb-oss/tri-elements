@@ -332,11 +332,14 @@ export const FREE_DIFFICULTY = {
 };
 
 // 星屑とパックの交換レート
+// 交換できるパックは、冒険の進み具合で増えていく。
+// ストーリーの報酬（REWARD）と同じ順番で開くので、
+// 新しい弾に触れる前に、その手前の弾で基本を覚えられる。
 export const DUST_SHOP = [
   { pack: 'set1', cost: 4 },
-  { pack: 'set2', cost: 5 },
-  { pack: 'set3', cost: 5 },
-  { pack: 'set4', cost: 5 },
+  { pack: 'set2', cost: 5, unlockAfter: 'a2' },
+  { pack: 'set3', cost: 5, unlockAfter: 'a4' },
+  { pack: 'set4', cost: 5, unlockAfter: 'a6' },
   { pack: 'prism', cost: 12, unlockAfter: 'a5' },
 ];
 
@@ -349,9 +352,19 @@ export const REWARD = {
   a6: 'set3', a7: 'set4', a8: 'set4',
 };
 
+/** そのエリアの相手を全員倒したか */
+export function areaCleared(save, areaId) {
+  const area = AREAS.find(a => a.id === areaId);
+  return !!area && area.enemies.every((_, i) => save.cleared?.[`${areaId}:${i}`]);
+}
+
+/** ショップの品が解放されているか */
+export function shopUnlocked(save, item) {
+  return !item.unlockAfter || areaCleared(save, item.unlockAfter);
+}
+
 export function prismUnlocked(save) {
-  const area = AREAS.find(a => a.id === 'a5');
-  return !!area && area.enemies.every((_, i) => save.cleared?.[`a5:${i}`]);
+  return areaCleared(save, 'a5');
 }
 
 // ---------- セーブ ----------

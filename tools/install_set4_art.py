@@ -26,6 +26,9 @@ spec = importlib.util.spec_from_file_location('unbake', 'tools/unbake_checker.py
 U = importlib.util.module_from_spec(spec); spec.loader.exec_module(U)
 
 SRC = 'assets/art/set4-iron-banner'
+# 作り直してもらった11枚。最初から透過つきで、隙間も整理されているので
+# 市松はがしも穴埋めもいらない。枠に合わせて切り出すだけでよい。
+REDO_DIR = 'C:/Users/pc/.codex/generated_images/set4_redo'
 # 高画質の元絵が見つかったものは、そちらから作り直す（1254px）。
 # ファイル名がUUIDなので、既存の絵と照合して特定した対応表。
 HQ_DIR = 'C:/Users/pc/.codex/generated_images/01a03eb8-7ba3-7f23-92e6-cf59f42eded5'
@@ -64,6 +67,16 @@ def main():
     assert len(files) == len(IDS), f'{len(files)} 枚 / ID {len(IDS)} 個'
 
     for f, cid in zip(files, IDS):
+        redo = os.path.join(REDO_DIR, cid + '.png')
+        if os.path.exists(redo):
+            im = Image.open(redo).convert('RGBA')
+            im = (A.square_bust(im) if kind[cid] == 'M' else centre_zoom(im))
+            im = im.resize((512, 512), Image.LANCZOS)
+            if not dry:
+                im.save('assets/art/' + cid + '.png')
+            print('  %-7s ← 作り直し版  %s' % (
+                cid, '顔に合わせて切り出し' if kind[cid] == 'M' else '構図のまま寄せ'))
+            continue
         hqp = os.path.join(HQ_DIR, HQ[cid]) if cid in HQ else None
         hq = hqp if hqp and os.path.exists(hqp) else None
         base = Image.open(os.path.join(SRC, f))

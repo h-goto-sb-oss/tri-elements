@@ -1227,3 +1227,15 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .fxlegveil,.fxlegpillar,.fxlegstar{display:none}
   .fxlegseal{animation-duration:.01ms!important;animation-fill-mode:forwards!important}
 }
+
+/* ---------- カードショップ ---------- */
+.shoplist{display:flex;flex-direction:column;gap:10px;padding:12px 14px}
+.shopitem{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;
+  background:#141a26;border:1px solid #26324a;border-radius:12px;padding:12px 14px}
+.shopitem .shopname{grid-column:1;font-weight:700;color:var(--gold);font-size:15px}
+.shopitem .shopdesc{grid-column:1;color:#9fb2c8;font-size:12.5px;line-height:1.5}
+.shopitem .btn{grid-column:2;grid-row:1 / span 2;white-space:nowrap}
+.shopitem.locked{opacity:.55}
+.shopitem.locked .shopname{color:#8fa0b6}
+.adv-shop .shoplist{position:relative;z-index:1}
+.shopitem{backdrop-filter:blur(2px);background:#141a26e8}
