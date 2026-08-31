@@ -263,7 +263,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 /* コストの数字は、玉の数を数えなくても分かるよう縦持ちでも出す */
 .battle.portrait .playerbar .meta{font-size:12.5px;white-space:nowrap}
 .battle.portrait .battle-actions{gap:5px;flex-wrap:wrap;justify-content:flex-end}
-.battle.portrait .btn.small,.battle.portrait .btn.tiny{font-size:13px;padding:5px 10px}
+.battle.portrait .btn.small,.battle.portrait .btn.tiny{font-size:16px;padding:9px 14px}
 .battle.portrait .btn.primary{font-size:14px;padding:6px 13px}
 .battle.portrait .turnlabel{font-size:16px}
 .battle.portrait .battle .hint{font-size:13px}
@@ -468,7 +468,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .title-tagline{margin-top:-14px;color:#f4eddc;font-size:clamp(12px,1.3vw,16px);font-weight:700;
   letter-spacing:.13em;text-shadow:0 2px 8px #000,0 0 18px #000}
 .title-elements{display:flex;gap:9px;justify-content:center;margin-top:13px}
-.title-elements span{font-size:11.5px;font-weight:900;padding:4px 12px;border-radius:18px;
+.title-elements span{font-size:14px;font-weight:900;padding:5px 14px;border-radius:18px;
   border:1px solid #ffffff42;background:#07101bcc;box-shadow:0 4px 14px #0008;backdrop-filter:blur(4px)}
 .title-elements .fire{color:#ffc1a4;border-color:#ff704d88}.title-elements .water{color:#bdeaff;border-color:#48b9ff88}
 .title-elements .grass{color:#c9f7bd;border-color:#64d27288}
@@ -486,7 +486,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .title-action.main{grid-column:1/-1;min-height:68px;background:linear-gradient(135deg,#b8741d,#e0ad3e 50%,#8f5615);
   border-color:#ffe095;color:#fffaf0;box-shadow:inset 0 1px #fff6bd99,0 8px 22px #0008,0 0 18px #f5c75e33}
 .title-action.quiet{grid-column:1/-1;min-height:45px;background:#101a28d9}
-.title-action .ta-icon{font-size:24px;width:31px;text-align:center;filter:drop-shadow(0 2px 3px #0008)}
+.title-action .ta-icon{font-size:30px;width:38px;text-align:center;filter:drop-shadow(0 2px 3px #0008)}
 .title-action b{display:block;font-size:14px;line-height:1.2}.title-action small{display:block;margin-top:3px;color:#aebdd0;font-size:10px}
 .title-action.main b{font-size:17px}.title-action.main small{color:#fff0c7}.title-action.quiet .ta-icon{font-size:20px}
 .grid{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:1240px}
@@ -693,7 +693,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .rarrow{font-size:12px;color:var(--gold);font-weight:800}
 
 /* ---------- フリーバトル ---------- */
-.dust{font-size:19px;font-weight:900;color:var(--gold);background:#141c28cc;border:1px solid var(--line);
+.dust{font-size:23px;font-weight:900;color:var(--gold);background:#141c28cc;border:1px solid var(--line);
   border-radius:20px;padding:4px 16px}
 .freebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px}
 .freebar .tab{padding:5px 14px;font-size:12px}
@@ -867,7 +867,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .title-logo{width:min(96vw,520px)}
   .title-tagline{margin-top:-16px;font-size:10.5px;letter-spacing:.06em}
   .title-elements{margin-top:9px;gap:5px}
-  .title-elements span{font-size:10px;padding:3px 8px}
+  .title-elements span{font-size:12.5px;padding:4px 10px}
   .title-panel{width:100%;padding:9px;border-radius:15px}
   .title-panel .titleprof{padding:3px 5px 8px}
   .title-panel .tface{width:40px;height:40px}.title-panel .tface .avfb{font-size:21px}
@@ -875,7 +875,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .title-menu{gap:6px;margin-top:8px}
   .title-action{min-height:53px;padding:7px 9px;gap:7px;border-radius:10px}
   .title-action.main{min-height:61px}.title-action.quiet{min-height:41px}
-  .title-action .ta-icon{font-size:20px;width:25px}.title-action b{font-size:12px}.title-action small{font-size:8.8px}
+  .title-action .ta-icon{font-size:26px;width:32px}.title-action b{font-size:12px}.title-action small{font-size:8.8px}
   .title-action.main b{font-size:15px}
 
   .collection-screen{padding:0}
@@ -1050,7 +1050,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .bnav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     padding:5px 2px;border:0;border-radius:9px;background:none;color:#93a5ba;
     font-family:inherit;font-weight:800;cursor:pointer;min-height:44px}
-  .bnav .bn-icon{font-size:18px;line-height:1}
+  .bnav .bn-icon{font-size:24px;line-height:1}
   .bnav .bn-label{font-size:10px;letter-spacing:.02em}
   .bnav.on{background:#1d2635;color:var(--gold);box-shadow:inset 0 0 0 1px #f2c15b44}
   .bnav:active{background:#232f40}
@@ -1232,12 +1232,12 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .shoplist{display:flex;flex-direction:column;gap:10px;padding:12px 14px}
 .shopitem{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;
   background:#141a26;border:1px solid #26324a;border-radius:12px;padding:12px 14px}
-.shopitem .shopart{grid-column:1;grid-row:1 / span 2;width:46px;height:46px}
+.shopitem .shopart{grid-column:1;grid-row:1 / span 2;width:64px;height:64px}
 .shopitem .shopart .gi{width:100%;height:100%}
-.shopitem .shopname{grid-column:2;font-weight:700;color:var(--gold);font-size:15px}
+.shopitem .shopname{grid-column:2;font-weight:700;color:var(--gold);font-size:17px}
 .shopitem .shopdesc{grid-column:2;color:#9fb2c8;font-size:12.5px;line-height:1.5}
 .shopitem .btn{grid-column:3;grid-row:1 / span 2;white-space:nowrap;display:flex;align-items:center;gap:4px}
-.shopitem .btn .gi{width:15px;height:15px}
+.shopitem .btn .gi{width:20px;height:20px}
 .shopitem.locked{opacity:.55}
 .shopitem.locked .shopname{color:#8fa0b6}
 .adv-shop .shoplist{position:relative;z-index:1}
