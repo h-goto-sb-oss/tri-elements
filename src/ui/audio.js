@@ -126,6 +126,21 @@ export function stopBgm() {
   if (state.el) { const el = state.el; fadeTo(el, 0, 250, () => { el.pause(); el.src = ''; }); state.el = null; }
 }
 
+/**
+ * BGMを止めずに、音量だけ一時的に下げる／戻す。
+ *
+ *   勝敗の効果音は演出として長め（十数〜三十秒）に作られていて、
+ *   その間ずっと戦闘BGMが同じ音量で鳴り続けると、2つの曲が
+ *   混ざったまま終わらないように聞こえてしまう。曲を止めたり
+ *   切り替えたりはせず、音量だけ下げて効果音を聞かせやすくする。
+ */
+export function duckBgm(factor, ms = 300) {
+  if (state.el) fadeTo(state.el, (state.muted ? 0 : state.bgmVol) * factor, ms);
+}
+export function unduckBgm(ms = 500) {
+  if (state.el) fadeTo(state.el, state.muted ? 0 : state.bgmVol, ms);
+}
+
 let seNodes = [];
 const lastPlayed = {};
 export async function playSe(key, opts = {}) {
@@ -140,6 +155,19 @@ export async function playSe(key, opts = {}) {
   a.volume = state.seVol;
   seNodes.push(a);
   a.addEventListener('ended', () => { seNodes = seNodes.filter(x => x !== a); });
+  // 長い効果音（勝敗など）は、鳴っているあいだBGMを下げて、鳴り終わったら戻す。
+  // 再生に失敗した場合や、いつまでも ended が来ない場合でも下げっぱなしに
+  // ならないよう、保険のタイムアウトも仕込んでおく。
+  if (opts.duckBgm) {
+    duckBgm(opts.duckBgm, 300);
+    let restored = false;
+    const restore = () => { if (restored) return; restored = true; unduckBgm(600); };
+    a.addEventListener('ended', restore);
+    a.addEventListener('error', restore);
+    setTimeout(restore, 40000);
+    a.play().catch(restore);
+    return;
+  }
   a.play().catch(() => { /* 鳴らせなくても進行に影響なし */ });
 }
 

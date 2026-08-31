@@ -1307,6 +1307,10 @@ function render(opts = {}) {
 // バトル進行
 // ============================================================
 function startBattle(areaIndex, enemyIndex, free = false) {
+  // 勝敗の効果音がまだ鳴っている途中で「もう一度」を押した場合に備えて、
+  // 鳴りかけの音を止め、下げたままのBGM音量を戻しておく
+  Audio.stopSe();
+  Audio.unduckBgm(0);
   // 複数スロットのせいで、30枚に満たないデッキを選んだまま挑めてしまわないように
   if (app.save.deck.length !== 30) {
     const d = app.save.decks[app.save.activeDeck];
@@ -1605,7 +1609,7 @@ function finishGame() {
     app.save.freeStats[key] = st;
     writeSave(app.save);
     app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true, charCard, charLeft };
-    Audio.playSe(win ? 'se_win' : 'se_lose');
+    Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
     return render();
   }
 
@@ -1634,7 +1638,7 @@ function finishGame() {
   } else app.save.stats.losses++;
   writeSave(app.save);
   app.result = { win, reason: g.reason, reward, unlocked };
-  Audio.playSe(win ? 'se_win' : 'se_lose');
+  Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
   render();
 }
 
