@@ -4,6 +4,7 @@
 import { card, ELEMENTS, KEYWORDS } from '../engine/cards.js';
 import { RARITY } from '../engine/rarity.js';
 import { cardHtml, monsterHtml, esc } from './cardview.js';
+import { icon } from './icons.js';
 
 /** 説明用のダミーモンスター（盤面と同じ見た目で並べる） */
 function demo(id, mode) {
@@ -26,13 +27,13 @@ export function renderRulesPage() {
       <div class="rside">
         <div class="rlabel">攻撃モード（縦置き）</div>
         ${monsterHtml(demo('f09', 'attack'), 1, 0, {})}
-        <div class="rcap">⚔ で戦う。殴れる</div>
+        <div class="rcap">${icon('atk')} で戦う。殴れる</div>
       </div>
       <div class="rvs">VS</div>
       <div class="rside">
         <div class="rlabel">防御モード（横置き）</div>
         ${monsterHtml(demo('w08', 'defense'), 1, 1, {})}
-        <div class="rcap">🛡 で受け止める。攻撃はできない</div>
+        <div class="rcap">${icon('def')} で受け止める。攻撃はできない</div>
       </div>
     </div>`;
 
@@ -94,8 +95,8 @@ export function renderRulesPage() {
       ${note('対戦の最初に<b>【マリガン】</b>があります。配られた手札が気に入らなければ、1回だけ引き直せます。')}`)}
 
     ${sec('モンスターの2つのモード', battleDemo + `
-      ${note('<b>攻撃モード同士</b>：⚔ が高い方が勝ち、負けた方は破壊。差はプレイヤーへのダメージ。負けた側のプレイヤーも差分を受けます。')}
-      ${note('<b>防御モードを攻撃</b>：⚔ が 🛡 を超えたら破壊されますが、<b>プレイヤーが受けるのは超えた分の半分だけ</b>（切り上げ）。🛡 が ⚔ 以上なら完全に防ぎ、両者とも場に残ります。')}
+      ${note(`<b>攻撃モード同士</b>：${icon('atk')} が高い方が勝ち、負けた方は破壊。差はプレイヤーへのダメージ。負けた側のプレイヤーも差分を受けます。`)}
+      ${note(`<b>防御モードを攻撃</b>：${icon('atk')} が ${icon('def')} を超えたら破壊されますが、<b>プレイヤーが受けるのは超えた分の半分だけ</b>（切り上げ）。${icon('def')} が ${icon('atk')} 以上なら完全に防ぎ、両者とも場に残ります。`)}
       ${note('つまり<b>防御モードは受けるダメージを減らせます</b>。攻撃モードで負けると差分をそのまま受けるので、殴り返せない相手には伏せておくのが有効です。<br>ただし【落とし穴】のように防御モードだけを狙い撃つカードや、【挑発】のように相手を攻撃モードへ引きずり出して守りを剥がすカードもあります。逆に【威圧】で相手を防御モードにすれば、その1体の攻撃を止められます。')}
       ${note('モード変更は1体につき1ターン1回。ただし<b>攻撃したモンスターは変更できません</b>。')}`)}
 
@@ -105,12 +106,12 @@ export function renderRulesPage() {
       ${note('余ったコストは <b>【鍛錬】2コストで1枚ドロー</b>（1ターン1回）に使えます。')}`)}
 
     ${sec('直接攻撃', `
-      ${note('相手の場にモンスターが1体もいないとき、⚔ の分をそのままライフへ叩き込めます。')}
+      ${note(`相手の場にモンスターが1体もいないとき、${icon('atk')} の分をそのままライフへ叩き込めます。`)}
       ${note('【守護】を持つモンスターがいる場合、まずそちらを攻撃しなければなりません。')}`)}
 
     ${sec('属性の相性', `
-      <div class="relem">${elemCards}<div class="rarrow">▶ 強い（🔥へ戻る）</div></div>
-      ${note('有利な属性で攻撃すると、その戦闘だけ <b>⚔ +2</b> されます。')}
+      <div class="relem">${elemCards}<div class="rarrow">▶ 強い（${icon('fire')}へ戻る）</div></div>
+      ${note(`有利な属性で攻撃すると、その戦闘だけ <b>${icon('atk')} +2</b> されます。`)}
       ${note('ごく一部に、複数の属性を同時に名乗るカードがあります。<br>'
         + '<b>【双属】</b>は炎と水の両方として、<b>【三属】</b>は三属性すべてとして扱われます。'
         + '有利を取りやすい代わりに、こちらが攻撃されるときも相手に有利を取られやすくなります。')}`)}

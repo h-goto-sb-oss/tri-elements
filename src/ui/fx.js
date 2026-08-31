@@ -4,6 +4,8 @@
 //   その座標で独立したレイヤーに描く」方式にしている。
 // ============================================================
 
+import { icon } from './icons.js';
+
 let layer = null;
 function getLayer() {
   if (!layer || !document.body.contains(layer)) {
@@ -262,7 +264,7 @@ export function fxGuard(rect) {
 /** 強化：上向きの矢印と増分 */
 export function fxBuff(rect, atk = 0, def = 0) {
   if (!rect) return;
-  const label = [atk ? `⚔+${atk}` : '', def ? `🛡+${def}` : ''].filter(Boolean).join(' ') || '強化';
+  const label = [atk ? `${icon('atk')}+${atk}` : '', def ? `${icon('def')}+${def}` : ''].filter(Boolean).join(' ') || '強化';
   const node = spawn(`<div class="fxbuff">${label}</div>`,
     `left:${cx(rect)}px;top:${cy(rect)}px;`);
   kill(node, 900);
