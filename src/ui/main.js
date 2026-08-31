@@ -56,6 +56,7 @@ const app = {
   logOpen: false,       // 戦闘開始時は畳んでおく（盤面を隠さない）
   drag: null,           // ドラッグ中の情報
   quitArm: false,       // 投了ボタンを1度押した状態（2度押しで確定）
+  quitArmAt: 0,          // 構えた時刻（ゴーストクリック対策）
   audioInfo: null,
   playLog: [],          // 直近に召喚・発動されたカード（最大2件、新しい順）
 };
@@ -379,6 +380,10 @@ function renderFree() {
 
   const cards = beaten.map(({ a, ai, e, ei, key }) => {
     const st = app.save.freeStats?.[key] || { w: 0, l: 0 };
+    // 「極」で規定回数勝つと本人のカードが手に入る。勝った直後にしか
+    // 出なかった進み具合を、相手を選ぶ画面にも常に出しておく
+    const cid = CHARACTER_OF[key];
+    const charLeft = cid && !app.save.collection[cid] ? CHARACTER_WINS_NEEDED - (st.xw || 0) : 0;
     return `<div class="foe free">
       ${portraitHtml(a.id, ei, e)}
       <div class="fname">${esc(e.name)}</div>
@@ -387,6 +392,7 @@ function renderFree() {
         <span>${st.w}勝 ${st.l}敗</span>
         ${e.weak ? `<span>${ELEMENTS[e.weak].icon}が有効</span>` : ''}
       </div>
+      ${charLeft > 0 ? `<div class="charprog">🎴「極」であと${charLeft}勝でカードを入手</div>` : ''}
       <button class="btn primary fbtn" data-freefight="${ai}:${ei}">戦う</button>
     </div>`;
   }).join('');
@@ -2094,9 +2100,12 @@ function handleClick(ev) {
   }
   if (hit('[data-closedrawer]')) { app.drawer = null; return render(); }
   if (hit('[data-surrender]')) {
-    // 誤爆すると即敗北なので、2回押させる（デッキ切り替えと同じ作法）
-    if (!app.quitArm) {
-      app.quitArm = true;
+    // 誤爆すると即敗北なので、2回押させる（デッキ切り替えと同じ作法）。
+    // 端末によっては1回のタップが2つのクリックとして届くことがあるので、
+    // 構えた直後すぐの2回目は「同じタップの誤検知」とみなして構え直しにする
+    const now = Date.now();
+    if (!app.quitArm || now - (app.quitArmAt || 0) < 300) {
+      app.quitArm = true; app.quitArmAt = now;
       toast('もう一度押すと投了します');
       setTimeout(() => { app.quitArm = false; }, 4000);
       return;
@@ -2175,7 +2184,8 @@ function handleClick(ev) {
       const slot = Number(slotEl.dataset.mslot);
       if (!canSummonAt(g, 0, app.sel.hand, slot)) {
         toast(g.players[0].field[slot]
-          ? 'そこは埋まっています（入れ替えるにはコストが+1必要です）'
+          ? `そこは埋まっています。入れ替えるにはコスト+1が必要です（あと${
+              summonCostOf(g, 0, app.sel.hand, slot) - g.players[0].cost}足りません）`
           : 'そこには出せません');
         return;
       }
