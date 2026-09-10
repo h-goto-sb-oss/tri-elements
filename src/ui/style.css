@@ -681,8 +681,12 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .tface img{width:100%;height:100%;object-fit:cover}
 .tface .avfb{font-size:26px}
 
-.tabs{display:flex;gap:8px}
-.tab{padding:7px 22px;border-radius:20px;font-size:13px;font-weight:800;border:1px solid var(--line);background:#161e2a;color:var(--muted)}
+/* 幅が足りないときは、タブの途中で文字を折らず、タブごと次の行へ送る */
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.screen > .tabs{justify-content:center}
+.tab{padding:7px 22px;border-radius:20px;font-size:13px;font-weight:800;border:1px solid var(--line);background:#161e2a;color:var(--muted);
+  white-space:nowrap}
+@media (max-width:720px){ .tab{padding:7px 14px} }
 .tab.on{background:linear-gradient(180deg,#d0a03a,#8f6415);color:#fff8e6;border-color:#e8c268}
 .setpanel{background:#141c28cc;border:1px solid var(--line);border-radius:14px;padding:20px 26px;
   min-width:520px;display:flex;flex-direction:column;gap:16px}
