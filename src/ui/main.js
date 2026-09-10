@@ -115,14 +115,30 @@ function toast(msg, ms = 1700) {
 const AREA_TINT = { a1: '#4a7a3a', a2: '#9a4020', a3: '#2b6a9a', a4: '#2f7048', a5: '#6a4a8a' };
 
 /** 敵の立ち絵。assets/enemies の実素材があればそれ、無ければ代表カードの絵を使う。 */
+// 立ち絵の中で「顔の中心」が上から何割のところにあるか。
+// 後半エリアのキャラは全身寄りに描かれていて顔が上端近くにあるため、
+// 画像の真ん中で切り抜くと、横長の枠（特にスマホ）で顔が見切れていた。
+// この値を使って、顔が枠の上から4割あたりに来るように切り抜く（style.css の .pchar）。
+const FACE_Y = {
+  'a1:0': 0.45, 'a1:1': 0.43, 'a1:2': 0.43,
+  'a2:0': 0.43, 'a2:1': 0.38, 'a2:2': 0.43,
+  'a3:0': 0.45, 'a3:1': 0.45, 'a3:2': 0.43,
+  'a4:0': 0.50, 'a4:1': 0.43, 'a4:2': 0.42,
+  'a5:0': 0.40, 'a5:1': 0.42, 'a5:2': 0.40,
+  'a6:0': 0.33, 'a6:1': 0.26, 'a6:2': 0.16,
+  'a7:0': 0.30, 'a7:1': 0.30, 'a7:2': 0.26,
+  'a8:0': 0.27, 'a8:1': 0.22, 'a8:2': 0.22,
+};
+
 function portraitHtml(areaId, index, enemy) {
   const src = ENEMY_ART[areaId + ':' + index];
   const bg = AREA_BG[areaId] || AREA_BG.common;
   const tint = AREA_TINT[areaId] || '#3a4a60';
   if (src) {
+    const fy = FACE_Y[areaId + ':' + index] ?? 0.42;
     return '<div class="portrait art">'
       + (bg ? '<div class="pbg" style="background-image:url(' + bg + ')"></div>' : '')
-      + '<img class="pchar" src="' + src + '" alt="">'
+      + '<img class="pchar" src="' + src + '" alt="" style="--fy:' + fy + '">'
       + '</div>';
   }
   const faceCard = enemy.face ? card(enemy.face) : null;
