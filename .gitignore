@@ -18,6 +18,7 @@ dist-pages/
 # itch.io 用のビルド（相対パス）。zip にしてアップロードする
 dist-itch/
 *.zip
+release/
 
 # Pythonのキャッシュ
 __pycache__/
