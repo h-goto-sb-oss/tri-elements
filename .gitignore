@@ -15,5 +15,9 @@ public/
 # tools/publish_github.ps1 が GitHub Pages 用に一時的に作るビルド（gh-pagesブランチへ配信済み）
 dist-pages/
 
+# itch.io 用のビルド（相対パス）。zip にしてアップロードする
+dist-itch/
+*.zip
+
 # Pythonのキャッシュ
 __pycache__/

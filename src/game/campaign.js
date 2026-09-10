@@ -3,6 +3,7 @@
 // ============================================================
 import { mk } from './decks.js';
 import { ALL_CARDS, SET2_CARDS, card } from '../engine/cards.js';
+import { L } from '../i18n/lang.js';
 
 // ---------- 初期配布デッキ（コストカーブを見て30枚） ----------
 // c1:8  c2:8  c3:5  c4:2  c5:1  サポート:6
@@ -325,10 +326,15 @@ export function openPack(type, rand = Math.random) {
 
 // エリアクリア報酬
 // フリーバトルの難易度と、勝ったときにもらえる星屑
+// 「極」はかつて開始コストを+2していたが、これがシグネチャカード
+// （ex: 蔦使いリム＝毎ターン+1/+1で増殖する4コスト）を通常よりずっと早く
+// 通してしまい、対処できないまま押し切られる原因になっていた。
+// 開始コストでの底上げはやめ、ライフを厚くする＋AIを本気にする
+// （呼び出し側で noise を強制0にする）方向に寄せる。
 export const FREE_DIFFICULTY = {
   normal:  { name: 'ノーマル', life: 0, cost: 0, dust: 1, color: '#8fa0b6' },
   hard:    { name: '強化',     life: 4, cost: 1, dust: 2, color: '#67b6ff' },
-  extreme: { name: '極',       life: 8, cost: 2, dust: 4, color: '#c58cff' },
+  extreme: { name: '極',       life: 10, cost: 0, dust: 4, color: '#c58cff' },
 };
 
 // 星屑とパックの交換レート
@@ -387,10 +393,10 @@ export const MAX_DECKS = 8;
  */
 export function ensureDecks(s) {
   if (!Array.isArray(s.decks) || !s.decks.length) {
-    s.decks = [{ name: 'デッキ1', list: [...(s.deck || STARTER_DECK)] }];
+    s.decks = [{ name: L('デッキ1', 'Deck 1'), list: [...(s.deck || STARTER_DECK)] }];
   }
   s.decks = s.decks.slice(0, MAX_DECKS).map((d, i) => ({
-    name: String((d && d.name) || `デッキ${i + 1}`).slice(0, 14),
+    name: String((d && d.name) || L(`デッキ${i + 1}`, `Deck ${i + 1}`)).slice(0, 14),
     list: Array.isArray(d && d.list) ? [...d.list] : [],
   }));
   if (typeof s.activeDeck !== 'number' || !s.decks[s.activeDeck]) s.activeDeck = 0;
@@ -403,7 +409,7 @@ export function newSave() {
     profile: null,      // { name, avatar } — 未設定なら初回の名前入力へ
     collection: { ...STARTER_COLLECTION },
     deck: [...STARTER_DECK],
-    decks: [{ name: 'デッキ1', list: [...STARTER_DECK] }],
+    decks: [{ name: L('デッキ1', 'Deck 1'), list: [...STARTER_DECK] }],
     activeDeck: 0,
     cleared: {},        // `${areaId}:${enemyIndex}` -> true（解放判定）
     clearCount: {},     // 同じ相手を倒した回数（報酬は REWARD_LIMIT 回まで）

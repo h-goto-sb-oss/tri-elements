@@ -71,6 +71,10 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   color:#ffe0a6;background:linear-gradient(0deg,#000000cc,#00000055)}
 .card .cname{font-size:10.5px;font-weight:800;padding:3px 22px 2px 5px;line-height:1.15;
   height:25px;display:flex;align-items:center;text-shadow:0 1px 2px #000;position:relative;z-index:2}
+/* 長い英語名：文字を縮めて2行まで（それ以上は…で切る） */
+.nm{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.05}
+.nm.nl1{font-size:.84em}
+.nm.nl2{font-size:.72em}
 .card .cost{position:absolute;top:2px;right:2px;width:21px;height:21px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,#ffe9a8,#c9922f);color:#3a2600;
   font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;
@@ -131,6 +135,15 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .enemybar{position:relative;min-height:100px;padding:2px 8px;gap:16px;flex:none}
 .enemybar .battle-actions{margin-left:auto}
 .enemybar .who{font-size:21px;min-width:0;text-shadow:0 2px 5px #000}
+/* 相手モンスターがいない時、盤面中央の小さなボタンだけでなく
+   相手の顔・名前・ライフをタップしても直接攻撃できるようにする。
+   プレイヤーは自然に相手を狙ってタップしてくるため、その直感を拾う */
+.atktarget{display:flex;align-items:center;gap:16px;min-width:0;flex:1}
+.atktarget.atk-ready{cursor:pointer;border-radius:16px;box-shadow:0 0 0 3px var(--danger),0 0 16px #ff556688;
+  animation:atkready 1.1s ease-in-out infinite}
+@keyframes atkready{0%,100%{box-shadow:0 0 0 3px var(--danger),0 0 12px #ff556666}
+  50%{box-shadow:0 0 0 3px var(--danger),0 0 24px #ff5566cc}}
+@media (prefers-reduced-motion:reduce){.atktarget.atk-ready{animation:none}}
 .playerbar{position:relative;z-index:12;min-height:58px;flex:none;
   padding:6px 12px;background:linear-gradient(90deg,#07101eef 0%,#07101ec9 55%,#07101e44 88%,transparent 100%);
   border-top:1px solid #53627a;border-radius:10px}
@@ -239,10 +252,11 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle.portrait .hand .card.selectable:hover:not(.peek){transform:none}
 
 .battle.portrait .enemybar{min-height:92px;gap:9px;align-items:center}
-.battle.portrait .bar.enemybar>.face{position:relative;left:auto;top:auto;width:84px;height:84px;
+.battle.portrait .bar.enemybar .face{position:relative;left:auto;top:auto;width:84px;height:84px;
   border-radius:14px;flex:none;border:2px solid #d5b45f;
   box-shadow:0 6px 22px #000c,0 0 18px #f2c15b44;background:#111927;overflow:hidden}
-.battle.portrait .bar.enemybar>.face img{width:100%;height:100%;object-fit:cover;object-position:center 24%}
+.battle.portrait .bar.enemybar .face img{width:100%;height:100%;object-fit:cover;object-position:center 24%}
+.battle.portrait .atktarget{gap:9px}
 /* 幅が足りず名前が1文字ずつ縦に折れてしまうので、折り返さず縮める */
 .battle.portrait .foeinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .battle.portrait .foeinfo .pname{font-size:17px;font-weight:900;white-space:nowrap;
@@ -272,7 +286,12 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .sidecol{flex:none;min-height:0;display:flex;flex-direction:column}
 .sidecol.left{width:246px}
 .sidecol.right{width:270px}
-.field{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:0}
+/* 盤面のスロットは固定幅なので、左右パネルを開いた状態でウィンドウ幅が
+   足りないと、本来なら .field を横スクロールさせたいところが
+   flexの min-width:auto のせいで縮まず、隣のパネルに食い込んでしまっていた。
+   min-width:0 で縮めるのを許可し、収まらない分は横スクロールで逃がす。 */
+.field{flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:0;
+  min-width:0;overflow-x:auto}
 .row{display:flex;gap:9px;justify-content:center;align-items:center}
 .slot{width:146px;height:142px;border-radius:9px;border:1.5px dashed #2f3d52;
   display:flex;align-items:center;justify-content:center;position:relative;flex:none;
@@ -396,6 +415,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .d-text{font-size:13px;line-height:1.75;margin-bottom:8px;max-width:340px}
 .d-kw{font-size:11.5px;color:#a8bdd4;line-height:1.7;background:#111a24;padding:6px 9px;border-radius:7px;margin-bottom:8px}
 .d-kw b{color:var(--gold)}
+/* 日本語は【】が区切りになるが、英語の [Guard] は説明文とくっつくので間を空ける */
+:lang(en) .d-kw b,:lang(en) .ip-kw b{margin-right:.35em}
 .d-flavor{font-size:11.5px;color:#7b8ca1;font-style:italic}
 .zoom-open{margin-top:12px;padding:7px 13px;border-radius:18px;border:1px solid #d7a83d;
   background:linear-gradient(180deg,#2b2417,#17130d);color:#f8d477;font-family:inherit;
@@ -661,6 +682,17 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .tinput{background:#0f1620;border:1px solid var(--line);border-radius:8px;color:var(--text);
   padding:8px 12px;font-size:14px;font-family:inherit;width:220px}
 .tinput:focus{outline:none;border-color:var(--gold)}
+/* 言語の選択 */
+.langpick{display:flex;gap:10px;flex-wrap:wrap}
+.langpick .btn{min-width:130px;font-size:16px;padding:10px 18px}
+.langpick.big{justify-content:center;margin-top:10px}
+.langpick.big .btn{min-width:170px;font-size:20px;padding:14px 22px}
+.langmodal{max-width:560px;text-align:center}
+/* 引き継ぎコード */
+.codebox{width:100%;min-height:92px;background:#0f1620;border:1px solid var(--line);border-radius:8px;
+  color:var(--text);font:12px/1.4 ui-monospace,Consolas,monospace;padding:8px 10px;resize:vertical;word-break:break-all}
+.codebox:focus{outline:none;border-color:var(--gold)}
+.setnote{font-size:12.5px;min-height:0;line-height:1.6}
 .avgrid{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:740px}
 .avpick{background:#0f1620;border:2px solid var(--line);border-radius:12px;padding:6px;width:112px}
 .avpick.on{border-color:var(--gold);box-shadow:0 0 14px #f2c15b55}
@@ -963,8 +995,14 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 
   /* デッキ編集：横2列だと入らないので縦に積む */
   .deckwrap{flex-direction:column;padding:8px 8px 10px;gap:8px;overflow-y:auto;overscroll-behavior:contain}
-  .deckcol{width:100%;flex:none;gap:6px}
-  .decklist{max-height:216px;flex:none;padding:6px;gap:5px}
+  /* 所持カード一覧を下にスクロールしても、今のデッキ（枚数・保存ボタン）が
+     隠れて見えなくなると増減のたびに上まで戻る羽目になるので、
+     デッキ側は画面上部に固定しておく。
+     z-indexは .poolcard .own が z-index:6 を使っているのと衝突しないよう、
+     図鑑画面の固定ヘッダー .dexsticky と同じ 20 に合わせる */
+  .deckcol{width:100%;flex:none;gap:6px;position:sticky;top:0;z-index:20;
+    background:var(--bg);border-bottom:1px solid var(--line);padding-bottom:8px}
+  .decklist{max-height:150px;flex:none;padding:6px;gap:5px}
   .poolcol{width:100%;flex:none;gap:5px}
   .pooltools{flex-wrap:wrap}
 

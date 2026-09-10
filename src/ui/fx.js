@@ -5,6 +5,7 @@
 // ============================================================
 
 import { icon } from './icons.js';
+import { L } from '../i18n/lang.js';
 
 let layer = null;
 function getLayer() {
@@ -243,7 +244,7 @@ export const elementColor = el => EL_COLOR[el] || EL_COLOR.none;
 export function fxElementBonus(rect, element) {
   if (!rect) return;
   const c = elementColor(element);
-  const node = spawn(`<div class="fxelem"><span>属性有利</span></div>`,
+  const node = spawn(`<div class="fxelem"><span>${L('属性有利', 'Advantage')}</span></div>`,
     `left:${cx(rect)}px;top:${cy(rect)}px;--fxc:${c};`);
   kill(node, 900);
   for (let i = 0; i < 3; i++) {
@@ -256,7 +257,7 @@ export function fxElementBonus(rect, element) {
 /** 守りきった：盾のリングを張る */
 export function fxGuard(rect) {
   if (!rect) return;
-  const node = spawn(`<div class="fxguard"><span>防御</span></div>`,
+  const node = spawn(`<div class="fxguard"><span>${L('防御', 'Blocked')}</span></div>`,
     `left:${cx(rect)}px;top:${cy(rect)}px;`);
   kill(node, 760);
 }
@@ -264,7 +265,7 @@ export function fxGuard(rect) {
 /** 強化：上向きの矢印と増分 */
 export function fxBuff(rect, atk = 0, def = 0) {
   if (!rect) return;
-  const label = [atk ? `${icon('atk')}+${atk}` : '', def ? `${icon('def')}+${def}` : ''].filter(Boolean).join(' ') || '強化';
+  const label = [atk ? `${icon('atk')}+${atk}` : '', def ? `${icon('def')}+${def}` : ''].filter(Boolean).join(' ') || L('強化', 'Buff');
   const node = spawn(`<div class="fxbuff">${label}</div>`,
     `left:${cx(rect)}px;top:${cy(rect)}px;`);
   kill(node, 900);

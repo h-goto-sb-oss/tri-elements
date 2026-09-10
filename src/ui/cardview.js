@@ -6,9 +6,21 @@ import { RARITY } from '../engine/rarity.js';
 import { cardArtSvg } from './art.js';
 import { effAtk, effDef, hasKw, maxAttacks } from '../engine/game.js';
 import { icon } from './icons.js';
+import { L, kwb } from '../i18n/lang.js';
 
 export const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// 英語のカード名は日本語より横に長く、狭い名前欄では折り返して絵やバッジに
+// かぶってしまう。長い名前だけ文字を小さくして2行までに収める。
+// （日本語の名前は今の見た目で調整済みなので触らない）
+const JA_CHAR = /[\u3000-\u9fff\uff00-\uffef]/;
+function nameHtml(name) {
+  const n = esc(name);
+  if (JA_CHAR.test(name)) return n;
+  const cls = name.length > 22 ? 'nl2' : name.length > 15 ? 'nl1' : '';
+  return cls ? `<span class="nm ${cls}">${n}</span>` : n;
+}
 
 /** 手札・一覧用の縦カード */
 export function cardHtml(c, opts = {}) {
@@ -17,18 +29,18 @@ export function cardHtml(c, opts = {}) {
     sup ? 'is-support' : 'is-monster', opts.cls || ''].join(' ');
   // 【双属】【三属】はキーワード欄と同じ場所に出す
   const multi = c.elements && c.elements.length > 1
-    ? [c.elements.length >= 3 ? '三属' : '双属'] : [];
+    ? [c.elements.length >= 3 ? KEYWORDS.tri.name : KEYWORDS.dual.name] : [];
   const kwNames = [...multi, ...(c.keywords || []).map(k => KEYWORDS[k].name)];
   const kw = kwNames.length ? `<div class="kw">${kwNames.join('/')}</div>` : '';
   // モンスターは ⚔/🛡、サポートは種別の帯。下辺を見るだけで区別できる。
   const stats = sup
-    ? `<div class="stats suptype">${c.equip ? '🔗 装備' : '✦ サポート'}</div>`
+    ? `<div class="stats suptype">${c.equip ? L('🔗 装備', '🔗 Equip') : L('✦ サポート', '✦ Support')}</div>`
     : `<div class="stats"><span class="atk">${icon('atk')}${c.atk}</span><span class="def">${icon('def')}${c.def}</span></div>`;
   const r = RARITY[c.rarity || 'common'];
   return `<div class="${cls}" ${opts.attr || ''} data-card="${c.id}">
     <div class="shine"></div>
     <div class="cost">${c.cost}</div>
-    <div class="cname">${esc(c.name)}</div>
+    <div class="cname">${nameHtml(c.name)}</div>
     <div class="art" ${opts.artAttr || ''}>${cardArtSvg(c)}<div class="elem">${
       (c.elements || [c.element]).map(e => icon(e)).join('')}</div></div>
     ${kw}
@@ -54,16 +66,16 @@ export function monsterHtml(m, side, slot, opts = {}) {
   return `<div class="${cls}" data-side="${side}" data-slot="${slot}" data-card="${c.id}">
     <div class="inner">
       <div class="mart">${cardArtSvg(c)}</div>
-      <div class="mname">${esc(c.name)}</div>
-      ${hasKw(m, 'guard') ? '<div class="gmark">守護</div>' : ''}
-      ${hasKw(m, 'pierce') ? '<div class="gmark pierce">貫通</div>' : ''}
-      ${hasKw(m, 'double') ? '<div class="gmark dbl">連撃</div>' : ''}
-      ${(m.stunnedUntil || -1) >= 0 ? '<div class="gmark stunned">停止</div>' : ''}
+      <div class="mname">${nameHtml(c.name)}</div>
+      ${hasKw(m, 'guard') ? `<div class="gmark">${L('守護', 'Guard')}</div>` : ''}
+      ${hasKw(m, 'pierce') ? `<div class="gmark pierce">${L('貫通', 'Pierce')}</div>` : ''}
+      ${hasKw(m, 'double') ? `<div class="gmark dbl">${L('連撃', 'Double')}</div>` : ''}
+      ${(m.stunnedUntil || -1) >= 0 ? `<div class="gmark stunned">${L('停止', 'Stun')}</div>` : ''}
       <div class="mstat ${buffed ? 'buffed' : ''}">
         <span class="atk">${icon('atk')}${effAtk(m)}</span><span class="def">${icon('def')}${effDef(m)}</span>
       </div>
     </div>
-    <div class="modetag">${def ? '守' : '攻'}</div>
+    <div class="modetag">${def ? L('守', 'DEF') : L('攻', 'ATK')}</div>
   </div>`;
 }
 
@@ -72,7 +84,7 @@ export function supportHtml(s) {
   const c = card(s.id);
   return `<div class="sup ${c.element} r-${c.rarity || 'common'}" data-card="${c.id}">
     <div class="sart">${cardArtSvg(c)}</div>
-    <div class="sname">${esc(c.name)}</div>
+    <div class="sname">${nameHtml(c.name)}</div>
   </div>`;
 }
 
@@ -82,24 +94,24 @@ export function detailHtml(c, extra = '', opts = {}) {
   const zoomable = Boolean(opts.zoomable);
   const kw = c.keywords?.length
     ? `<div class="d-kw">${c.keywords.map(k =>
-        `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>` : '';
+        `<b>${kwb(KEYWORDS[k].name)}</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>` : '';
   return `<div class="detail">
     ${cardHtml(c, {
       cls: `big ${zoomable ? 'zoomable' : ''}`,
       artAttr: zoomable
-        ? `data-artzoom="${esc(c.id)}" role="button" tabindex="0" aria-label="${esc(c.name)}のイラストを拡大"`
+        ? `data-artzoom="${esc(c.id)}" role="button" tabindex="0" aria-label="${L(`${esc(c.name)}のイラストを拡大`, `Enlarge ${esc(c.name)} art`)}"`
         : '',
     })}
     <div class="d-body">
       <div class="d-name">${esc(c.name)}</div>
       <div class="d-meta">
         <span>${icon(c.element)} ${ELEMENTS[c.element].name}</span>
-        <span>コスト ${c.cost}</span>
-        ${c.type === 'monster' ? `<span class="atk">${icon('atk')} ${c.atk}</span><span class="def">${icon('def')} ${c.def}</span>` : '<span>サポート</span>'}
+        <span>${L('コスト', 'Cost')} ${c.cost}</span>
+        ${c.type === 'monster' ? `<span class="atk">${icon('atk')} ${c.atk}</span><span class="def">${icon('def')} ${c.def}</span>` : `<span>${L('サポート', 'Support')}</span>`}
         <span style="color:${r.color}">${r.name}</span>
-        <span>第${c.set || 1}弾</span>
+        <span>${(c.set || 1) === 9 ? L('キャラクター', 'Character') : L(`第${c.set || 1}弾`, `Set ${c.set || 1}`)}</span>
       </div>
-      <div class="d-text">${esc(c.text || 'このカードに効果はありません（バニラ）。')}</div>
+      <div class="d-text">${esc(c.text || L('このカードに効果はありません（バニラ）。', 'This card has no effect (vanilla).'))}</div>
       ${kw}
       <div class="d-flavor">${esc(c.flavor)}</div>
       ${extra}

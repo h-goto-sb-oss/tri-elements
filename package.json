@@ -7,7 +7,8 @@
     "dev": "vite --port 5180",
     "build": "vite build",
     "build:pages": "vite build --base=/tri-elements/ --outDir dist-pages",
-    "sim": "node sim/run.js"
+    "sim": "node sim/run.js",
+    "build:itch": "vite build --base=./ --outDir dist-itch"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

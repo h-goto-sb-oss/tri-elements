@@ -20,7 +20,7 @@ export function mulberry(a) {
 }
 
 export function playGame(deckA, deckB, seed, rules = {}, opts = {}) {
-  const state = createGame({ decks: [deckA, deckB], seed, rules, names: ['A', 'B'], startCost: opts.startCost });
+  const state = createGame({ decks: [deckA, deckB], seed, rules, names: ['A', 'B'], startCost: opts.startCost, signature: opts.signature });
   if (opts.lives) opts.lives.forEach((v, i) => { if (v) state.players[i].life = v; });
   if (state.rules.mulligan) {
     mulligan(state, 0, mulliganDecision(state, 0));

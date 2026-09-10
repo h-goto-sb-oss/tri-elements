@@ -26,6 +26,19 @@ import {
 import { withBase } from './base_url.js';
 import { renderRulesPage } from './rules.js';
 import * as Fx from './fx.js';
+import { L, kwb, lang, setLang, storedLang, guessLang } from '../i18n/lang.js';
+import '../i18n/data.js';
+import { EN_SETS } from '../i18n/en_game.js';
+
+// 言語は最初に決める（カード名などのデータもここで差し替わる）。
+// 一度も選んだことが無ければ、端末の言語で仮に表示して選択画面を出す。
+const LANG_CHOSEN = !!storedLang();
+setLang(storedLang() || guessLang(), false);
+function applyDocLang() {
+  document.documentElement.lang = lang();
+  document.title = L('TRI-ELEMENTS ／ 三属の戦記', 'TRI-ELEMENTS: Chronicle of the Three');
+}
+applyDocLang();
 
 // assets_map.js のパスはルート絶対（"/assets/..."）で保存されている。
 // GitHub Pages のサブパス配信（/tri-elements/ 配下）でも解決できるよう、
@@ -60,6 +73,7 @@ const app = {
   quitArmAt: 0,          // 構えた時刻（ゴーストクリック対策）
   audioInfo: null,
   playLog: [],          // 直近に召喚・発動されたカード（最大2件、新しい順）
+  langChosen: LANG_CHOSEN,
 };
 
 /** スマホ幅かどうか。下メニューを出すか等の判断に使う */
@@ -185,24 +199,24 @@ export function avatarHtml(idx) {
   const a = AVATARS.find(x => x.id === Number(idx)) || AVATARS[0];
   return `<div class="avfb" style="background:radial-gradient(circle at 50% 34%, ${a.tint}, #0a0f18 76%)">${a.emoji}</div>`;
 }
-const myName = () => (app.save.profile?.name || 'あなた');
+const myName = () => (app.save.profile?.name || L('あなた', 'You'));
 const myAvatar = () => (app.save.profile?.avatar || 1);
 
 // ============================================================
 // スマホ用の下メニュー（戦闘中は出さない）
 // ============================================================
 const NAV_ITEMS = [
-  { go: 'adventure', icon: 'adventure', label: '冒険' },
-  { go: 'free', icon: 'freebattle', label: 'フリー' },
-  { go: 'deck', icon: 'deck', label: 'デッキ' },
-  { go: 'collection', icon: 'collection', label: '図鑑' },
-  { go: 'title', icon: 'home', label: 'タイトル' },
+  { go: 'adventure', icon: 'adventure', label: ['冒険', 'Adventure'] },
+  { go: 'free', icon: 'freebattle', label: ['フリー', 'Free'] },
+  { go: 'deck', icon: 'deck', label: ['デッキ', 'Deck'] },
+  { go: 'collection', icon: 'collection', label: ['図鑑', 'Cards'] },
+  { go: 'title', icon: 'home', label: ['タイトル', 'Title'] },
 ];
 function bottomNavHtml() {
   if (app.screen === 'battle' || !isNarrow()) return '';
   return `<nav class="bottomnav">${NAV_ITEMS.map(n => `
     <button class="bnav ${app.screen === n.go ? 'on' : ''}" data-go="${n.go}">
-      <span class="bn-icon">${icon(n.icon)}</span><span class="bn-label">${n.label}</span>
+      <span class="bn-icon">${icon(n.icon)}</span><span class="bn-label">${L(...n.label)}</span>
     </button>`).join('')}</nav>`;
 }
 
@@ -215,25 +229,25 @@ function renderTitle() {
     <div class="title-bg" style="--titlebg:url(${withBase('/assets/backgrounds/title-bg.webp')})" aria-hidden="true"></div>
     <div class="title-shade" aria-hidden="true"></div>
     <div class="title-hero">
-      <img class="title-logo" src="${withBase('/assets/ui/title-logo.svg')}" alt="TRI-ELEMENTS 三属の戦記">
-      <p class="title-tagline">三つの力を束ね、まだ見ぬカードと世界へ。</p>
-      <div class="title-elements" aria-label="炎・水・草の三属性">
-        <span class="fire">${icon('fire')} 炎</span><span class="water">${icon('water')} 水</span><span class="grass">${icon('grass')} 草</span>
+      <img class="title-logo" src="${withBase(L('/assets/ui/title-logo.svg', '/assets/ui/title-logo-en.svg'))}" alt="${L('TRI-ELEMENTS 三属の戦記', 'TRI-ELEMENTS: Chronicle of the Three')}">
+      <p class="title-tagline">${L('三つの力を束ね、まだ見ぬカードと世界へ。', 'Bind the three powers. New cards and new worlds await.')}</p>
+      <div class="title-elements" aria-label="${L('炎・水・草の三属性', 'The three elements: Fire, Water, Grass')}">
+        <span class="fire">${icon('fire')} ${ELEMENTS.fire.name}</span><span class="water">${icon('water')} ${ELEMENTS.water.name}</span><span class="grass">${icon('grass')} ${ELEMENTS.grass.name}</span>
       </div>
     </div>
     <div class="title-panel">
       <div class="titleprof">
         <div class="tface">${avatarHtml(myAvatar())}</div>
-        <div class="titleprof-text"><b>${esc(myName())}</b><div>${app.save.stats.wins}勝 ${app.save.stats.losses}敗　<span>所持 ${owned}枚</span></div></div>
+        <div class="titleprof-text"><b>${esc(myName())}</b><div>${L(`${app.save.stats.wins}勝 ${app.save.stats.losses}敗`, `${app.save.stats.wins}W ${app.save.stats.losses}L`)}　<span>${L(`所持 ${owned}枚`, `${owned} cards`)}</span></div></div>
       </div>
       <div class="title-menu">
-        <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>冒険へ出る</b><small>物語を進める</small></span></button>
-        <button class="title-action" data-go="free"><span class="ta-icon">${icon('freebattle')}</span><span><b>フリーバトル</b><small>好きな相手と対戦</small></span></button>
-        <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>デッキ編集</b><small>30枚を編成</small></span></button>
-        <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>カード図鑑</b><small>全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める</small></span></button>
-        <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>カードショップ</b><small>星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換</small></span></button>
-        <button class="title-action" data-go="rules"><span class="ta-icon">${icon('rules')}</span><span><b>ルール説明</b><small>遊び方を確認</small></span></button>
-        <button class="title-action quiet" data-go="settings"><span class="ta-icon">${icon('settings')}</span><span><b>設定</b><small>音量・プロフィール</small></span></button>
+        <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>${L('冒険へ出る', 'Adventure')}</b><small>${L('物語を進める', 'Continue the story')}</small></span></button>
+        <button class="title-action" data-go="free"><span class="ta-icon">${icon('freebattle')}</span><span><b>${L('フリーバトル', 'Free Battle')}</b><small>${L('好きな相手と対戦', 'Fight any opponent you like')}</small></span></button>
+        <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>${L('デッキ編集', 'Deck Builder')}</b><small>${L('30枚を編成', 'Build a 30-card deck')}</small></span></button>
+        <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>${L('カード図鑑', 'Card Library')}</b><small>${L(`全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める`, `Browse all ${ALL_CARDS.filter(c => !c.hidden).length} cards`)}</small></span></button>
+        <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>${L('カードショップ', 'Card Shop')}</b><small>${L(`星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換`, `Trade ${icon('stardust')}${app.save.stardust || 0} Stardust for packs`)}</small></span></button>
+        <button class="title-action" data-go="rules"><span class="ta-icon">${icon('rules')}</span><span><b>${L('ルール説明', 'How to Play')}</b><small>${L('遊び方を確認', 'Learn the rules')}</small></span></button>
+        <button class="title-action quiet" data-go="settings"><span class="ta-icon">${icon('settings')}</span><span><b>${L('設定', 'Settings')}</b><small>${L('音量・プロフィール・言語', 'Sound, profile, language')}</small></span></button>
       </div>
     </div>
   </div>`;
@@ -248,14 +262,14 @@ function deckPickerHtml() {
   if (decks.length < 1) return '';
   const active = app.save.activeDeck;
   return `<div class="deckpick">
-    <span class="dp-label">デッキ</span>
+    <span class="dp-label">${L('デッキ', 'Deck')}</span>
     <div class="dp-slots">${decks.map((d, i) => {
       const ready = d.list.length === 30;
       return `<button class="dp-slot ${i === active ? 'on' : ''} ${ready ? '' : 'short'}"
-        data-usedeck="${i}" ${ready ? '' : 'title="30枚そろっていません"'}>
+        data-usedeck="${i}" ${ready ? '' : `title="${L('30枚そろっていません', 'Not 30 cards yet')}"`}>
         <b>${esc(d.name)}</b><small>${d.list.length}/30</small></button>`;
     }).join('')}</div>
-    <button class="btn tiny" data-go="deck">編集</button>
+    <button class="btn tiny" data-go="deck">${L('編集', 'Edit')}</button>
   </div>`;
 }
 
@@ -282,31 +296,31 @@ function renderAdventure() {
     const cnt = (app.save.clearCount || {})[`${area.id}:${i}`] || 0;
     const left = Math.max(0, REWARD_LIMIT - cnt);
     return `<div class="foe ${cleared ? 'cleared' : ''} ${open ? '' : 'locked'}">
-      ${cleared ? `<div class="badge">${left ? `報酬 あと${left}回` : 'クリア済'}</div>` : ''}
+      ${cleared ? `<div class="badge">${left ? L(`報酬 あと${left}回`, `Rewards left: ${left}`) : L('クリア済', 'Cleared')}</div>` : ''}
       ${open ? '' : `<div class="lockicon">${icon('lock')}</div>`}
       ${portraitHtml(area.id, i, e)}
       <div class="fname">${esc(e.name)}</div>
       <div class="fdesc">${esc(e.desc)}</div>
       <div class="fmeta">
-        <span>ライフ <b>${e.life || 20}</b></span>
-        ${e.startCost ? `<span>開始 <b>${e.startCost}</b>コスト</span>` : ''}
-        ${e.weak ? `<span>${icon(e.weak)}が有効</span>` : ''}
-        ${i === area.enemies.length - 1 ? '<span style="color:#ffd27a">ボス</span>' : ''}
+        <span>${L('ライフ', 'Life')} <b>${e.life || 20}</b></span>
+        ${e.startCost ? `<span>${L(`開始 <b>${e.startCost}</b>コスト`, `Starts at <b>${e.startCost}</b> cost`)}</span>` : ''}
+        ${e.weak ? `<span>${L(`${icon(e.weak)}が有効`, `Weak to ${icon(e.weak)}`)}</span>` : ''}
+        ${i === area.enemies.length - 1 ? `<span style="color:#ffd27a">${L('ボス', 'Boss')}</span>` : ''}
       </div>
       <button class="btn ${cleared && !left ? '' : 'primary'} fbtn" ${open ? `data-fight="${ai}:${i}"` : 'disabled'}>
-        ${open ? (cleared ? (left ? `戦う（報酬あと${left}回）` : 'もう一度戦う') : '挑戦する') : '前の相手を倒すと解放'}
+        ${open ? (cleared ? (left ? L(`戦う（報酬あと${left}回）`, `Fight (${left} rewards left)`) : L('もう一度戦う', 'Fight again')) : L('挑戦する', 'Challenge')) : L('前の相手を倒すと解放', 'Beat the previous opponent to unlock')}
       </button>
     </div>`;
   }).join('');
 
   const packs = Object.entries(app.save.packs || {}).filter(([, n]) => n > 0)
-    .map(([k, n]) => `<button class="btn primary" data-openpack="${k}">${PACK_TYPES[k].name} ×${n} を開ける</button>`).join('');
+    .map(([k, n]) => `<button class="btn primary" data-openpack="${k}">${L(`${PACK_TYPES[k].name} ×${n} を開ける`, `Open ${PACK_TYPES[k].name} ×${n}`)}</button>`).join('');
 
   return `<div class="adventure">
     ${deckPickerHtml()}
     <div class="adv-head">
       <h2>${esc(area.name)}</h2>
-      <div class="desc">${esc(area.desc)}<br><span style="color:#9fb2c8">報酬: ${PACK_TYPES[REWARD[area.id]].name}　／　撃破 ${area.enemies.filter((_, k) => app.save.cleared[`${area.id}:${k}`]).length}/${area.enemies.length}</span></div>
+      <div class="desc">${esc(area.desc)}<br><span style="color:#9fb2c8">${L('報酬', 'Reward')}: ${PACK_TYPES[REWARD[area.id]].name}${L('　／　', ' / ')}${L('撃破', 'Defeated')} ${area.enemies.filter((_, k) => app.save.cleared[`${area.id}:${k}`]).length}/${area.enemies.length}</span></div>
       <div class="adv-tabs">${tabs}</div>
     </div>
     <div class="adv-stage adv-${area.id}" ${AREA_BG[area.id] ? `style="--bgimg:url(${AREA_BG[area.id]})"` : ''}>
@@ -315,9 +329,9 @@ function renderAdventure() {
     </div>
     <div class="adv-foot">
       ${packs}
-      <button class="btn" data-go="free">フリーバトル</button>
-      <button class="btn" data-go="deck">デッキ編集</button>
-      <button class="btn" data-go="title">タイトルへ</button>
+      <button class="btn" data-go="free">${L('フリーバトル', 'Free Battle')}</button>
+      <button class="btn" data-go="deck">${L('デッキ編集', 'Deck Builder')}</button>
+      <button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button>
     </div>
   </div>`;
 }
@@ -329,11 +343,11 @@ function renderAdventure() {
 // 以前はフリーバトル画面のバーの端に押し込まれていて、まず気づけなかった。
 // 星屑の貯め方と、次に何を開けば新しい弾が並ぶのかも、ここに書いておく。
 const PACK_BLURB = {
-  set1: '第1弾。炎・水・草の基本が一通りそろいます。',
-  set2: '第2弾。断末魔や装備など、仕掛けのあるカードが増えます。',
-  set3: '第3弾。観測・加速など、引きと展開を助けるカード。',
-  set4: '第4弾。隣に誰を置くかで強さが変わる、陣形のカード。',
-  prism: '全弾から、レア以上だけが5枚出ます。',
+  set1: ['第1弾。炎・水・草の基本が一通りそろいます。', 'Set 1. All the Fire, Water, and Grass basics.'],
+  set2: ['第2弾。断末魔や装備など、仕掛けのあるカードが増えます。', 'Set 2. More tricks, like Last Breath and equipment.'],
+  set3: ['第3弾。観測・加速など、引きと展開を助けるカード。', 'Set 3. Cards like Observe and Accelerate that help you draw and build up.'],
+  set4: ['第4弾。隣に誰を置くかで強さが変わる、陣形のカード。', 'Set 4. Formation cards whose strength depends on who stands beside them.'],
+  prism: ['全弾から、レア以上だけが5枚出ます。', '5 cards from every set, all Rare or better.'],
 };
 
 function renderShop() {
@@ -346,18 +360,19 @@ function renderShop() {
     return `<div class="shopitem ${open ? '' : 'locked'}">
       <div class="shopart">${open ? packIcon(x.pack) : icon('lock')}</div>
       <div class="shopname">${open ? esc(pack.name) : '？？？'}</div>
-      <div class="shopdesc">${open ? esc(PACK_BLURB[x.pack] || `${pack.size}枚入り`)
-        : `${esc(area ? area.name : '')}の相手を全員倒すと並びます`}</div>
+      <div class="shopdesc">${open ? esc(PACK_BLURB[x.pack] ? L(...PACK_BLURB[x.pack]) : L(`${pack.size}枚入り`, `${pack.size} cards`))
+        : L(`${esc(area ? area.name : '')}の相手を全員倒すと並びます`, `Unlocks after beating everyone in ${esc(area ? area.name : '')}`)}</div>
       <button class="btn ${open && enough ? 'primary' : ''}" ${open && enough ? `data-buypack="${x.pack}"` : 'disabled'}>
-        ${icon('stardust')}${x.cost} ${open ? (enough ? 'で交換' : 'ぶん足りません') : ''}</button>
+        ${L(`${icon('stardust')}${x.cost} ${open ? (enough ? 'で交換' : 'ぶん足りません') : ''}`,
+          `${open ? (enough ? 'Trade ' : 'Need ') : ''}${icon('stardust')}${x.cost}`)}</button>
     </div>`;
   }).join('');
 
   return `<div class="adventure">
     <div class="adv-head">
-      <h2>カードショップ</h2>
-      <div class="desc">星屑 ${icon('stardust')} をパックと交換できます。<br>
-        <span style="color:#9fb2c8">星屑はフリーバトルで勝つと貯まります。難易度が高いほど多くもらえます。</span></div>
+      <h2>${L('カードショップ', 'Card Shop')}</h2>
+      <div class="desc">${L(`星屑 ${icon('stardust')} をパックと交換できます。`, `Trade Stardust ${icon('stardust')} for card packs.`)}<br>
+        <span style="color:#9fb2c8">${L('星屑はフリーバトルで勝つと貯まります。難易度が高いほど多くもらえます。', 'You earn Stardust by winning Free Battles. Higher difficulties give more.')}</span></div>
       <div class="dust">${icon('stardust')} ${dust}</div>
     </div>
     <div class="adv-stage adv-shop" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
@@ -365,7 +380,7 @@ function renderShop() {
       <div class="shoplist">${items}</div>
     </div>
     <div class="hint" style="font-size:13px;padding:10px 14px">
-      新しい弾は、冒険を進めると並びます。手前の弾から順に覚えていくのがおすすめです。</div>
+      ${L('新しい弾は、冒険を進めると並びます。手前の弾から順に覚えていくのがおすすめです。', 'New sets appear as you progress in Adventure. It helps to learn the earlier sets first.')}</div>
   </div>`;
 }
 
@@ -375,10 +390,16 @@ function renderFree() {
     if (app.save.cleared[`${a.id}:${ei}`]) beaten.push({ a, ai, e, ei, key: `${a.id}:${ei}` });
   }));
 
-  const diffTabs = Object.entries(FREE_DIFFICULTY).map(([k, d]) => `
+  const diffTabs = Object.entries(FREE_DIFFICULTY).map(([k, d]) => {
+    const notes = [];
+    if (d.life) notes.push(L(`敵ライフ+${d.life}`, `Enemy Life +${d.life}`));
+    if (d.cost) notes.push(L(`開始コスト+${d.cost}`, `Start cost +${d.cost}`));
+    if (k === 'extreme') notes.push(L('AIが本気で戦う', 'AI plays its best'));
+    return `
     <button class="tab ${app.freeDiff === k ? 'on' : ''}" data-freediff="${k}">
-      ${d.name}${d.life ? `（敵ライフ+${d.life}・開始コスト+${d.cost}）` : ''}
-    </button>`).join('');
+      ${d.name}${notes.length ? L(`（${notes.join('・')}）`, ` (${notes.join(', ')})`) : ''}
+    </button>`;
+  }).join('');
 
   const cards = beaten.map(({ a, ai, e, ei, key }) => {
     const st = app.save.freeStats?.[key] || { w: 0, l: 0 };
@@ -391,36 +412,36 @@ function renderFree() {
       <div class="fname">${esc(e.name)}</div>
       <div class="fdesc">${esc(a.name)}</div>
       <div class="fmeta">
-        <span>${st.w}勝 ${st.l}敗</span>
-        ${e.weak ? `<span>${icon(e.weak)}が有効</span>` : ''}
+        <span>${L(`${st.w}勝 ${st.l}敗`, `${st.w}W ${st.l}L`)}</span>
+        ${e.weak ? `<span>${L(`${icon(e.weak)}が有効`, `Weak to ${icon(e.weak)}`)}</span>` : ''}
       </div>
-      ${charLeft > 0 ? `<div class="charprog">🎴「極」であと${charLeft}勝でカードを入手</div>` : ''}
-      <button class="btn primary fbtn" data-freefight="${ai}:${ei}">戦う</button>
+      ${charLeft > 0 ? `<div class="charprog">${L(`🎴「極」であと${charLeft}勝でカードを入手`, `🎴 ${charLeft} more Extreme wins to get their card`)}</div>` : ''}
+      <button class="btn primary fbtn" data-freefight="${ai}:${ei}">${L('戦う', 'Fight')}</button>
     </div>`;
   }).join('');
 
   return `<div class="adventure">
     ${deckPickerHtml()}
     <div class="adv-head">
-      <h2>フリーバトル</h2>
-      <div class="desc">一度倒した相手といつでも再戦できます。ここでの勝敗は冒険の戦績には影響しません。<br>
-        <span style="color:#9fb2c8">勝つと星屑 ${icon('stardust')} が貯まり、パックと交換できます。</span></div>
+      <h2>${L('フリーバトル', 'Free Battle')}</h2>
+      <div class="desc">${L('一度倒した相手といつでも再戦できます。ここでの勝敗は冒険の戦績には影響しません。', 'Rematch any opponent you have beaten. Results here don’t affect your Adventure record.')}<br>
+        <span style="color:#9fb2c8">${L(`勝つと星屑 ${icon('stardust')} が貯まり、パックと交換できます。`, `Wins earn Stardust ${icon('stardust')}, which you can trade for packs.`)}</span></div>
       <div class="dust">${icon('stardust')} ${app.save.stardust || 0}</div>
     </div>
     <div class="freebar">
-      <span class="hint" style="min-height:0">難易度</span>
+      <span class="hint" style="min-height:0">${L('難易度', 'Difficulty')}</span>
       <div class="tabs">${diffTabs}</div>
-      ${app.freeDiff === 'extreme' ? '<span class="hint xrule">極では、相手は自分のカードを1枚だけ必ず初手に持って現れます</span>' : ''}
+      ${app.freeDiff === 'extreme' ? `<span class="hint xrule">${L('極では、相手は自分のカードを1枚だけ必ず初手に持って現れます', 'On Extreme, each opponent always starts with their own character card in hand')}</span>` : ''}
       <span style="margin-left:auto"></span>
-      <button class="btn small" data-go="shop">${icon('shop')} カードショップ（${icon('stardust')}${app.save.stardust || 0}）</button>
+      <button class="btn small" data-go="shop">${icon('shop')} ${L('カードショップ', 'Card Shop')}（${icon('stardust')}${app.save.stardust || 0}）</button>
     </div>
     <div class="adv-stage adv-free" ${AREA_BG.common ? `style="--bgimg:url(${AREA_BG.common})"` : ''}>
       ${AREA_BG.common ? '<div class="stagebg"></div>' : ''}
-      <div class="foes scroll">${cards || '<div class="hint" style="font-size:14px">まだ誰も倒していません。冒険で1人倒すとここに並びます。</div>'}</div>
+      <div class="foes scroll">${cards || `<div class="hint" style="font-size:14px">${L('まだ誰も倒していません。冒険で1人倒すとここに並びます。', 'You haven’t beaten anyone yet. Opponents you beat in Adventure will show up here.')}</div>`}</div>
     </div>
     <div class="adv-foot">
-      <button class="btn" data-go="deck">デッキ編集</button>
-      <button class="btn" data-go="title">タイトルへ</button>
+      <button class="btn" data-go="deck">${L('デッキ編集', 'Deck Builder')}</button>
+      <button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button>
     </div>
   </div>`;
 }
@@ -455,7 +476,7 @@ function switchDeckSlot(i) {
   if (deckDirty() && app.pendingSlot !== i) {
     app.pendingSlot = i;
     render();
-    return toast('未保存の変更があります。もう一度押すと破棄して切り替えます');
+    return toast(L('未保存の変更があります。もう一度押すと破棄して切り替えます', 'You have unsaved changes. Press again to discard them and switch'));
   }
   app.pendingSlot = null;
   app.save.activeDeck = i;
@@ -480,7 +501,7 @@ function renderDeck() {
     .sort((a, b) => a.cost - b.cost || a.element.localeCompare(b.element) || a.id.localeCompare(b.id))
     .map(c => `<div class="dcard" data-deckcard="${c.id}" draggable="false">
         ${cardHtml(c, {})}<div class="cnt">×${counts[c.id]}</div>
-        <button class="cinfo" data-cardinfo="${c.id}" title="カードの効果を見る" aria-label="${esc(c.name)}の詳細">i</button>
+        <button class="cinfo" data-cardinfo="${c.id}" title="${L('カードの効果を見る', 'View card effect')}" aria-label="${L(`${esc(c.name)}の詳細`, `${esc(c.name)} details`)}">i</button>
       </div>`).join('');
 
   const owned = Object.keys(app.save.collection).filter(id => app.save.collection[id] > 0).map(id => card(id));
@@ -491,7 +512,7 @@ function renderDeck() {
     return `<div class="poolcard ${full ? 'full' : ''}" data-poolcard="${c.id}">
       ${cardHtml(c, { cls: full ? '' : 'selectable' })}
       <div class="own">${inDeck}/${Math.min(3, own)}</div>
-      <button class="cinfo" data-cardinfo="${c.id}" title="カードの効果を見る" aria-label="${esc(c.name)}の詳細">i</button>
+      <button class="cinfo" data-cardinfo="${c.id}" title="${L('カードの効果を見る', 'View card effect')}" aria-label="${L(`${esc(c.name)}の詳細`, `${esc(c.name)} details`)}">i</button>
     </div>`;
   }).join('');
 
@@ -502,38 +523,38 @@ function renderDeck() {
       <b>${esc(d.name)}</b><small>${d.list.length}/30</small>
     </button>`).join('')
     + (decks.length < MAX_DECKS
-      ? `<button class="dslot add" data-deckadd title="新しいデッキを作る">＋</button>` : '');
+      ? `<button class="dslot add" data-deckadd title="${L('新しいデッキを作る', 'New deck')}">＋</button>` : '');
 
   return `<div class="deckwrap">
     <div class="deckcol">
       <div class="dslots">${slots}</div>
       <div class="dnamerow">
         <input class="dname" data-deckname maxlength="14" value="${esc(decks[active].name)}"
-          aria-label="デッキ名">
+          aria-label="${L('デッキ名', 'Deck name')}">
         <span class="dcount" style="color:${draft.length === 30 ? '#7fe0a0' : '#ff9a9a'}">${draft.length}/30</span>
-        ${decks.length > 1 ? '<button class="btn tiny" data-deckdel>削除</button>' : ''}
+        ${decks.length > 1 ? `<button class="btn tiny" data-deckdel>${L('削除', 'Delete')}</button>` : ''}
       </div>
       <div class="curve">${bars}</div>
       <div style="height:10px"></div>
-      <div class="decklist" data-decklist>${deckCards || '<div class="hint" style="width:100%;padding-top:30px">ここにカードをドラッグ</div>'}</div>
+      <div class="decklist" data-decklist>${deckCards || `<div class="hint" style="width:100%;padding-top:30px">${L('ここにカードをドラッグ', 'Drag cards here')}</div>`}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn primary small" data-savedeck ${draft.length === 30 ? '' : 'disabled'}>保存</button>
-        <button class="btn small" data-resetdeck>初期構築</button>
-        <button class="btn small" data-cleardeck>全部外す</button>
-        <button class="btn small" data-go="title">戻る</button>
+        <button class="btn primary small" data-savedeck ${draft.length === 30 ? '' : 'disabled'}>${L('保存', 'Save')}</button>
+        <button class="btn small" data-resetdeck>${L('初期構築', 'Starter deck')}</button>
+        <button class="btn small" data-cleardeck>${L('全部外す', 'Clear all')}</button>
+        <button class="btn small" data-go="title">${L('戻る', 'Back')}</button>
       </div>
-      <div class="hint"><span class="hint-mouse">カードをドラッグして出し入れ／クリックでも増減</span><span class="hint-touch">カードをタップで出し入れ／「i」で効果を見る</span>${
-        deckDirty() ? '　<b style="color:#ffc07a">未保存の変更があります</b>' : ''}</div>
+      <div class="hint"><span class="hint-mouse">${L('カードをドラッグして出し入れ／クリックでも増減', 'Drag cards in and out, or click to add/remove')}</span><span class="hint-touch">${L('カードをタップで出し入れ／「i」で効果を見る', 'Tap cards to add/remove. Tap “i” to see the effect')}</span>${
+        deckDirty() ? `　<b style="color:#ffc07a">${L('未保存の変更があります', 'Unsaved changes')}</b>` : ''}</div>
     </div>
     <div class="poolcol">
       <div class="pooltools">
-        <b style="color:var(--gold)">所持カード</b>
-        <span class="hint" style="min-height:0">並び順</span>
+        <b style="color:var(--gold)">${L('所持カード', 'Your cards')}</b>
+        <span class="hint" style="min-height:0">${L('並び順', 'Sort')}</span>
         <select class="sel" data-poolsort>
-          <option value="element" ${app.poolSort === 'element' ? 'selected' : ''}>属性順</option>
-          <option value="cost" ${app.poolSort === 'cost' ? 'selected' : ''}>コスト順</option>
-          <option value="rarity" ${app.poolSort === 'rarity' ? 'selected' : ''}>レア度順</option>
-          <option value="type" ${app.poolSort === 'type' ? 'selected' : ''}>種類順</option>
+          <option value="element" ${app.poolSort === 'element' ? 'selected' : ''}>${L('属性順', 'Element')}</option>
+          <option value="cost" ${app.poolSort === 'cost' ? 'selected' : ''}>${L('コスト順', 'Cost')}</option>
+          <option value="rarity" ${app.poolSort === 'rarity' ? 'selected' : ''}>${L('レア度順', 'Rarity')}</option>
+          <option value="type" ${app.poolSort === 'type' ? 'selected' : ''}>${L('種類順', 'Type')}</option>
         </select>
       </div>
       <div class="pool" data-pool>${pool}</div>
@@ -545,13 +566,15 @@ function renderDeck() {
 // 図鑑・ルール・サウンド
 // ============================================================
 function renderCollection() {
-  const setInfo = {
-    1: { name: '第1弾', sub: '三属の目覚め' },
-    2: { name: '第2弾', sub: '嵐の来訪者' },
-    3: { name: '第3弾', sub: '星辰の門' },
-    4: { name: '第4弾', sub: '鉄旗の陣' },
-    9: { name: 'キャラクター', sub: '極の果てに現れる者たち' },
-  };
+  const setInfo = lang() === 'en'
+    ? Object.fromEntries(Object.entries(EN_SETS).map(([k, [name, sub]]) => [k, { name, sub }]))
+    : {
+      1: { name: '第1弾', sub: '三属の目覚め' },
+      2: { name: '第2弾', sub: '嵐の来訪者' },
+      3: { name: '第3弾', sub: '星辰の門' },
+      4: { name: '第4弾', sub: '鉄旗の陣' },
+      9: { name: 'キャラクター', sub: '極の果てに現れる者たち' },
+    };
   // キャラクターカードは隠し。1枚でも入手するまで弾のタブごと出さない
   const charOwned = ALL_CARDS.filter(c => c.hidden && app.save.collection[c.id]).length;
   const visible = ALL_CARDS.filter(c => !c.hidden || charOwned);
@@ -563,36 +586,36 @@ function renderCollection() {
   const tabs = sets.map(s => {
     const cards = visible.filter(c => (c.set || 1) === s);
     const have = cards.filter(c => app.save.collection[c.id]).length;
-    const info = setInfo[s] || { name: `第${s}弾`, sub: '' };
+    const info = setInfo[s] || { name: L(`第${s}弾`, `Set ${s}`), sub: '' };
     return `<button class="dexset ${s === activeSet ? 'on' : ''}" data-collectionset="${s}">
       <b>${info.name}</b><small>${esc(info.sub)}　${have}/${cards.length}</small>
     </button>`;
   }).join('');
-  const groups = [['fire', `${icon('fire')} 炎`], ['water', `${icon('water')} 水`], ['grass', `${icon('grass')} 草`], ['none', `${icon('none')} 汎用`]];
+  const groups = [['fire', `${icon('fire')} ${L('炎', 'Fire')}`], ['water', `${icon('water')} ${L('水', 'Water')}`], ['grass', `${icon('grass')} ${L('草', 'Grass')}`], ['none', `${icon('none')} ${L('汎用', 'Neutral')}`]];
   const html = groups.map(([el, label]) => {
     const cs = setCards.filter(c => c.element === el);
     if (!cs.length) return '';
     const have = cs.filter(c => app.save.collection[c.id]).length;
     return `<section class="dexgroup">
-      <div class="dexgroup-head"><h3>${label}</h3><span>${have}/${cs.length}種</span></div>
+      <div class="dexgroup-head"><h3>${label}</h3><span>${have}/${cs.length}${L('種', '')}</span></div>
       <div class="grid dexgrid">${cs.map(c => {
         const own = app.save.collection[c.id] || 0;
         // 隠しカードは、入手するまで中身を見せない（何が居るかも伏せる）
         if (c.hidden && !own) {
           return `<div class="poolcard"><div class="card secretcard"><div class="secretmark">？</div></div>
-            <div class="own">未入手</div></div>`;
+            <div class="own">${L('未入手', 'Not found')}</div></div>`;
         }
         return `<div class="poolcard">${cardHtml(c, { cls: own ? 'selectable' : 'disabled' })}
-          <div class="own">${own ? '×' + own : '未所持'}</div></div>`;
+          <div class="own">${own ? '×' + own : L('未所持', 'Not owned')}</div></div>`;
       }).join('')}</div></section>`;
   }).join('');
-  const info = setInfo[activeSet] || { name: `第${activeSet}弾`, sub: '' };
+  const info = setInfo[activeSet] || { name: L(`第${activeSet}弾`, `Set ${activeSet}`), sub: '' };
   return `<div class="screen collection-screen">
     <div class="dexsticky">
       <div class="dexhead">
-        <button class="dexback" data-go="title" aria-label="タイトルへ戻る">← <span>タイトルへ</span></button>
-        <div class="dextitle"><h2>カード図鑑</h2><p>${info.name}「${esc(info.sub)}」</p></div>
-        <div class="dexsummary"><b>${setHave}</b> / ${setCards.length}種<small>所持 ${copies}枚</small></div>
+        <button class="dexback" data-go="title" aria-label="${L('タイトルへ戻る', 'Back to title')}">← <span>${L('タイトルへ', 'Title')}</span></button>
+        <div class="dextitle"><h2>${L('カード図鑑', 'Card Library')}</h2><p>${L(`${info.name}「${esc(info.sub)}」`, `${info.name}: ${esc(info.sub)}`)}</p></div>
+        <div class="dexsummary"><b>${setHave}</b> / ${setCards.length}${L('種', '')}<small>${L(`所持 ${copies}枚`, `${copies} owned`)}</small></div>
       </div>
       <div class="dexsets">${tabs}</div>
     </div>
@@ -612,40 +635,131 @@ function renderSettings() {
 
   const player = `
     <div class="setrow">
-      <label>プレイヤー名</label>
+      <label>${L('プレイヤー名', 'Player name')}</label>
       <input class="tinput" type="text" maxlength="12" value="${esc(myName())}" data-playername>
     </div>
     <div class="setrow col">
-      <label>アバター</label>
+      <label>${L('アバター', 'Avatar')}</label>
       <div class="avgrid">${avatars}</div>
     </div>`;
 
   const sound = `
     <div class="setrow">
-      <label>ミュート</label>
+      <label>${L('ミュート', 'Mute')}</label>
       <input type="checkbox" data-mute ${st.muted ? 'checked' : ''}>
     </div>
     <div class="setrow">
-      <label>BGM 音量</label>
+      <label>${L('BGM 音量', 'Music volume')}</label>
       <input type="range" min="0" max="100" value="${Math.round(st.bgmVol * 100)}" data-bgmvol>
       <span class="hint" style="min-height:0">${Math.round(st.bgmVol * 100)}</span>
     </div>
     <div class="setrow">
-      <label>効果音 音量</label>
+      <label>${L('効果音 音量', 'Sound effects volume')}</label>
       <input type="range" min="0" max="100" value="${Math.round(st.seVol * 100)}" data-sevol>
       <span class="hint" style="min-height:0">${Math.round(st.seVol * 100)}</span>
     </div>`;
 
-  return `<div class="screen">
-    <h2 style="color:var(--gold)">設定</h2>
-    <div class="tabs">
-      <button class="tab ${tab === 'player' ? 'on' : ''}" data-settab="player">プレイヤー</button>
-      <button class="tab ${tab === 'sound' ? 'on' : ''}" data-settab="sound">サウンド</button>
+  // 言語タブは、読めない言語で開いてしまった人でも見つけられるよう常に2言語で書く
+  const language = `
+    <div class="setrow col">
+      <label>言語 / Language</label>
+      <div class="langpick">
+        <button class="btn ${lang() === 'ja' ? 'primary' : ''}" data-setlang="ja">日本語</button>
+        <button class="btn ${lang() === 'en' ? 'primary' : ''}" data-setlang="en">English</button>
+      </div>
+    </div>`;
+
+  const data = `
+    <div class="setrow col">
+      <label>${L('引き継ぎコードを作る', 'Create a transfer code')}</label>
+      <div class="hint setnote">${L('別の端末や別のサイトにデータを移すときに使います。コードをコピーして、移し先の「コードで読み込む」に貼り付けてください。',
+        'Use this to move your save to another device or site. Copy the code, then paste it into “Load from code” there.')}</div>
+      <button class="btn" data-makecode>${L('コードを作る', 'Create code')}</button>
+      ${app.transferCode ? `<textarea class="codebox" readonly data-codeout>${esc(app.transferCode)}</textarea>
+        <button class="btn small" data-copycode>${L('コピー', 'Copy')}</button>` : ''}
     </div>
-    <div class="setpanel">${tab === 'player' ? player : sound}</div>
-    <div class="hint" style="font-size:11px">ビルド ${typeof __BUILD__ === 'string' ? __BUILD__ : '開発中'}</div>
-    <button class="btn" data-go="title">戻る</button>
+    <div class="setrow col">
+      <label>${L('コードで読み込む', 'Load from code')}</label>
+      <textarea class="codebox" data-codein placeholder="${L('ここに引き継ぎコードを貼り付け', 'Paste your transfer code here')}">${esc(app.codeIn || '')}</textarea>
+      <button class="btn danger" data-loadcode>${L('読み込む', 'Load')}</button>
+      <div class="hint setnote">${L('今のデータは上書きされます。', 'Your current save will be overwritten.')}</div>
+    </div>`;
+
+  const panels = { player, sound, language, data };
+  return `<div class="screen">
+    <h2 style="color:var(--gold)">${L('設定', 'Settings')}</h2>
+    <div class="tabs">
+      <button class="tab ${tab === 'player' ? 'on' : ''}" data-settab="player">${L('プレイヤー', 'Player')}</button>
+      <button class="tab ${tab === 'sound' ? 'on' : ''}" data-settab="sound">${L('サウンド', 'Sound')}</button>
+      <button class="tab ${tab === 'language' ? 'on' : ''}" data-settab="language">言語 / Language</button>
+      <button class="tab ${tab === 'data' ? 'on' : ''}" data-settab="data">${L('データ', 'Data')}</button>
+    </div>
+    <div class="setpanel">${panels[tab] || player}</div>
+    <div class="hint" style="font-size:11px">${L('ビルド', 'Build')} ${typeof __BUILD__ === 'string' ? __BUILD__ : L('開発中', 'dev')}</div>
+    <button class="btn" data-go="title">${L('戻る', 'Back')}</button>
   </div>`;
+}
+
+/** 自分で名前を付けていないデッキ（「デッキ1」「Deck 1」のまま）は言語に合わせて呼び替える */
+function renameDefaultDecks() {
+  let changed = false;
+  (app.save.decks || []).forEach(d => {
+    const m = /^(?:デッキ|Deck )(\d+)$/.exec(d.name || '');
+    if (!m) return;
+    const nm = L(`デッキ${m[1]}`, `Deck ${m[1]}`);
+    if (nm !== d.name) { d.name = nm; changed = true; }
+  });
+  if (changed) writeSave(app.save);
+}
+
+/** 初回起動時：表示言語を選ぶ（どちらの言語でも読めるよう2言語で書く） */
+function langOverlay() {
+  return `<div class="overlay"><div class="modal langmodal">
+    <h2>Language / 言語</h2>
+    <p>Choose a language. You can change it later in Settings.<br>表示する言語を選んでください。あとから設定で変えられます。</p>
+    <div class="langpick big">
+      <button class="btn primary" data-picklang="ja">日本語</button>
+      <button class="btn primary" data-picklang="en">English</button>
+    </div>
+  </div></div>`;
+}
+
+// ============================================================
+// 引き継ぎコード（セーブデータを文字列にして別の端末・別のURLへ移す）
+//   保存先はURL（オリジン）ごとに分かれているので、公開先を変えたときや
+//   機種変更のときはこれで持っていく。
+//   TE1: … deflate圧縮してBase64 ／ TE0: … 圧縮できない環境向けにそのままBase64
+// ============================================================
+function b64encode(u8) {
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function b64decode(str) {
+  const s = atob(str);
+  const u8 = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
+  return u8;
+}
+async function pipeBytes(u8, stream) {
+  return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer());
+}
+async function makeTransferCode() {
+  const bytes = new TextEncoder().encode(JSON.stringify(app.save));
+  if (typeof CompressionStream === 'function') {
+    return 'TE1:' + b64encode(await pipeBytes(bytes, new CompressionStream('deflate-raw')));
+  }
+  return 'TE0:' + b64encode(bytes);
+}
+async function readTransferCode(code) {
+  const s = String(code || '').replace(/\s+/g, '');
+  const tag = s.slice(0, 4);
+  let bytes = b64decode(s.slice(4));
+  if (tag === 'TE1:') bytes = await pipeBytes(bytes, new DecompressionStream('deflate-raw'));
+  else if (tag !== 'TE0:') throw new Error('unknown code');
+  const obj = JSON.parse(new TextDecoder().decode(bytes));
+  if (!obj || typeof obj !== 'object' || !obj.collection || !obj.deck) throw new Error('not a save');
+  return obj;
 }
 
 /** 初回起動時：名前とアバターを決める */
@@ -656,14 +770,14 @@ function onboardingOverlay() {
       <div class="avimg">${avatarHtml(a.id)}</div>
     </button>`).join('');
   return `<div class="overlay"><div class="modal" style="max-width:800px">
-    <h2>ようこそ、三属の戦記へ</h2>
-    <p>あなたの名前とアバターを決めてください。<br>あとから設定でいつでも変えられます。</p>
+    <h2>${L('ようこそ、三属の戦記へ', 'Welcome to TRI-ELEMENTS')}</h2>
+    <p>${L('あなたの名前とアバターを決めてください。<br>あとから設定でいつでも変えられます。', 'Choose your name and avatar.<br>You can change them anytime in Settings.')}</p>
     <div class="setrow" style="justify-content:center">
-      <label>名前</label>
-      <input class="tinput" type="text" maxlength="12" placeholder="名前を入力" value="${esc(draft.name)}" data-obname>
+      <label>${L('名前', 'Name')}</label>
+      <input class="tinput" type="text" maxlength="12" placeholder="${L('名前を入力', 'Enter your name')}" value="${esc(draft.name)}" data-obname>
     </div>
     <div class="avgrid" style="margin:14px 0">${avatars}</div>
-    <div class="row-btn"><button class="btn primary" data-obstart>冒険をはじめる</button></div>
+    <div class="row-btn"><button class="btn primary" data-obstart>${L('冒険をはじめる', 'Start your adventure')}</button></div>
   </div></div>`;
 }
 
@@ -674,7 +788,7 @@ function pileHtml(kind, n, side) {
   return `<div class="pile ${kind === 'grave' ? 'grave' : ''} ${n ? '' : 'empty'}"
       ${kind === 'grave' ? `data-grave="${side}"` : ''}>
     <div class="stack"><i></i>${n > 1 ? '<i></i>' : ''}${n > 6 ? '<i></i>' : ''}</div>
-    <div>${kind === 'grave' ? '墓地' : '山札'} <span class="n">${n}</span></div>
+    <div>${kind === 'grave' ? L('墓地', 'Grave') : L('山札', 'Deck')} <span class="n">${n}</span></div>
   </div>`;
 }
 
@@ -683,11 +797,12 @@ function graveChoices(g, handIndex) {
   const id = g.players[0].hand[handIndex];
   const c = id ? card(id) : null;
   if (!c || c.type !== 'support') return null;
-  const e = c.effects.find(x => x.op === 'revive' || x.op === 'recallSupport');
+  const e = c.effects.find(x => x.op === 'revive' || x.op === 'recallSupport' || x.op === 'recallMonster');
   if (!e) return null;
   const grave = g.players[0].grave;
   const idx = grave.map((gid, i) => {
     if (e.op === 'revive') return (isMonster(gid) && card(gid).cost <= e.maxCost) ? i : null;
+    if (e.op === 'recallMonster') return isMonster(gid) ? i : null;
     return !isMonster(gid) ? i : null;
   }).filter(i => i !== null);
   return { effect: e, indices: idx };
@@ -716,19 +831,19 @@ function playEntryHtml(e) {
   const c = card(e.id);
   if (!c) return '';
   const kw = c.keywords?.length
-    ? `<div class="ip-kw">${c.keywords.map(k => `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
+    ? `<div class="ip-kw">${c.keywords.map(k => `<b>${kwb(KEYWORDS[k].name)}</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
     : '';
   return `<div class="ip-entry ${e.who === 1 ? 'foe' : 'mine'}">
-    <div class="ip-banner">${esc(e.who === 1 ? (app.enemy?.name || '相手') : myName())} が${esc(e.verb)}</div>
+    <div class="ip-banner">${L(`${esc(e.who === 1 ? (app.enemy?.name || '相手') : myName())} が${esc(e.verb)}`, `${esc(e.who === 1 ? (app.enemy?.name || 'Opponent') : myName())} ${esc(e.verb)}`)}</div>
     <div class="ip-row">
       ${cardHtml(c, {})}
       <div class="ip-side">
         <div class="ip-name">${esc(c.name)}</div>
         <div class="ip-meta">
-          <span>${icon(c.element)}</span><span>コスト ${c.cost}</span>
-          ${c.type === 'monster' ? `<span class="atkc">${icon('atk')} ${c.atk}</span><span class="defc">${icon('def')} ${c.def}</span>` : '<span>サポート</span>'}
+          <span>${icon(c.element)}</span><span>${L('コスト', 'Cost')} ${c.cost}</span>
+          ${c.type === 'monster' ? `<span class="atkc">${icon('atk')} ${c.atk}</span><span class="defc">${icon('def')} ${c.def}</span>` : `<span>${L('サポート', 'Support')}</span>`}
         </div>
-        <div class="ip-text">${esc(c.text || '効果はありません（バニラ）。')}</div>
+        <div class="ip-text">${esc(c.text || L('効果はありません（バニラ）。', 'No effect (vanilla).'))}</div>
         ${kw}
       </div>
     </div>
@@ -741,7 +856,7 @@ function inspectPanelHtml() {
   // 自分から別のカードを見に行った場合は履歴を捨てて、そのカードだけを出す。
   if (!app.inspect && app.playLog.length) {
     return `<div class="ipanel history">
-      <div class="ip-title">直前に使われたカード</div>
+      <div class="ip-title">${L('直前に使われたカード', 'Recently played')}</div>
       ${app.playLog.slice(0, 2).map(playEntryHtml).join('')}
     </div>`;
   }
@@ -749,29 +864,29 @@ function inspectPanelHtml() {
   const c = id ? card(id) : null;
   if (!c) {
     return `<div class="ipanel empty">
-      <div class="ip-title">カード情報</div>
-      <div class="ip-hint">カードにカーソルを合わせると、ここに詳しい内容が出ます。</div>
+      <div class="ip-title">${L('カード情報', 'Card info')}</div>
+      <div class="ip-hint">${L('カードにカーソルを合わせると、ここに詳しい内容が出ます。', 'Hover over a card to see its details here.')}</div>
       <div class="ip-legend">
-        <div><b class="atkc">${icon('atk')} 攻撃モード</b>（縦置き）<br>殴れる。相手の攻撃モンスターとぶつかると弱い方が破壊。</div>
-        <div><b class="defc">${icon('def')} 防御モード</b>（横置き）<br>攻撃できないが、${icon('def')}の分だけダメージを受け止める。</div>
-        <div><b class="gold">属性相性</b><br>${icon('fire')}→${icon('grass')}→${icon('water')}→${icon('fire')} 有利な属性で攻撃すると ${icon('atk')}+2。</div>
+        <div><b class="atkc">${icon('atk')} ${L('攻撃モード', 'Attack Mode')}</b>${L('（縦置き）', ' (upright)')}<br>${L('殴れる。相手の攻撃モンスターとぶつかると弱い方が破壊。', 'Can attack. When two Attack Mode monsters clash, the weaker one is destroyed.')}</div>
+        <div><b class="defc">${icon('def')} ${L('防御モード', 'Defense Mode')}</b>${L('（横置き）', ' (sideways)')}<br>${L(`攻撃できないが、${icon('def')}の分だけダメージを受け止める。`, `Can’t attack, but absorbs damage up to its ${icon('def')}.`)}</div>
+        <div><b class="gold">${L('属性相性', 'Element advantage')}</b><br>${icon('fire')}→${icon('grass')}→${icon('water')}→${icon('fire')} ${L(`有利な属性で攻撃すると ${icon('atk')}+2。`, `Attacking with the advantaged element gives ${icon('atk')}+2.`)}</div>
       </div>
     </div>`;
   }
   const r = RARITY[c.rarity || 'common'];
   const kw = c.keywords?.length
-    ? `<div class="ip-kw">${c.keywords.map(k => `<b>【${KEYWORDS[k].name}】</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
+    ? `<div class="ip-kw">${c.keywords.map(k => `<b>${kwb(KEYWORDS[k].name)}</b>${esc(KEYWORDS[k].desc)}`).join('<br>')}</div>`
     : '';
   return `<div class="ipanel">
     <div class="ip-card">${cardHtml(c, { cls: 'big' })}</div>
     <div class="ip-name">${esc(c.name)}</div>
     <div class="ip-meta">
       <span>${icon(c.element)} ${ELEMENTS[c.element].name}</span>
-      <span>コスト ${c.cost}</span>
-      ${c.type === 'monster' ? `<span class="atkc">${icon('atk')} ${c.atk}</span><span class="defc">${icon('def')} ${c.def}</span>` : '<span>サポート</span>'}
+      <span>${L('コスト', 'Cost')} ${c.cost}</span>
+      ${c.type === 'monster' ? `<span class="atkc">${icon('atk')} ${c.atk}</span><span class="defc">${icon('def')} ${c.def}</span>` : `<span>${L('サポート', 'Support')}</span>`}
       <span style="color:${r.color}">${r.name}</span>
     </div>
-    <div class="ip-text">${esc(c.text || 'このカードに効果はありません（バニラ）。')}</div>
+    <div class="ip-text">${esc(c.text || L('このカードに効果はありません（バニラ）。', 'This card has no effect (vanilla).'))}</div>
     ${kw}
     <div class="ip-flavor">${esc(c.flavor)}</div>
   </div>`;
@@ -791,14 +906,44 @@ document.addEventListener('pointerover', ev => {
   if (el && el.dataset.card) setInspect(el.dataset.card);
 });
 
-// 指では「重ねて長押し」でカードを覗く。タップは出し入れ・攻撃に使うため。
+// 指では「長押し」でカードの詳細（中央のウィンドウ）を見られる。タップは出し入れ・攻撃に使うため。
+// ブラウザ標準の contextmenu（長押しメニュー）任せだと端末によって遅く感じるので、
+// 自前の短いタイマーで判定する。手札を掴む保持タイマー(TOUCH_HOLD_MS)より
+// 短くして先に発動させ、動いていなければ掴む構えのほうは解除する。
+const CARD_VIEW_HOLD_MS = 180;
+let viewHoldTimer = null, viewHoldEl = null, viewHoldX = 0, viewHoldY = 0;
+function clearViewHold() { clearTimeout(viewHoldTimer); viewHoldTimer = null; viewHoldEl = null; }
+document.addEventListener('pointerdown', ev => {
+  if (app.screen !== 'battle' || ev.pointerType !== 'touch') return;
+  const el = ev.target.closest('[data-card]');
+  if (!el || !el.dataset.card) return;
+  viewHoldEl = el; viewHoldX = ev.clientX; viewHoldY = ev.clientY;
+  clearTimeout(viewHoldTimer);
+  viewHoldTimer = setTimeout(() => {
+    viewHoldTimer = null;
+    clearTimeout(app.dragHold);
+    if (app.drag && !app.drag.moved) app.drag = null;
+    clearPeek();
+    app.detail = viewHoldEl.dataset.card;
+    render();
+  }, CARD_VIEW_HOLD_MS);
+});
+document.addEventListener('pointermove', ev => {
+  if (!viewHoldTimer) return;
+  if (Math.hypot(ev.clientX - viewHoldX, ev.clientY - viewHoldY) > TOUCH_SLOP) clearViewHold();
+});
+document.addEventListener('pointerup', clearViewHold);
+document.addEventListener('pointercancel', clearViewHold);
+
+// 上のタイマーより先に端末側の長押しメニューが出てしまった場合の保険。
+// 表示先は同じ中央のカード詳細ウィンドウにする（前は左のログ欄が開いていた）。
 document.addEventListener('contextmenu', ev => {
   if (app.screen !== 'battle') return;
   const el = ev.target.closest('[data-card]');
   if (!el || !el.dataset.card) return;
   ev.preventDefault();
-  setInspect(el.dataset.card);
-  if (battleLayout() === 'portrait') app.drawer = 'info';
+  clearViewHold();
+  app.detail = el.dataset.card;
   render();
 });
 
@@ -885,28 +1030,37 @@ function renderBattle() {
 
   // 縦持ちは幅が足りず名前が縦書きのように折れてしまうので、
   // 顔の右に「名前／ライフ／コスト」を縦に積む形にする。
+  // 相手がガード無しで直接攻撃を通せる時、盤面中央の小さなボタンだけでなく
+  // 相手の顔まわり(名前・ライフ)をタップしても直接攻撃できるようにする。
+  // プレイヤーは自然に相手を狙ってタップしてくるため、その直感の方を拾う。
+  const faceAttr = faceTargetable ? 'data-attackface' : '';
+  const faceCls = faceTargetable ? 'atk-ready' : '';
   const enemyBar = portrait ? `
     <div class="bar enemybar">
-      <div class="face">${foeFace}</div>
-      <div class="foeinfo">
-        <span class="pname">${esc(op.name)}</span>
-        ${foeLife}
-        <div class="foesub"><div class="costpips">${pips(op.cost, op.maxCost)}</div><span class="meta">手札 <b>${op.hand.length}</b></span></div>
+      <div class="atktarget ${faceCls}" ${faceAttr}>
+        <div class="face">${foeFace}</div>
+        <div class="foeinfo">
+          <span class="pname">${esc(op.name)}</span>
+          ${foeLife}
+          <div class="foesub"><div class="costpips">${pips(op.cost, op.maxCost)}</div><span class="meta">${L('手札', 'Hand')} <b>${op.hand.length}</b></span></div>
+        </div>
       </div>
       <div class="battle-actions">
-        <button class="btn tiny paneltab ${drawer === 'info' ? 'on' : ''}" data-toggle-info>${icon('info')}<small>情報</small></button>
-        <button class="btn tiny paneltab ${drawer === 'log' ? 'on' : ''}" data-toggle-log>${icon('rules')}<small>ログ</small></button>
-        <button class="btn tiny paneltab quit" data-surrender>${icon('surrender')}<small>投了</small></button>
+        <button class="btn tiny paneltab ${drawer === 'info' ? 'on' : ''}" data-toggle-info>${icon('info')}<small>${L('情報', 'Info')}</small></button>
+        <button class="btn tiny paneltab ${drawer === 'log' ? 'on' : ''}" data-toggle-log>${icon('rules')}<small>${L('ログ', 'Log')}</small></button>
+        <button class="btn tiny paneltab quit" data-surrender>${icon('surrender')}<small>${L('投了', 'Surrender')}</small></button>
       </div>
     </div>` : `
     <div class="bar enemybar">
-      <div class="who"><div class="face">${foeFace}</div><span class="pname">${esc(op.name)}</span></div>
-      ${foeLife}
-      <div class="costpips">${pips(op.cost, op.maxCost)}</div>
-      <span class="meta">手札 <b>${op.hand.length}</b></span>
+      <div class="atktarget ${faceCls}" ${faceAttr}>
+        <div class="who"><div class="face">${foeFace}</div><span class="pname">${esc(op.name)}</span></div>
+        ${foeLife}
+        <div class="costpips">${pips(op.cost, op.maxCost)}</div>
+        <span class="meta">${L('手札', 'Hand')} <b>${op.hand.length}</b></span>
+      </div>
       <div class="battle-actions">
-        <button class="btn tiny" data-toggle-log>${app.logOpen ? 'ログ非表示' : 'ログ'}</button>
-        <button class="btn tiny" data-surrender>投了</button>
+        <button class="btn tiny" data-toggle-log>${app.logOpen ? L('ログ非表示', 'Hide log') : L('ログ', 'Log')}</button>
+        <button class="btn tiny" data-surrender>${L('投了', 'Surrender')}</button>
       </div>
     </div>`;
 
@@ -924,8 +1078,8 @@ function renderBattle() {
         <div class="row">${pileHtml('grave', op.grave.length, 1)}${supRow(op)}${pileHtml('deck', op.deck.length, 1)}</div>
         <div class="row">${enemyMon}</div>
         <div class="center">
-          <span class="turnlabel">ターン ${g.turn}　${g.active === 0 ? 'あなたの番' : '相手の番'}</span>
-          ${faceTargetable ? '<button class="btn danger small" data-attackface>▶ 直接攻撃！</button>' : ''}
+          <span class="turnlabel">${L('ターン', 'Turn')} ${g.turn}　${g.active === 0 ? L('あなたの番', 'Your turn') : L('相手の番', 'Opponent’s turn')}</span>
+          ${faceTargetable ? `<button class="btn danger small" data-attackface>${L('▶ 直接攻撃！', '▶ Direct Attack!')}</button>` : ''}
           <span class="hint">${esc(app.hint)}</span>
         </div>
         <div class="row">${myMon}</div>
@@ -940,13 +1094,13 @@ function renderBattle() {
       <div class="lifebox"><span class="lifeval">${me.life}</span>
         <div class="lifebar"><div style="width:${Math.max(0, Math.min(100, me.life / 20 * 100))}%"></div></div></div>
       <div class="costpips">${pips(me.cost, me.maxCost)}</div>
-      <span class="meta">コスト <b>${me.cost}/${me.maxCost}</b></span>
+      <span class="meta">${L('コスト', 'Cost')} <b>${me.cost}/${me.maxCost}</b></span>
       <div class="battle-actions">
-        ${discardMode ? '<span class="hint" style="color:var(--gold)">手札が多すぎます。捨てるカードを選んでください</span>' : ''}
-        ${app.sel ? '<button class="btn small" data-cancel>選択解除</button>' : ''}
+        ${discardMode ? `<span class="hint" style="color:var(--gold)">${L('手札が多すぎます。捨てるカードを選んでください', 'Too many cards. Choose one to discard')}</span>` : ''}
+        ${app.sel ? `<button class="btn small" data-cancel>${L('選択解除', 'Deselect')}</button>` : ''}
         <button class="btn small" data-forge ${myTurn && g.phase === 'main' && canForge(g, 0) ? '' : 'disabled'}
-          title="余ったコストでカードを1枚引く">${icon('forge')} 鍛錬 <small>${g.rules.forgeCost}コストで1枚引く</small></button>
-        <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>ターン終了</button>
+          title="${L('余ったコストでカードを1枚引く', 'Spend leftover cost to draw 1 card')}">${icon('forge')} ${L('鍛錬', 'Forge')} <small>${L(`${g.rules.forgeCost}コストで1枚引く`, `${g.rules.forgeCost} cost: draw 1`)}</small></button>
+        <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>${L('ターン終了', 'End Turn')}</button>
       </div>
     </div>
     <div class="hand">${hand}</div>
@@ -964,10 +1118,10 @@ function popupHtml() {
     const victim = g.players[0].field[p.slot];
     const cost = summonCostOf(g, 0, p.hand, p.slot);
     return `<div class="modepick" style="${style}">
-      ${victim ? `<div class="tip warn">${esc(card(victim.id).name)} を墓地へ送って入れ替え<br>コスト ${cost}（+${g.rules.replaceSummonCost}）</div>` : ''}
-      <button class="mp-atk" data-summon="attack">${icon('atk')} 攻撃モード <b>${c.atk}</b></button>
-      <button class="mp-def" data-summon="defense">${icon('def')} 防御モード <b>${c.def}</b></button>
-      <div class="tip">攻撃モードは縦置き・殴れる／防御モードは横置き・${icon('def')}の分だけダメージを受け止める</div>
+      ${victim ? `<div class="tip warn">${L(`${esc(card(victim.id).name)} を墓地へ送って入れ替え<br>コスト ${cost}（+${g.rules.replaceSummonCost}）`, `Replace ${esc(card(victim.id).name)} (sent to the graveyard)<br>Cost ${cost} (+${g.rules.replaceSummonCost})`)}</div>` : ''}
+      <button class="mp-atk" data-summon="attack">${icon('atk')} ${L('攻撃モード', 'Attack Mode')} <b>${c.atk}</b></button>
+      <button class="mp-def" data-summon="defense">${icon('def')} ${L('防御モード', 'Defense Mode')} <b>${c.def}</b></button>
+      <div class="tip">${L(`攻撃モードは縦置き・殴れる／防御モードは横置き・${icon('def')}の分だけダメージを受け止める`, `Attack Mode: upright, can attack. Defense Mode: sideways, absorbs damage up to its ${icon('def')}.`)}</div>
     </div>`;
   }
   if (p.type === 'own') {
@@ -975,10 +1129,10 @@ function popupHtml() {
     if (!m) return '';
     const acts = [];
     if (canAttack(g, 0, p.slot) && app.phase === 'play' && g.active === 0)
-      acts.push(`<button data-act="attack">${icon('atk')} 攻撃する</button>`);
+      acts.push(`<button data-act="attack">${icon('atk')} ${L('攻撃する', 'Attack')}</button>`);
     if (canChangeMode(g, 0, p.slot) && app.phase === 'play' && g.active === 0)
-      acts.push(`<button data-act="mode">${icon('modeswitch')} ${m.mode === 'attack' ? '防御' : '攻撃'}モードへ</button>`);
-    acts.push(`<button data-act="detail">${icon('info')} カードを見る</button>`);
+      acts.push(`<button data-act="mode">${icon('modeswitch')} ${m.mode === 'attack' ? L('防御モードへ', 'To Defense Mode') : L('攻撃モードへ', 'To Attack Mode')}</button>`);
+    acts.push(`<button data-act="detail">${icon('info')} ${L('カードを見る', 'View card')}</button>`);
     return `<div class="modepick" style="${style}">${acts.join('')}</div>`;
   }
   return '';
@@ -1001,13 +1155,13 @@ function overlays() {
 function mulliganOverlay() {
   const hand = app.game.players[0].hand.map(id => cardHtml(card(id), { cls: 'big' })).join('');
   return `<div class="overlay"><div class="modal">
-    <h2>初期手札</h2>
-    <p>この手札で始めますか？　1回だけ引き直せます。<br>
-      <span style="color:#9fb2c8">低コストのカードが無いと序盤に動けません。</span></p>
+    <h2>${L('初期手札', 'Opening hand')}</h2>
+    <p>${L('この手札で始めますか？　1回だけ引き直せます。', 'Start with this hand? You can redraw once.')}<br>
+      <span style="color:#9fb2c8">${L('低コストのカードが無いと序盤に動けません。', 'Without low-cost cards, you can’t do much early on.')}</span></p>
     <div class="mull-hand">${hand}</div>
     <div class="row-btn">
-      <button class="btn primary" data-mulligan="keep">この手札で戦う</button>
-      <button class="btn" data-mulligan="redraw">引き直す（1回だけ）</button>
+      <button class="btn primary" data-mulligan="keep">${L('この手札で戦う', 'Keep this hand')}</button>
+      <button class="btn" data-mulligan="redraw">${L('引き直す（1回だけ）', 'Redraw (once)')}</button>
     </div>
   </div></div>`;
 }
@@ -1021,7 +1175,7 @@ function battleStartOverlay() {
       <div class="bs-side">
         <div class="bs-face">${avatarHtml(myAvatar())}</div>
         <div class="bs-name">${esc(myName())}</div>
-        <div class="bs-desc">ライフ ${app.game.players[0].life}</div>
+        <div class="bs-desc">${L('ライフ', 'Life')} ${app.game.players[0].life}</div>
       </div>
       <div class="bs-vslabel">VS</div>
       <div class="bs-side">
@@ -1030,10 +1184,10 @@ function battleStartOverlay() {
           return src ? `<img src="${src}" alt="">` : e.icon;
         })()}</div>
         <div class="bs-name">${esc(e.name)}</div>
-        <div class="bs-desc">${esc(e.desc)}<br>ライフ ${app.game.players[1].life}${e.startCost ? ` ／ 開始コスト ${e.startCost}` : ''}</div>
+        <div class="bs-desc">${esc(e.desc)}<br>${L('ライフ', 'Life')} ${app.game.players[1].life}${e.startCost ? L(` ／ 開始コスト ${e.startCost}`, ` / Starts at ${e.startCost} cost`) : ''}</div>
       </div>
     </div>
-    <button class="btn primary" data-startbattle>戦闘開始</button>
+    <button class="btn primary" data-startbattle>${L('戦闘開始', 'Start battle')}</button>
   </div></div>`;
 }
 
@@ -1045,11 +1199,11 @@ function detailOverlay() {
   const zoomable = app.screen === 'collection' && owned;
   const extra = app.screen !== 'collection' ? ''
     : owned
-      ? `<button class="zoom-open" data-artzoom="${esc(c.id)}">${icon('info')} イラストを拡大</button>`
-      : `<div class="zoom-locked">${icon('lock')} 入手するとイラストを拡大できます</div>`;
+      ? `<button class="zoom-open" data-artzoom="${esc(c.id)}">${icon('info')} ${L('イラストを拡大', 'Enlarge art')}</button>`
+      : `<div class="zoom-locked">${icon('lock')} ${L('入手するとイラストを拡大できます', 'Get this card to enlarge its art')}</div>`;
   return `<div class="overlay" data-closedetail><div class="modal">
     ${detailHtml(c, extra, { zoomable })}
-    <div class="row-btn"><button class="btn" data-closedetail>閉じる</button></div>
+    <div class="row-btn"><button class="btn" data-closedetail>${L('閉じる', 'Close')}</button></div>
   </div></div>`;
 }
 
@@ -1059,9 +1213,9 @@ function observeOverlay() {
   const cards = choice.cards.map((id, i) =>
     `<button class="observe-card" data-observe="${i}">${cardHtml(card(id), { cls: 'big selectable' })}</button>`).join('');
   return `<div class="overlay"><div class="modal observe-modal">
-    <h2>【観測】</h2>
-    <p>山札の上から見えたカードです。手札に加える1枚を選んでください。<br>
-      <span style="color:#9fb2c8">残りは山札の底へ戻ります。</span></p>
+    <h2>${kwb(KEYWORDS.observe.name)}</h2>
+    <p>${L('山札の上から見えたカードです。手札に加える1枚を選んでください。', 'These are the top cards of your deck. Choose 1 to add to your hand.')}<br>
+      <span style="color:#9fb2c8">${L('残りは山札の底へ戻ります。', 'The rest go to the bottom of your deck.')}</span></p>
     <div class="observe-list">${cards}</div>
   </div></div>`;
 }
@@ -1074,11 +1228,11 @@ function artZoomOverlay() {
     ? `<img src="${src}" alt="${esc(c.name)}">`
     : cardArtSvg(c);
   return `<div class="overlay artzoom-overlay" data-closeartzoom>
-    <div class="artzoom-modal" role="dialog" aria-modal="true" aria-label="${esc(c.name)}のイラスト">
-      <button class="artzoom-close" data-closeartzoom aria-label="拡大表示を閉じる">×</button>
+    <div class="artzoom-modal" role="dialog" aria-modal="true" aria-label="${L(`${esc(c.name)}のイラスト`, `${esc(c.name)} art`)}">
+      <button class="artzoom-close" data-closeartzoom aria-label="${L('拡大表示を閉じる', 'Close')}">×</button>
       <div class="artzoom-name">${esc(c.name)}</div>
       <div class="artzoom-stage ${c.element}">${art}</div>
-      <div class="artzoom-hint">画面をクリック、または Esc で閉じる</div>
+      <div class="artzoom-hint">${L('画面をクリック、または Esc で閉じる', 'Click anywhere or press Esc to close')}</div>
     </div>
   </div>`;
 }
@@ -1092,9 +1246,9 @@ function gravePickOverlay() {
     `<div class="gpick" data-gravepick="${i}">${cardHtml(card(g.players[0].grave[i]), { cls: 'selectable' })}</div>`).join('');
   return `<div class="overlay"><div class="modal" style="max-width:840px">
     <h2>${esc(c.name)}</h2>
-    <p>墓地から1枚選んでください。</p>
+    <p>${L('墓地から1枚選んでください。', 'Choose 1 card from your graveyard.')}</p>
     <div class="grid" style="margin:12px 0">${cards}</div>
-    <div class="row-btn"><button class="btn" data-cancelgrave>やめる</button></div>
+    <div class="row-btn"><button class="btn" data-cancelgrave>${L('やめる', 'Cancel')}</button></div>
   </div></div>`;
 }
 
@@ -1102,29 +1256,29 @@ function graveOverlay() {
   const p = app.game.players[app.graveView];
   const cards = p.grave.map(id => cardHtml(card(id), { cls: 'selectable' })).join('');
   return `<div class="overlay" data-closegrave><div class="modal">
-    <h2>${app.graveView === 0 ? esc(myName()) : esc(p.name)}の墓地（${p.grave.length}枚）</h2>
-    <div class="grid" style="max-width:760px;margin:10px 0">${cards || '<p>まだ何もありません。</p>'}</div>
-    <div class="row-btn"><button class="btn" data-closegrave>閉じる</button></div>
+    <h2>${L(`${app.graveView === 0 ? esc(myName()) : esc(p.name)}の墓地（${p.grave.length}枚）`, `${app.graveView === 0 ? esc(myName()) : esc(p.name)}’s graveyard (${p.grave.length})`)}</h2>
+    <div class="grid" style="max-width:760px;margin:10px 0">${cards || `<p>${L('まだ何もありません。', 'Nothing here yet.')}</p>`}</div>
+    <div class="row-btn"><button class="btn" data-closegrave>${L('閉じる', 'Close')}</button></div>
   </div></div>`;
 }
 
 function resultOverlay() {
   const r = app.result;
   return `<div class="overlay"><div class="modal">
-    <h2 style="font-size:30px">${r.win ? '勝利！' : '敗北…'}</h2>
+    <h2 style="font-size:30px">${r.win ? L('勝利！', 'Victory!') : L('敗北…', 'Defeat…')}</h2>
     <p>${esc(r.reason)}</p>
-    ${r.reward ? `<p style="color:var(--gold);font-size:15px">報酬: ${PACK_TYPES[r.reward].name} を1つ獲得！</p>` : ''}
-    ${r.dust ? `<p style="color:var(--gold);font-size:15px">星屑 ${icon('stardust')}${r.dust} を獲得！（所持 ${icon('stardust')}${app.save.stardust}）</p>` : ''}
-    ${r.unlocked ? `<p style="color:#8fe0a8">「${esc(r.unlocked)}」が解放されました！</p>` : ''}
+    ${r.reward ? `<p style="color:var(--gold);font-size:15px">${L(`報酬: ${PACK_TYPES[r.reward].name} を1つ獲得！`, `Reward: 1 ${PACK_TYPES[r.reward].name}!`)}</p>` : ''}
+    ${r.dust ? `<p style="color:var(--gold);font-size:15px">${L(`星屑 ${icon('stardust')}${r.dust} を獲得！（所持 ${icon('stardust')}${app.save.stardust}）`, `Got ${icon('stardust')}${r.dust} Stardust! (Total ${icon('stardust')}${app.save.stardust})`)}</p>` : ''}
+    ${r.unlocked ? `<p style="color:#8fe0a8">${L(`「${esc(r.unlocked)}」が解放されました！`, `${esc(r.unlocked)} unlocked!`)}</p>` : ''}
     ${r.charCard ? `<div class="charget">
-      <div class="charget-label">${icon('stardust')} キャラクターカードを入手 ${icon('stardust')}</div>
+      <div class="charget-label">${icon('stardust')} ${L('キャラクターカードを入手', 'Character card get!')} ${icon('stardust')}</div>
       ${cardHtml(card(r.charCard), { cls: 'big' })}
       <div class="charget-name">${esc(card(r.charCard).name)}</div>
     </div>` : ''}
-    ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります</p>` : ''}
+    ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">${L(`「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります`, `Beat them <b>${r.charLeft}</b> more times on Extreme to get their character card`)}</p>` : ''}
     <div class="row-btn">
-      <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? 'フリーバトルへ戻る' : '冒険へ戻る'}</button>
-      <button class="btn" data-rematch>もう一度</button>
+      <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? L('フリーバトルへ戻る', 'Back to Free Battle') : L('冒険へ戻る', 'Back to Adventure')}</button>
+      <button class="btn" data-rematch>${L('もう一度', 'Rematch')}</button>
     </div>
   </div></div>`;
 }
@@ -1163,9 +1317,9 @@ function packOverlay() {
     </div>`;
   }).join('');
   return `<div class="overlay"><div class="modal" style="max-width:880px">
-    <h2>パック開封！</h2>
+    <h2>${L('パック開封！', 'Pack opened!')}</h2>
     <div class="grid packgrid" style="margin:14px 0">${cards}</div>
-    <button class="btn primary" data-closepack>受け取る</button>
+    <button class="btn primary" data-closepack>${L('受け取る', 'Collect')}</button>
   </div></div>`;
 }
 
@@ -1181,6 +1335,9 @@ const BATTLE_SIZE = {
 };
 /** いまの画面の形に合う方を選ぶ */
 function battleLayout() {
+  // 縦長でなくても、横幅自体が狭いと「ワイド」用の左右パネル(固定幅計246+270px)が
+  // 盤面を押しつぶして見切れてしまう。アスペクト比だけでなく絶対幅でも判定する。
+  if (window.innerWidth < 900) return 'portrait';
   return window.innerWidth / window.innerHeight < 0.95 ? 'portrait' : 'wide';
 }
 
@@ -1286,7 +1443,8 @@ function render(opts = {}) {
   }
   html += bottomNavHtml();
   html += overlays();
-  if (!app.save.profile) html += onboardingOverlay();
+  if (!app.langChosen) html += langOverlay();
+  else if (!app.save.profile) html += onboardingOverlay();
   if (app.toast) html += `<div class="toast">${esc(app.toast)}</div>`;
   $app.innerHTML = html;
   Object.entries(keep).forEach(([sel, top]) => {
@@ -1316,7 +1474,7 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   // 複数スロットのせいで、30枚に満たないデッキを選んだまま挑めてしまわないように
   if (app.save.deck.length !== 30) {
     const d = app.save.decks[app.save.activeDeck];
-    toast(`「${d ? d.name : 'デッキ'}」は${app.save.deck.length}枚です。30枚にしてください`);
+    toast(L(`「${d ? d.name : 'デッキ'}」は${app.save.deck.length}枚です。30枚にしてください`, `“${d ? d.name : 'Deck'}” has ${app.save.deck.length} cards. It needs exactly 30`));
     return go('deck');
   }
   const area = AREAS[areaIndex], enemy = area.enemies[enemyIndex];
@@ -1371,7 +1529,7 @@ function beginPlay() {
   render();
   lastBannerTurn = app.game.turn;
   Audio.playSe('se_battle');
-  Fx.fxBanner(app.game.active === 0 ? 'あなたのターン' : `${esc(app.enemy.name)} のターン`, '', 750);
+  Fx.fxBanner(app.game.active === 0 ? L('あなたのターン', 'Your Turn') : L(`${esc(app.enemy.name)} のターン`, `${esc(app.enemy.name)}’s Turn`), '', 750);
   if (app.game.active === 1) scheduleAi();
 }
 
@@ -1382,8 +1540,8 @@ function maybeTurnBanner() {
   if (g.turn === lastBannerTurn) return;
   lastBannerTurn = g.turn;
   Audio.playSe('se_turn');
-  Fx.fxBanner(g.active === 0 ? 'あなたのターン' : `${esc(app.enemy?.name || '相手')} のターン`,
-    `ターン ${g.turn}`, 700);
+  Fx.fxBanner(g.active === 0 ? L('あなたのターン', 'Your Turn') : L(`${esc(app.enemy?.name || '相手')} のターン`, `${esc(app.enemy?.name || 'Opponent')}’s Turn`),
+    L(`ターン ${g.turn}`, `Turn ${g.turn}`), 700);
 }
 
 /**
@@ -1428,8 +1586,8 @@ async function runActionFx(g, pi, action) {
   const mark = g.log.length;
 
   // 召喚・発動されたカードは、どちらの手番でもカード情報欄の履歴に積む
-  if (supCard) pushPlay(supCard.id, supCard.equip ? '装備した' : '発動した', pi);
-  else if (sumCard) pushPlay(sumCard.id, '召喚した', pi);
+  if (supCard) pushPlay(supCard.id, supCard.equip ? L('装備した', 'equipped') : L('発動した', 'played'), pi);
+  else if (sumCard) pushPlay(sumCard.id, L('召喚した', 'summoned'), pi);
 
   // 行動そのものの音
   if (action.type === 'attack') Audio.playSe(action.target === 'face' ? 'se_direct' : 'se_attack');
@@ -1457,8 +1615,8 @@ async function runActionFx(g, pi, action) {
     }
     if (attacker) {
       const kws = [];
-      if (hasKw(attacker, 'pierce') && action.target !== 'face') kws.push(['貫通', '#ff9a6b']);
-      if (hasKw(attacker, 'double')) kws.push(['連撃', '#e79aff']);
+      if (hasKw(attacker, 'pierce') && action.target !== 'face') kws.push([KEYWORDS.pierce.name, '#ff9a6b']);
+      if (hasKw(attacker, 'double')) kws.push([KEYWORDS.double.name, '#e79aff']);
       kws.forEach(([label, color], i) => setTimeout(() => Fx.fxKeyword(from, label, color), i * 130));
     }
     if (action.target === 'face') Fx.fxSlash(target);
@@ -1563,9 +1721,16 @@ function aiStep() {
       if (s < ws) { ws = s; worst = i; }
     });
     applyAction(g, 1, { type: 'discard', hand: worst });
-    render(); return scheduleAi();
+    render();
+    // 手札上限オーバーで捨てている間に手番が実際に切り替わることがある。
+    // ここでも見ておかないと、次に自分が何か操作するまでバナーが出ず、
+    // 「行動した後に急にターンバナーが出る」という変なタイミングになる
+    maybeTurnBanner();
+    return scheduleAi();
   }
-  const act = aiChooseAction(g, 1, { noise: app.enemy?.noise || 0, profile: app.enemy?.profile || 'balanced' });
+  // 「極」はミスをしない全力のAIにする（キャラごとのnoiseは弱め設定なので上書き）
+  const aiNoise = app.free?.difficulty === 'extreme' ? 0 : (app.enemy?.noise || 0);
+  const act = aiChooseAction(g, 1, { noise: aiNoise, profile: app.enemy?.profile || 'balanced' });
   if (act) {
     const pause = aiPauseFor(g, act);
     actWithFx(1, act).then(() => scheduleAi(pause));
@@ -1784,7 +1949,8 @@ document.addEventListener('click', ev => {
   if (btn) {
     const label = (btn.textContent || '').trim();
     const back = btn.matches('[data-go="title"],[data-closedetail],[data-closeartzoom],[data-closegrave],[data-cancelgrave],[data-cancel],[data-surrender],.dexback,.artzoom-close')
-      || label.includes('戻る') || /^(閉じる|やめる|キャンセル|選択解除|投了)/.test(label);
+      || label.includes('戻る') || /^(閉じる|やめる|キャンセル|選択解除|投了)/.test(label)
+      || /^(Back|Close|Cancel|Deselect|Surrender)\b/i.test(label);
     const confirm = btn.matches('.primary,.title-action.main,[data-fight],[data-freefight],[data-startbattle],[data-obstart],[data-savedeck],[data-openpack],[data-buypack],[data-rematch],[data-closepack]');
     Audio.playSe(back ? 'se_back' : confirm ? 'se_confirm' : 'se_click', { gap: 40 });
   }
@@ -1863,14 +2029,14 @@ document.addEventListener('pointerup', ev => {
       if (slotEl) {
         const slot = Number(slotEl.dataset.mslot);
         if (canSummonAt(g, 0, d.index, slot)) { openModePick(d.index, slotEl); return; }
-        if (g.players[0].field[slot]) toast('コストが足りません（入れ替え召喚は+1コスト）');
+        if (g.players[0].field[slot]) toast(L('コストが足りません（入れ替え召喚は+1コスト）', 'Not enough cost (replacing a monster costs +1)'));
       }
       render(); return;
     }
     // サポート
     const gc = graveChoices(g, d.index);
     if (gc) {
-      if (!gc.indices.length) { toast('墓地に対象がありません'); render(); return; }
+      if (!gc.indices.length) { toast(L('墓地に対象がありません', 'No valid target in your graveyard')); render(); return; }
       app.gravePick = { hand: d.index, indices: gc.indices };
       render(); return;
     }
@@ -1882,8 +2048,8 @@ document.addEventListener('pointerup', ev => {
         const side = Number(mEl.dataset.side), slot = Number(mEl.dataset.slot);
         const ok = side === 0 ? t.self.includes(slot) : t.enemy.includes(slot);
         if (ok) { actWithFx(0, { type: 'support', hand: d.index, target: { slot } }).then(afterAction); return; }
-        toast('そのカードは対象にできません');
-      } else toast('対象のモンスターにドロップしてください');
+        toast(L('そのカードは対象にできません', 'That card can’t be targeted'));
+      } else toast(L('対象のモンスターにドロップしてください', 'Drop it on a target monster'));
       render(); return;
     }
     if (elementUnder(x, y, '.field') && canPlaySupport(g, 0, d.index)) {
@@ -1900,7 +2066,7 @@ document.addEventListener('pointerup', ev => {
     if (mEl) {
       const slot = Number(mEl.dataset.slot);
       if (legal.includes(slot)) { actWithFx(0, { type: 'attack', slot: d.slot, target: slot }).then(afterAction); return; }
-      toast('【守護】がいるため、そのモンスターは攻撃できません');
+      toast(L('【守護】がいるため、そのモンスターは攻撃できません', 'A [Guard] monster is in the way. You can’t attack that one'));
     } else if (legal.includes('face') && y < window.innerHeight * 0.42) {
       actWithFx(0, { type: 'attack', slot: d.slot, target: 'face' }).then(afterAction); return;
     }
@@ -1923,9 +2089,9 @@ function addToDeck(id) {
   const have = d.filter(x => x === id).length;
   const own = app.save.collection[id] || 0;
   const limit = card(id).maxCopies || 3;
-  if (d.length >= 30) { toast('デッキは30枚までです'); return; }
+  if (d.length >= 30) { toast(L('デッキは30枚までです', 'A deck can have up to 30 cards')); return; }
   if (have >= Math.min(limit, own)) {
-    toast(limit === 1 ? 'レジェンドは同名1枚までです' : 'これ以上は入れられません（同名3枚・所持数まで）'); return;
+    toast(limit === 1 ? L('レジェンドは同名1枚までです', 'Only 1 copy of each Legend') : L('これ以上は入れられません（同名3枚・所持数まで）', 'Can’t add more (up to 3 copies, and only as many as you own)')); return;
   }
   d.push(id);
 }
@@ -1952,7 +2118,7 @@ function handleClick(ev) {
   const artZoomEl = hit('[data-artzoom]');
   if (artZoomEl) {
     const zid = artZoomEl.dataset.artzoom;
-    if (!(app.save.collection[zid] || 0)) return toast('まだ入手していないカードです');
+    if (!(app.save.collection[zid] || 0)) return toast(L('まだ入手していないカードです', 'You don’t own this card yet'));
     app.artZoom = zid; return render();
   }
 
@@ -1967,7 +2133,7 @@ function handleClick(ev) {
     app.deckDraft = null;           // デッキ編集の下書きは作り直す
     writeSave(app.save);
     Audio.playSe('se_click');
-    toast(d.list.length === 30 ? `「${d.name}」で戦います` : `「${d.name}」は${d.list.length}/30枚です`);
+    toast(d.list.length === 30 ? L(`「${d.name}」で戦います`, `Using “${d.name}”`) : L(`「${d.name}」は${d.list.length}/30枚です`, `“${d.name}” has ${d.list.length}/30 cards`));
     return render();
   }
 
@@ -2008,13 +2174,58 @@ function handleClick(ev) {
     return startBattle(ai, Number(e), !!app.free);
   }
 
+  // --- 言語 ---
+  const pl = hit('[data-picklang]');
+  if (pl) { setLang(pl.dataset.picklang); applyDocLang(); renameDefaultDecks(); app.langChosen = true; return render(); }
+  const sl = hit('[data-setlang]');
+  if (sl) { setLang(sl.dataset.setlang); applyDocLang(); renameDefaultDecks(); return render(); }
+
+  // --- 引き継ぎコード ---
+  if (hit('[data-makecode]')) {
+    makeTransferCode().then(code => { app.transferCode = code; render(); })
+      .catch(() => toast(L('コードを作れませんでした', 'Could not create a code')));
+    return;
+  }
+  if (hit('[data-copycode]')) {
+    const box = document.querySelector('[data-codeout]');
+    const fallback = () => {
+      if (box) { box.focus(); box.select(); }
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { /* 使えない環境もある */ }
+      toast(ok ? L('コピーしました', 'Copied') : L('コードを長押ししてコピーしてください', 'Press and hold the code to copy it'));
+    };
+    if (navigator.clipboard && app.transferCode) {
+      navigator.clipboard.writeText(app.transferCode).then(() => toast(L('コピーしました', 'Copied')), fallback);
+    } else fallback();
+    return;
+  }
+  if (hit('[data-loadcode]')) {
+    const code = (document.querySelector('[data-codein]')?.value || app.codeIn || '').trim();
+    if (!code) return toast(L('コードを貼り付けてください', 'Paste a code first'));
+    // 上書きなので2回押させる（投了・デッキ切り替えと同じ作法）
+    const now = Date.now();
+    if (!app.loadArm || now - app.loadArm > 6000) {
+      app.loadArm = now;
+      return toast(L('もう一度押すと、今のデータを上書きして読み込みます', 'Press again to overwrite your current save'), 2600);
+    }
+    app.loadArm = 0;
+    readTransferCode(code).then(obj => {
+      writeSave(obj);
+      app.save = loadSave();
+      app.codeIn = ''; app.transferCode = '';
+      toast(L('データを読み込みました', 'Save loaded'));
+      render();
+    }).catch(() => toast(L('コードが正しくありません', 'That code is not valid'), 2400));
+    return;
+  }
+
   // --- 設定 ---
   if (t.matches('[data-mute]')) { Audio.setMuted(t.checked); return; }
   const st = hit('[data-settab]');
   if (st) { app.settingsTab = st.dataset.settab; return render(); }
   const av = hit('[data-avatar]');
   if (av) {
-    app.save.profile = { ...(app.save.profile || { name: 'あなた' }), avatar: Number(av.dataset.avatar) };
+    app.save.profile = { ...(app.save.profile || { name: L('あなた', 'You') }), avatar: Number(av.dataset.avatar) };
     writeSave(app.save); return render();
   }
   // --- 初回の名前入力 ---
@@ -2022,8 +2233,8 @@ function handleClick(ev) {
   if (oba) { app.onboard.avatar = Number(oba.dataset.obavatar); return render(); }
   if (hit('[data-obstart]')) {
     const nm = (document.querySelector('[data-obname]')?.value || '').trim();
-    app.save.profile = { name: nm || '名もなき挑戦者', avatar: app.onboard.avatar };
-    writeSave(app.save); app.onboard = null; toast('ようこそ！'); return render();
+    app.save.profile = { name: nm || L('名もなき挑戦者', 'Nameless Challenger'), avatar: app.onboard.avatar };
+    writeSave(app.save); app.onboard = null; toast(L('ようこそ！', 'Welcome!')); return render();
   }
 
   // --- デッキ編集 ---
@@ -2038,8 +2249,8 @@ function handleClick(ev) {
     const slot = hit('[data-deckslot]');
     if (slot) return switchDeckSlot(Number(slot.dataset.deckslot));
     if (hit('[data-deckadd]')) {
-      if (app.save.decks.length >= MAX_DECKS) return toast(`デッキは${MAX_DECKS}個までです`);
-      app.save.decks.push({ name: `デッキ${app.save.decks.length + 1}`, list: [] });
+      if (app.save.decks.length >= MAX_DECKS) return toast(L(`デッキは${MAX_DECKS}個までです`, `You can have up to ${MAX_DECKS} decks`));
+      app.save.decks.push({ name: L(`デッキ${app.save.decks.length + 1}`, `Deck ${app.save.decks.length + 1}`), list: [] });
       app.pendingSlot = null;
       app.save.activeDeck = app.save.decks.length - 1;
       app.save.deck = [];
@@ -2049,7 +2260,7 @@ function handleClick(ev) {
       return render();
     }
     if (hit('[data-deckdel]')) {
-      if (app.save.decks.length <= 1) return toast('デッキは1つ以上必要です');
+      if (app.save.decks.length <= 1) return toast(L('デッキは1つ以上必要です', 'You need at least 1 deck'));
       app.save.decks.splice(app.save.activeDeck, 1);
       app.save.activeDeck = Math.max(0, app.save.activeDeck - 1);
       app.save.deck = [...app.save.decks[app.save.activeDeck].list];
@@ -2063,7 +2274,7 @@ function handleClick(ev) {
       app.save.deck = [...app.deckDraft];
       app.pendingSlot = null;
       writeSave(app.save);
-      toast(`「${app.save.decks[app.save.activeDeck].name}」を保存しました`);
+      toast(L(`「${app.save.decks[app.save.activeDeck].name}」を保存しました`, `Saved “${app.save.decks[app.save.activeDeck].name}”`));
       return render();
     }
     if (hit('[data-resetdeck]')) { app.deckDraft = [...STARTER_DECK]; return render(); }
@@ -2112,7 +2323,7 @@ function handleClick(ev) {
     const now = Date.now();
     if (!app.quitArm || now - (app.quitArmAt || 0) < 300) {
       app.quitArm = true; app.quitArmAt = now;
-      toast('もう一度押すと投了します');
+      toast(L('もう一度押すと投了します', 'Press again to surrender'));
       setTimeout(() => { app.quitArm = false; }, 4000);
       return;
     }
@@ -2133,7 +2344,7 @@ function handleClick(ev) {
   const act = hit('[data-act]');
   if (act) {
     const p = app.popup; app.popup = null;
-    if (act.dataset.act === 'attack') { app.sel = { kind: 'attack', slot: p.slot }; app.hint = '攻撃する相手を選んでください'; return render(); }
+    if (act.dataset.act === 'attack') { app.sel = { kind: 'attack', slot: p.slot }; app.hint = L('攻撃する相手を選んでください', 'Choose a target to attack'); return render(); }
     if (act.dataset.act === 'mode') return actWithFx(0, { type: 'mode', slot: p.slot }).then(afterAction);
     if (act.dataset.act === 'detail') { app.detail = g.players[0].field[p.slot].id; return render(); }
   }
@@ -2157,25 +2368,25 @@ function handleClick(ev) {
     const id = g.players[0].hand[i];
     if (!id) return;
     if (isMonster(id)) {
-      if (!canSummon(g, 0, i)) { toast('今は出せません（コストが足りません）'); return; }
+      if (!canSummon(g, 0, i)) { toast(L('今は出せません（コストが足りません）', 'Can’t summon now (not enough cost)')); return; }
       // どの枠に置くかで強さが変わる（【隊列】【旗】）。
       // 勝手に空き枠へ置かず、必ず自分で選んでもらう
       app.sel = { kind: 'place', hand: i };
-      app.hint = 'どの枠に出しますか？　隣に誰がいるかで強さが変わります';
+      app.hint = L('どの枠に出しますか？　隣に誰がいるかで強さが変わります', 'Which slot? Some cards get stronger depending on their neighbors');
       return render();
     } else {
-      if (!canPlaySupport(g, 0, i)) { toast('今は使えません'); return; }
+      if (!canPlaySupport(g, 0, i)) { toast(L('今は使えません', 'Can’t use that now')); return; }
       const gc = graveChoices(g, i);
       if (gc) {
-        if (!gc.indices.length) { toast('墓地に対象がありません'); return; }
+        if (!gc.indices.length) { toast(L('墓地に対象がありません', 'No valid target in your graveyard')); return; }
         app.gravePick = { hand: i, indices: gc.indices };
         return render();
       }
       if (supportNeedsTarget(id)) {
         const t = supportTargetSlots(g, i);
-        if (!t.self.length && !t.enemy.length) { toast('対象にできるモンスターがいません'); return; }
+        if (!t.self.length && !t.enemy.length) { toast(L('対象にできるモンスターがいません', 'No monster can be targeted')); return; }
         app.sel = { kind: 'target', hand: i };
-        app.hint = '効果をかける相手を選んでください';
+        app.hint = L('効果をかける相手を選んでください', 'Choose a target for the effect');
         return render();
       }
       return actWithFx(0, { type: 'support', hand: i }).then(afterAction);
@@ -2190,9 +2401,10 @@ function handleClick(ev) {
       const slot = Number(slotEl.dataset.mslot);
       if (!canSummonAt(g, 0, app.sel.hand, slot)) {
         toast(g.players[0].field[slot]
-          ? `そこは埋まっています。入れ替えるにはコスト+1が必要です（あと${
-              summonCostOf(g, 0, app.sel.hand, slot) - g.players[0].cost}足りません）`
-          : 'そこには出せません');
+          ? L(`そこは埋まっています。入れ替えるにはコスト+1が必要です（あと${
+              summonCostOf(g, 0, app.sel.hand, slot) - g.players[0].cost}足りません）`,
+            `That slot is taken. Replacing costs +1 (you need ${summonCostOf(g, 0, app.sel.hand, slot) - g.players[0].cost} more)`)
+          : L('そこには出せません', 'Can’t summon there'));
         return;
       }
       const hand = app.sel.hand;
@@ -2207,7 +2419,7 @@ function handleClick(ev) {
       const side = Number(mEl.dataset.side), slot = Number(mEl.dataset.slot);
       const t = supportTargetSlots(g, app.sel.hand);
       if (!(side === 0 ? t.self : t.enemy).includes(slot)) {
-        toast('そのモンスターは対象にできません'); return;
+        toast(L('そのモンスターは対象にできません', 'That monster can’t be targeted')); return;
       }
       const hand = app.sel.hand;
       app.sel = null; app.hint = '';
@@ -2222,7 +2434,7 @@ function handleClick(ev) {
     if (side === 1) {
       if (app.sel && app.sel.kind === 'attack') {
         const legal = legalAttackTargets(g, 0, app.sel.slot);
-        if (!legal.includes(slot)) { toast('【守護】がいるため攻撃できません'); return; }
+        if (!legal.includes(slot)) { toast(L('【守護】がいるため攻撃できません', 'A [Guard] monster is in the way')); return; }
         const act = { type: 'attack', slot: app.sel.slot, target: slot };
         app.sel = null; app.hint = '';
         return actWithFx(0, act).then(afterAction);
@@ -2241,15 +2453,17 @@ function handleClick(ev) {
 document.addEventListener('input', ev => {
   if (ev.target.matches('[data-playername]')) {
     const v = ev.target.value.trim();
-    app.save.profile = { ...(app.save.profile || { avatar: 1 }), name: v || 'あなた' };
+    app.save.profile = { ...(app.save.profile || { avatar: 1 }), name: v || L('あなた', 'You') };
     writeSave(app.save);
   }
+  // 再描画（トーストなど）で貼り付けた中身が消えないよう控えておく
+  if (ev.target.matches('[data-codein]')) app.codeIn = ev.target.value;
   if (ev.target.matches('[data-obname]') && app.onboard) app.onboard.name = ev.target.value;
   // デッキ名は打つたびに保存する（再描画すると入力欄からフォーカスが外れるので render しない）
   if (ev.target.matches('[data-deckname]')) {
     const d = app.save.decks[app.save.activeDeck];
     if (d) {
-      d.name = ev.target.value.slice(0, 14) || `デッキ${app.save.activeDeck + 1}`;
+      d.name = ev.target.value.slice(0, 14) || L(`デッキ${app.save.activeDeck + 1}`, `Deck ${app.save.activeDeck + 1}`);
       writeSave(app.save);
       const tab = document.querySelector(`[data-deckslot="${app.save.activeDeck}"] b`);
       if (tab) tab.textContent = d.name;
@@ -2278,7 +2492,7 @@ document.addEventListener('contextmenu', ev => {
   ev.preventDefault();
   const slot = Number(mini.dataset.slot);
   if (canChangeMode(app.game, 0, slot)) actWithFx(0, { type: 'mode', slot }).then(afterAction);
-  else toast('モード変更はできません（1ターン1回・攻撃後は不可）');
+  else toast(L('モード変更はできません（1ターン1回・攻撃後は不可）', 'Can’t switch mode (once per turn, not after attacking)'));
 });
 
 // ============================================================
@@ -2317,5 +2531,6 @@ window.__TE = { app, render, startBattle, makeDemo, card, ALL_CARDS, applyAction
 
 // ============================================================
 Audio.scanAudio().then(info => { app.audioInfo = info; });
+if (app.langChosen) renameDefaultDecks();
 syncBgm();
 render();

@@ -3,8 +3,8 @@
 // 状態は plain object。structuredClone でコピーできる形に保つ。
 // ============================================================
 import { card, STRONG_AGAINST, KEYWORDS } from './cards.js';
-const KW_NAME = Object.fromEntries(Object.entries(KEYWORDS).map(([k, v]) => [k, v.name]));
 import { DEFAULT_RULES } from './rules.js';
+import { L } from '../i18n/lang.js';
 
 // ---------- RNG (mulberry32) ----------
 export function rngNext(state) {
@@ -47,7 +47,7 @@ export function createGame({ decks, seed = 1, rules = {}, names = ['あなた', 
   // 同じキャラが場に並ばず、こちらも毎回それを前提に戦えるので公平。
   if (signature) signature.forEach((id, i) => { if (id) { state.players[i].signature = id; ensureSignature(state, i); } });
   refreshAuras(state);
-  log(state, 'sys', `対戦開始。先攻: ${names[0]}`);
+  log(state, 'sys', L(`対戦開始。先攻: ${names[0]}`, `Battle start. ${names[0]} goes first.`));
   return state;
 }
 
@@ -158,7 +158,7 @@ export function damageMonster(state, pi, slot, v, srcName = '') {
   const p = state.players[pi], m = p.field[slot];
   if (!m || v <= 0) return;
   m.def -= v;
-  log(state, 'damage', `${card(m.id).name} に ${v} ダメージ（防御力 ${Math.max(0, m.def)}）`,
+  log(state, 'damage', L(`${card(m.id).name} に ${v} ダメージ（防御力 ${Math.max(0, m.def)}）`, `${card(m.id).name} takes ${v} damage (DEF ${Math.max(0, m.def)})`),
     { p: pi, slot, v });
   if (effDef(m) <= 0) destroyMonster(state, pi, slot, { bySource: srcName });
   refreshAuras(state);
@@ -171,39 +171,39 @@ function draw(state, pi, n = 1) {
   const p = state.players[pi];
   for (let k = 0; k < n; k++) {
     if (p.deck.length === 0) {
-      endGame(state, other(pi), `${p.name} は山札が尽きた（デッキ切れ）`);
+      endGame(state, other(pi), L(`${p.name} は山札が尽きた（デッキ切れ）`, `${p.name} ran out of cards (deck out)`));
       return;
     }
     const id = p.deck.pop();
     p.hand.push(id);
-    log(state, 'draw', `${p.name} がドロー`, { p: pi, cardId: id });
+    log(state, 'draw', L(`${p.name} がドロー`, `${p.name} draws a card`), { p: pi, cardId: id });
   }
 }
 
 function endGame(state, winner, reason) {
   if (state.winner !== null) return;
   state.winner = winner; state.reason = reason; state.phase = 'over';
-  log(state, 'end', `${reason} → ${state.players[winner].name} の勝ち`);
+  log(state, 'end', L(`${reason} → ${state.players[winner].name} の勝ち`, `${reason} → ${state.players[winner].name} wins`));
 }
 
 function checkLife(state) {
   const [a, b] = state.players;
-  if (a.life <= 0 && b.life <= 0) endGame(state, state.active, '相打ち');
-  else if (a.life <= 0) endGame(state, 1, `${a.name} のライフが0`);
-  else if (b.life <= 0) endGame(state, 0, `${b.name} のライフが0`);
+  if (a.life <= 0 && b.life <= 0) endGame(state, state.active, L('相打ち', 'Both fell together'));
+  else if (a.life <= 0) endGame(state, 1, L(`${a.name} のライフが0`, `${a.name}’s Life reached 0`));
+  else if (b.life <= 0) endGame(state, 0, L(`${b.name} のライフが0`, `${b.name}’s Life reached 0`));
 }
 
 export function damagePlayer(state, pi, v, src = '') {
   if (v <= 0) return;
   const p = state.players[pi];
   p.life -= v;
-  log(state, 'damage', `${p.name} に ${v} ダメージ${src ? `（${src}）` : ''}`, { p: pi, v, src });
+  log(state, 'damage', L(`${p.name} に ${v} ダメージ${src ? `（${src}）` : ''}`, `${p.name} takes ${v} damage${src ? ` (${src})` : ''}`), { p: pi, v, src });
   checkLife(state);
 }
 export function healPlayer(state, pi, v) {
   const p = state.players[pi];
   p.life += v;
-  log(state, 'heal', `${p.name} がライフ ${v} 回復`, { p: pi, v });
+  log(state, 'heal', L(`${p.name} がライフ ${v} 回復`, `${p.name} restores ${v} Life`), { p: pi, v });
 }
 
 // ---------- 破壊 ----------
@@ -212,12 +212,12 @@ export function destroyMonster(state, pi, slot, opts = {}) {
   const m = p.field[slot];
   if (!m) return;
   if (opts.byCombat && state.turn <= m.invulnUntil) {
-    log(state, 'info', `${card(m.id).name} は【氷の防壁】で破壊されなかった`);
+    log(state, 'info', L(`${card(m.id).name} は【氷の防壁】で破壊されなかった`, `${card(m.id).name} was saved by Ice Barrier`));
     return;
   }
   if (!opts.ignoreFog && opts.byCombat && state.turn <= p.fogUntil
     && (!p.fogElement || card(m.id).element === p.fogElement)) {
-    log(state, 'info', `${card(m.id).name} は【森の加護】で破壊されなかった`);
+    log(state, 'info', L(`${card(m.id).name} は【森の加護】で破壊されなかった`, `${card(m.id).name} was saved by the forest’s blessing`));
     return;
   }
   p.field[slot] = null;
@@ -226,7 +226,7 @@ export function destroyMonster(state, pi, slot, opts = {}) {
     if (s && s.attachedTo === m.uid) { p.grave.push(s.id); p.supports[si] = null; }
   });
   p.grave.push(m.id);
-  log(state, 'destroy', `${card(m.id).name} が破壊された`, { p: pi, cardId: m.id, slot });
+  log(state, 'destroy', L(`${card(m.id).name} が破壊された`, `${card(m.id).name} was destroyed`), { p: pi, cardId: m.id, slot });
   refreshAuras(state);   // 抜けた穴のぶん、隣の効き方が変わる
   const od = card(m.id).onDeath;
   if (od) runEffects(state, pi, od, { auto: true, sourceName: card(m.id).name });
@@ -281,7 +281,7 @@ function applyOp(state, pi, op, ctx) {
     case 'increaseMaxCost': {
       const before = me.maxCost;
       me.maxCost = Math.min(state.rules.maxCostCap, me.maxCost + (op.n || 1));
-      log(state, 'buff', `${me.name} の最大コストが ${before} → ${me.maxCost} になった`, { p: pi });
+      log(state, 'buff', L(`${me.name} の最大コストが ${before} → ${me.maxCost} になった`, `${me.name}’s max cost: ${before} → ${me.maxCost}`), { p: pi });
       break;
     }
     case 'observe': {
@@ -298,10 +298,10 @@ function applyOp(state, pi, op, ctx) {
         const [chosen] = seen.splice(best, 1);
         me.hand.push(chosen);
         me.deck.unshift(...seen);
-        log(state, 'draw', `${me.name} が【観測】で ${card(chosen).name} を手札に加えた`, { p: pi, cardId: chosen });
+        log(state, 'draw', L(`${me.name} が【観測】で ${card(chosen).name} を手札に加えた`, `${me.name} added ${card(chosen).name} to their hand with [Observe]`), { p: pi, cardId: chosen });
       } else {
         state.pendingChoice = { type: 'observe', pi, cards: seen };
-        log(state, 'info', `${me.name} が山札の上から ${seen.length} 枚を観測している`);
+        log(state, 'info', L(`${me.name} が山札の上から ${seen.length} 枚を観測している`, `${me.name} is observing the top ${seen.length} cards of their deck`));
       }
       break;
     }
@@ -313,7 +313,7 @@ function applyOp(state, pi, op, ctx) {
       list.forEach(sl => {
         const m = tp.field[sl]; if (!m) return;
         if (m.mode !== op.mode) { m.mode = op.mode; if (!op.free && tps === pi) m.modeChanged = true; }
-        log(state, 'info', `${card(m.id).name} が${op.mode === 'attack' ? '攻撃' : '防御'}モードになった`);
+        log(state, 'info', L(`${card(m.id).name} が${op.mode === 'attack' ? '攻撃' : '防御'}モードになった`, `${card(m.id).name} switched to ${op.mode === 'attack' ? 'Attack' : 'Defense'} Mode`));
       });
       break;
     }
@@ -326,7 +326,7 @@ function applyOp(state, pi, op, ctx) {
         const m = tp.field[sl]; if (!m) return;
         if (op.duration === 'turn') { m.tempAtk += op.atk; m.tempDef += op.def; }
         else { m.atk += op.atk; m.def += op.def; }
-        log(state, 'buff', `${card(m.id).name} が +${op.atk}/+${op.def}`,
+        log(state, 'buff', L(`${card(m.id).name} が +${op.atk}/+${op.def}`, `${card(m.id).name} gets +${op.atk}/+${op.def}`),
           { p: tps, slot: sl, atk: op.atk, def: op.def });
       });
       break;
@@ -341,7 +341,7 @@ function applyOp(state, pi, op, ctx) {
       if (op.n) list = list.slice(0, op.n);
       list.forEach(m => {
         m.atk += (op.atk || 0); m.def += (op.def || 0);
-        log(state, 'buff', `${card(m.id).name} が +${op.atk || 0}/+${op.def || 0}`,
+        log(state, 'buff', L(`${card(m.id).name} が +${op.atk || 0}/+${op.def || 0}`, `${card(m.id).name} gets +${op.atk || 0}/+${op.def || 0}`),
           { p: pi, slot: me2.field.indexOf(m), atk: op.atk || 0, def: op.def || 0 });
       });
       break;
@@ -370,7 +370,7 @@ function applyOp(state, pi, op, ctx) {
         m.grants = m.grants || [];
         m.grants.push(op.kw);
         if (op.duration === 'turn') (m.turnGrants = m.turnGrants || []).push(op.kw);
-        log(state, 'buff', `${card(m.id).name} が【${KW_NAME[op.kw] || op.kw}】を得た`, { p: tps, slot: sl });
+        log(state, 'buff', L(`${card(m.id).name} が【${KEYWORDS[op.kw]?.name || op.kw}】を得た`, `${card(m.id).name} gained [${KEYWORDS[op.kw]?.name || op.kw}]`), { p: tps, slot: sl });
       });
       break;
     }
@@ -384,7 +384,7 @@ function applyOp(state, pi, op, ctx) {
       pair.forEach(sl => {
         const m = F[sl];
         m.atk += (op.atk || 0); m.def += (op.def || 0);
-        log(state, 'buff', `${card(m.id).name} が +${op.atk || 0}/+${op.def || 0}`,
+        log(state, 'buff', L(`${card(m.id).name} が +${op.atk || 0}/+${op.def || 0}`, `${card(m.id).name} gets +${op.atk || 0}/+${op.def || 0}`),
           { p: tp === state.players[pi] ? pi : other(pi), slot: sl, atk: op.atk || 0, def: op.def || 0 });
       });
       break;
@@ -401,7 +401,7 @@ function applyOp(state, pi, op, ctx) {
         const d = (op.def || 0) + (ok ? (op.bonusDef || 0) : 0);
         if (op.duration === 'turn') { m.tempAtk += a; m.tempDef += d; }
         else { m.atk += a; m.def += d; }
-        log(state, 'buff', `${card(m.id).name} が ${a >= 0 ? '+' : ''}${a}/${d >= 0 ? '+' : ''}${d}`,
+        log(state, 'buff', L(`${card(m.id).name} が ${a >= 0 ? '+' : ''}${a}/${d >= 0 ? '+' : ''}${d}`, `${card(m.id).name} gets ${a >= 0 ? '+' : ''}${a}/${d >= 0 ? '+' : ''}${d}`),
           { p: tps, slot: i, atk: a, def: d });
         if (effDef(m) <= 0) destroyMonster(state, tps, i);
       });
@@ -413,7 +413,7 @@ function applyOp(state, pi, op, ctx) {
       const self = ctx.self; if (!self) break;
       const n = me3.field.filter(Boolean).length;
       self.atk += (op.atk || 0) * n; self.def += (op.def || 0) * n;
-      log(state, 'buff', `${card(self.id).name} が +${(op.atk || 0) * n}/+${(op.def || 0) * n}`,
+      log(state, 'buff', L(`${card(self.id).name} が +${(op.atk || 0) * n}/+${(op.def || 0) * n}`, `${card(self.id).name} gets +${(op.atk || 0) * n}/+${(op.def || 0) * n}`),
         { p: pi, slot: me3.field.indexOf(self), atk: (op.atk || 0) * n, def: (op.def || 0) * n });
       break;
     }
@@ -426,7 +426,7 @@ function applyOp(state, pi, op, ctx) {
         // 自分のターンだけ守っても、壊されるのは相手のターンなので意味がない
         if (F[i - 1] || F[i + 1]) m.invulnUntil = state.turn + 1;
       });
-      log(state, 'info', '隣り合ったモンスターは、このターン戦闘で破壊されない');
+      log(state, 'info', L('隣り合ったモンスターは、次の相手ターン終了まで戦闘で破壊されない', 'Monsters with a neighbor can’t be destroyed in battle until the end of the opponent’s next turn'));
       break;
     }
     case 'destroy': {
@@ -439,7 +439,7 @@ function applyOp(state, pi, op, ctx) {
       const tps = resolveSide(pi, op.side), tp = state.players[tps];
       let n = 0;
       for (let k = 0; k < op.n && tp.deck.length; k++) { tp.grave.push(tp.deck.pop()); n++; }
-      log(state, 'info', `${tp.name} の山札を ${n} 枚 墓地へ送った（残り ${tp.deck.length}）`);
+      log(state, 'info', L(`${tp.name} の山札を ${n} 枚 墓地へ送った（残り ${tp.deck.length}）`, `Sent ${n} cards from ${tp.name}’s deck to the graveyard (${tp.deck.length} left)`));
       break;
     }
     case 'defAsAtk': {
@@ -452,7 +452,7 @@ function applyOp(state, pi, op, ctx) {
         const m = tp.field[sl]; if (!m) return;
         const gain = effDef(m) - effAtk(m);
         if (gain > 0) m.tempAtk += gain;
-        log(state, 'info', `${card(m.id).name} は防御力で殴る（⚔${effAtk(m)}）`);
+        log(state, 'info', L(`${card(m.id).name} は防御力で殴る（⚔${effAtk(m)}）`, `${card(m.id).name} attacks with its DEF (⚔${effAtk(m)})`));
       });
       break;
     }
@@ -481,7 +481,7 @@ function applyOp(state, pi, op, ctx) {
         tp.hand.forEach((id, i) => { const v = card(id).cost; if (v > score) { score = v; worst = i; } });
         const [id] = tp.hand.splice(worst, 1);
         tp.grave.push(id);
-        log(state, 'info', `${tp.name} は ${card(id).name} を捨てた`);
+        log(state, 'info', L(`${tp.name} は ${card(id).name} を捨てた`, `${tp.name} discarded ${card(id).name}`));
       }
       break;
     }
@@ -495,7 +495,7 @@ function applyOp(state, pi, op, ctx) {
         tp.field[sl] = null;
         tp.supports.forEach((s, si) => { if (s && s.attachedTo === m.uid) { tp.grave.push(s.id); tp.supports[si] = null; } });
         tp.hand.push(m.id);
-        log(state, 'info', `${card(m.id).name} が手札に戻った`);
+        log(state, 'info', L(`${card(m.id).name} が手札に戻った`, `${card(m.id).name} returned to its owner’s hand`));
       });
       break;
     }
@@ -507,7 +507,7 @@ function applyOp(state, pi, op, ctx) {
       tp.field[sl] = null;
       tp.supports.forEach((s, si) => { if (s && s.attachedTo === m.uid) { tp.grave.push(s.id); tp.supports[si] = null; } });
       tp.deck.push(m.id);
-      log(state, 'info', `${card(m.id).name} が山札の一番上に戻った`);
+      log(state, 'info', L(`${card(m.id).name} が山札の一番上に戻った`, `${card(m.id).name} was put on top of its owner’s deck`));
       break;
     }
     case 'stun': {
@@ -518,7 +518,7 @@ function applyOp(state, pi, op, ctx) {
       list.forEach(sl => {
         const m = tp.field[sl]; if (!m) return;
         m.stunnedUntil = Math.max(m.stunnedUntil || -1, state.turn + 1);
-        log(state, 'info', `${card(m.id).name} は次の自分のターンに攻撃できない`);
+        log(state, 'info', L(`${card(m.id).name} は次の自分のターンに攻撃できない`, `${card(m.id).name} can’t attack on its next turn`));
       });
       break;
     }
@@ -531,19 +531,19 @@ function applyOp(state, pi, op, ctx) {
       if (best) {
         self.atk = effAtk(best.m) + (op.atk || 0);
         self.def = effDef(best.m) + (op.def || 0);
-        log(state, 'info', `${card(self.id).name} が ${card(best.m.id).name} の姿を写し取った（${self.atk}/${self.def}）`);
+        log(state, 'info', L(`${card(self.id).name} が ${card(best.m.id).name} の姿を写し取った（${self.atk}/${self.def}）`, `${card(self.id).name} copied the form of ${card(best.m.id).name} (${self.atk}/${self.def})`));
       } else {
         // 写す相手がいなければ、素の値のまま出る
         self.atk = op.baseAtk ?? self.atk;
         self.def = op.baseDef ?? self.def;
-        log(state, 'info', `${card(self.id).name} は写し取る相手がいなかった`);
+        log(state, 'info', L(`${card(self.id).name} は写し取る相手がいなかった`, `${card(self.id).name} had nothing to copy`));
       }
       break;
     }
     case 'invuln':
       me.fogUntil = state.turn + 1; // このターン + 次の相手ターン
       me.fogElement = op.element || null;
-      log(state, 'info', `${me.name} のモンスターは次の相手ターン終了まで戦闘で破壊されない`);
+      log(state, 'info', L(`${me.name} のモンスターは次の相手ターン終了まで戦闘で破壊されない`, `${me.name}’s monsters can’t be destroyed in battle until the end of the opponent’s next turn`));
       break;
     case 'revive': {
       const gi = ctx.target && ctx.target.grave != null ? ctx.target.grave : autoGraveMonster(me, op.maxCost, op.element);
@@ -554,7 +554,7 @@ function applyOp(state, pi, op, ctx) {
       if (op.element && card(id).element !== op.element) break;
       me.grave.splice(gi, 1);
       me.field[slot] = makeMonster(state, id, 'attack');
-      log(state, 'summon', `${card(id).name} が墓地から蘇った`, { p: pi, cardId: id });
+      log(state, 'summon', L(`${card(id).name} が墓地から蘇った`, `${card(id).name} rose from the graveyard`), { p: pi, cardId: id });
       const os = card(id).onSummon;
       if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name, self: me.field[slot] });
       break;
@@ -565,7 +565,7 @@ function applyOp(state, pi, op, ctx) {
       if (gi == null) break;
       const id = me.grave[gi]; if (!id || isMonster(id)) break;
       me.grave.splice(gi, 1); me.hand.push(id);
-      log(state, 'info', `${card(id).name} を手札に戻した`);
+      log(state, 'info', L(`${card(id).name} を手札に戻した`, `Returned ${card(id).name} to hand`));
       break;
     }
     case 'recallMonster': {
@@ -573,7 +573,7 @@ function applyOp(state, pi, op, ctx) {
       if (gi == null) break;
       const id = me.grave[gi]; if (!id || !isMonster(id)) break;
       me.grave.splice(gi, 1); me.hand.push(id);
-      log(state, 'info', `${card(id).name} を墓地から手札に戻した`);
+      log(state, 'info', L(`${card(id).name} を墓地から手札に戻した`, `Returned ${card(id).name} from the graveyard to hand`));
       break;
     }
     case 'reviveMany': {
@@ -585,7 +585,7 @@ function applyOp(state, pi, op, ctx) {
         const slot = emptySlot(me);
         me.field[slot] = makeMonster(state, id, 'attack');
         count++;
-        log(state, 'summon', `${card(id).name} が墓地から蘇った`, { p: pi, cardId: id });
+        log(state, 'summon', L(`${card(id).name} が墓地から蘇った`, `${card(id).name} rose from the graveyard`), { p: pi, cardId: id });
         const os = card(id).onSummon;
         if (os) runEffects(state, pi, os, { auto: true, sourceName: card(id).name, self: me.field[slot] });
       }
@@ -597,7 +597,7 @@ function applyOp(state, pi, op, ctx) {
         me.deck.push(...me.grave.splice(0));
         shuffle(state, me.deck);
       }
-      log(state, 'info', `${me.name} は墓地のカード ${n} 枚を山札に戻した`);
+      log(state, 'info', L(`${me.name} は墓地のカード ${n} 枚を山札に戻した`, `${me.name} shuffled ${n} cards from the graveyard into their deck`));
       break;
     }
     case 'balanceHand': {
@@ -607,7 +607,7 @@ function applyOp(state, pi, op, ctx) {
         if (p.hand.length < target) draw(state, pIndex, target - p.hand.length);
         while (state.winner === null && p.hand.length > target) p.grave.push(p.hand.pop());
       });
-      log(state, 'info', `お互いの手札を ${target} 枚に揃えた`);
+      log(state, 'info', L(`お互いの手札を ${target} 枚に揃えた`, `Both players now have ${target} cards in hand`));
       break;
     }
     case 'sacrificeBurn': {
@@ -616,7 +616,7 @@ function applyOp(state, pi, op, ctx) {
       const m = me.field[sl]; if (!m) break;
       const dmg = effAtk(m);
       destroyMonster(state, pi, sl, { ignoreFog: true });
-      damagePlayer(state, other(pi), dmg, '決死の一撃');
+      damagePlayer(state, other(pi), dmg, L('決死の一撃', 'Desperate Strike'));
       break;
     }
     default:
@@ -651,7 +651,7 @@ function pickSlot(state, pi, op, ctx) {
 export function startTurn(state) {
   const R = state.rules;
   state.turn++;
-  if (state.turn > R.maxTurns) { endGame(state, state.players[0].life >= state.players[1].life ? 0 : 1, 'ターン数上限'); return; }
+  if (state.turn > R.maxTurns) { endGame(state, state.players[0].life >= state.players[1].life ? 0 : 1, L('ターン数上限', 'Turn limit reached')); return; }
   const pi = state.active, p = state.players[pi];
   p.maxCost = Math.min(p.maxCost + 1, R.maxCostCap);
   p.cost = p.maxCost;
@@ -667,7 +667,7 @@ export function startTurn(state) {
     if (m.stunnedUntil != null && state.turn > m.stunnedUntil) m.stunnedUntil = -1;
   });
   refreshAuras(state);
-  log(state, 'turn', `── ${p.name} のターン ${state.turn}（コスト ${p.cost}）`, { p: pi });
+  log(state, 'turn', L(`── ${p.name} のターン ${state.turn}（コスト ${p.cost}）`, `── ${p.name}’s turn ${state.turn} (cost ${p.cost})`), { p: pi });
 
   // ターン開始時トリガー
   p.field.forEach(m => {
@@ -683,7 +683,7 @@ export function startTurn(state) {
 export function endTurn(state) {
   const pi = state.active, p = state.players[pi], R = state.rules;
   // 計測用: ターン終了時に余ったコストと盤面の埋まり具合を記録する
-  log(state, 'endturn', `${p.name} のターン終了（余りコスト ${p.cost}）`, {
+  log(state, 'endturn', L(`${p.name} のターン終了（余りコスト ${p.cost}）`, `${p.name} ends the turn (${p.cost} cost left)`), {
     p: pi, leftCost: p.cost, fieldFull: p.field.every(x => x !== null),
     handMonsters: p.hand.filter(id => isMonster(id)).length,
   });
@@ -699,7 +699,7 @@ export function discardCard(state, handIndex) {
   const p = state.players[state.active];
   const id = p.hand.splice(handIndex, 1)[0];
   p.grave.push(id);
-  log(state, 'info', `${p.name} が ${card(id).name} を捨てた（手札上限）`);
+  log(state, 'info', L(`${p.name} が ${card(id).name} を捨てた（手札上限）`, `${p.name} discarded ${card(id).name} (hand limit)`));
   state.pendingDiscard--;
   if (state.pendingDiscard <= 0) { state.phase = 'main'; endTurn(state); }
 }
@@ -740,7 +740,7 @@ export function forge(state, pi) {
   const p = state.players[pi];
   p.cost -= state.rules.forgeCost;
   p.forges = (p.forges || 0) + 1;
-  log(state, 'info', `${p.name} が鍛錬（コスト${state.rules.forgeCost}）でカードを1枚引いた`, { p: pi });
+  log(state, 'info', L(`${p.name} が鍛錬（コスト${state.rules.forgeCost}）でカードを1枚引いた`, `${p.name} used Forge (cost ${state.rules.forgeCost}) to draw 1 card`), { p: pi });
   draw(state, pi, 1);
   return true;
 }
@@ -770,7 +770,7 @@ export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
   p.summoned = true;
 
   if (replacing) {
-    log(state, 'info', `${card(p.field[slot].id).name} を墓地へ送って入れ替え召喚`, { p: pi });
+    log(state, 'info', L(`${card(p.field[slot].id).name} を墓地へ送って入れ替え召喚`, `Sent ${card(p.field[slot].id).name} to the graveyard to make room`), { p: pi });
     destroyMonster(state, pi, slot, { ignoreFog: true, replaced: true });
     // 断末魔で別のモンスターが出てきた場合に備えて置き場所を取り直す
     if (p.field[slot]) {
@@ -784,7 +784,7 @@ export function summon(state, pi, handIndex, mode = 'attack', wantSlot = null) {
   if (!R.summonModeIsFree && mode === 'defense') m.modeChanged = true;
   p.field[slot] = m;
   refreshAuras(state);   // 並びが変わったので、隣接の効き方を入れ直す
-  log(state, 'summon', `${p.name} が ${card(id).name} を${mode === 'attack' ? '攻撃' : '防御'}モードで召喚`,
+  log(state, 'summon', L(`${p.name} が ${card(id).name} を${mode === 'attack' ? '攻撃' : '防御'}モードで召喚`, `${p.name} summoned ${card(id).name} in ${mode === 'attack' ? 'Attack' : 'Defense'} Mode`),
     { p: pi, cardId: id, mode });
   const os = card(id).onSummon;
   if (os) runEffects(state, pi, os, { sourceName: card(id).name, self: m, target: state.pendingTarget || null });
@@ -839,7 +839,7 @@ export function playSupport(state, pi, handIndex, target = null) {
   const p = state.players[pi], id = p.hand[handIndex], c = card(id);
   p.hand.splice(handIndex, 1);
   p.cost -= c.cost;
-  log(state, 'support', `${p.name} が ${c.name} を使用`, { p: pi, cardId: id });
+  log(state, 'support', L(`${p.name} が ${c.name} を使用`, `${p.name} used ${c.name}`), { p: pi, cardId: id });
   if (c.equip) {
     const e = c.effects.find(x => x.op === 'equip');
     let slot = target && target.slot != null ? target.slot : null;
@@ -854,7 +854,7 @@ export function playSupport(state, pi, handIndex, target = null) {
     if (e.grants) { m.grants = [...(m.grants || []), ...e.grants]; }
     const si = p.supports.findIndex(s => s === null);
     p.supports[si] = { uid: state.uid++, id, attachedTo: m.uid, slot: si };
-    log(state, 'buff', `${card(m.id).name} に ${c.name} を装備 (+${e.atk}/+${e.def})`,
+    log(state, 'buff', L(`${card(m.id).name} に ${c.name} を装備 (+${e.atk}/+${e.def})`, `Equipped ${c.name} to ${card(m.id).name} (+${e.atk}/+${e.def})`),
       { p: pi, slot, atk: e.atk, def: e.def, equip: true });
   } else {
     runEffects(state, pi, c.effects, { target, sourceName: c.name });
@@ -875,7 +875,7 @@ export function changeMode(state, pi, slot) {
   const m = state.players[pi].field[slot];
   m.mode = m.mode === 'attack' ? 'defense' : 'attack';
   m.modeChanged = true;
-  log(state, 'mode', `${card(m.id).name} を${m.mode === 'attack' ? '攻撃' : '防御'}モードに変更`,
+  log(state, 'mode', L(`${card(m.id).name} を${m.mode === 'attack' ? '攻撃' : '防御'}モードに変更`, `Switched ${card(m.id).name} to ${m.mode === 'attack' ? 'Attack' : 'Defense'} Mode`),
     { p: pi, slot, mode: m.mode });
   return true;
 }
@@ -907,7 +907,7 @@ export function attack(state, pi, slot, target) {
 
   if (target === 'face') {
     const dmg = effAtk(A);
-    log(state, 'attack', `${card(A.id).name} が直接攻撃！`, { p: pi, slot, direct: true });
+    log(state, 'attack', L(`${card(A.id).name} が直接攻撃！`, `${card(A.id).name} attacks directly!`), { p: pi, slot, direct: true });
     damagePlayer(state, oi, dmg, card(A.id).name);
     return true;
   }
@@ -918,7 +918,7 @@ export function attack(state, pi, slot, target) {
   const aAtk = effAtk(A) + (dmgMode ? 0 : bonus);
   // ダメージ計算に使う攻撃力（常にボーナス込み）
   const aDmg = effAtk(A) + bonus;
-  log(state, 'attack', `${card(A.id).name}(${aAtk}${bonus ? ' 属性有利' : ''}) → ${card(D.id).name}`,
+  log(state, 'attack', L(`${card(A.id).name}(${aAtk}${bonus ? ' 属性有利' : ''}) → ${card(D.id).name}`, `${card(A.id).name}(${aAtk}${bonus ? ' advantage' : ''}) → ${card(D.id).name}`),
     { p: pi, slot, target, bonus, element: card(A.id).element });
 
   // 【突撃】並んでいる相手を巻き込む。戦闘の勝ち負けとは別に、先に飛ぶ
@@ -927,7 +927,7 @@ export function attack(state, pi, slot, target) {
     if (splash > 0) {
       [target - 1, target + 1]
         .filter(k => k >= 0 && k < opp.field.length && opp.field[k])
-        .forEach(k => damageMonster(state, oi, k, splash, `${card(A.id).name}の突撃`));
+        .forEach(k => damageMonster(state, oi, k, splash, L(`${card(A.id).name}の突撃`, `${card(A.id).name}’s Cleave`)));
     }
   }
   if (!opp.field[target]) return true;   // 巻き込みで対象ごと落ちた場合
@@ -936,10 +936,10 @@ export function attack(state, pi, slot, target) {
     const dAtk = effAtk(D);
     if (aAtk > dAtk) {
       destroyMonster(state, oi, target, { byCombat: true });
-      damagePlayer(state, oi, aDmg - dAtk, '超過ダメージ');
+      damagePlayer(state, oi, aDmg - dAtk, L('超過ダメージ', 'excess damage'));
     } else if (aAtk < dAtk) {
       destroyMonster(state, pi, slot, { byCombat: true });
-      if (R.reflectOnAttackerLoss) damagePlayer(state, pi, dAtk - aAtk, '返り討ち');
+      if (R.reflectOnAttackerLoss) damagePlayer(state, pi, dAtk - aAtk, L('返り討ち', 'counterattack'));
     } else {
       destroyMonster(state, oi, target, { byCombat: true });
       destroyMonster(state, pi, slot, { byCombat: true });
@@ -950,16 +950,16 @@ export function attack(state, pi, slot, target) {
       destroyMonster(state, oi, target, { byCombat: true });
       const exc = aDmg - dDef;
       const mode = R.defenseExcessDamage;   // false | 'half' | true(=full)
-      if (mode === 'half') damagePlayer(state, oi, Math.ceil(exc / 2), '守備貫通(半減)');
-      else if (mode) damagePlayer(state, oi, exc, '守備貫通');
-      else if (hasKw(A, 'pierce2')) damagePlayer(state, oi, exc, '貫通');
+      if (mode === 'half') damagePlayer(state, oi, Math.ceil(exc / 2), L('守備貫通(半減)', 'through defense, halved'));
+      else if (mode) damagePlayer(state, oi, exc, L('守備貫通', 'through defense'));
+      else if (hasKw(A, 'pierce2')) damagePlayer(state, oi, exc, L('貫通', 'Pierce'));
     } else {
-      log(state, 'guard', `${card(D.id).name} は耐えた（防御 ${dDef}）`, { p: oi, slot: target });
+      log(state, 'guard', L(`${card(D.id).name} は耐えた（防御 ${dDef}）`, `${card(D.id).name} held on (DEF ${dDef})`), { p: oi, slot: target });
       if (R.defenseKillsAttacker) {
         destroyMonster(state, pi, slot, { byCombat: true });
-        log(state, 'info', `${card(A.id).name} は跳ね返された`);
+        log(state, 'info', L(`${card(A.id).name} は跳ね返された`, `${card(A.id).name} was repelled`));
       }
-      if (R.defenseReflect && dDef > aAtk) damagePlayer(state, pi, dDef - aAtk, '反射');
+      if (R.defenseReflect && dDef > aAtk) damagePlayer(state, pi, dDef - aAtk, L('反射', 'reflected'));
     }
   }
   return true;
@@ -975,7 +975,7 @@ export function mulligan(state, pi, doIt) {
     shuffle(state, p.deck);
     for (let i = 0; i < state.rules.startHand; i++) p.hand.push(p.deck.pop());
     ensureSignature(state, pi);
-    log(state, 'info', `${p.name} が手札を引き直した`);
+    log(state, 'info', L(`${p.name} が手札を引き直した`, `${p.name} redrew their hand`));
   }
   if (state.players.every(x => x.mulliganed)) { state.active = 0; startTurn(state); }
 }
@@ -1030,7 +1030,7 @@ export function applyAction(state, pi, act) {
       state.players[pi].hand.push(chosen);
       state.players[pi].deck.unshift(...cards);
       state.pendingChoice = null;
-      log(state, 'draw', `${state.players[pi].name} が【観測】で ${card(chosen).name} を手札に加えた`, { p: pi, cardId: chosen });
+      log(state, 'draw', L(`${state.players[pi].name} が【観測】で ${card(chosen).name} を手札に加えた`, `${state.players[pi].name} added ${card(chosen).name} to their hand with [Observe]`), { p: pi, cardId: chosen });
       return true;
     }
     default: return false;
