@@ -21,6 +21,14 @@ function nameHtml(name) {
   const cls = name.length > 22 ? 'nl2' : name.length > 15 ? 'nl1' : '';
   return cls ? `<span class="nm ${cls}">${n}</span>` : n;
 }
+/** カード下部の効果文。英語は長くなりがちなので、長さに応じて文字を縮める */
+function bodyHtml(text) {
+  const t = esc(text);
+  if (!text || JA_CHAR.test(text)) return t;
+  const n = text.length;
+  const cls = n > 120 ? 'bl3' : n > 85 ? 'bl2' : n > 55 ? 'bl1' : '';
+  return cls ? `<span class="${cls}">${t}</span>` : t;
+}
 
 /** 手札・一覧用の縦カード */
 export function cardHtml(c, opts = {}) {
@@ -45,7 +53,7 @@ export function cardHtml(c, opts = {}) {
       (c.elements || [c.element]).map(e => icon(e)).join('')}</div></div>
     ${kw}
     <div class="rarity" style="color:${r.color};border-color:${r.color}66">${r.short}</div>
-    <div class="body">${esc(c.text || c.flavor)}</div>
+    <div class="body">${bodyHtml(c.text || c.flavor)}</div>
     ${stats}
   </div>`;
 }

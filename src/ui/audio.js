@@ -84,9 +84,12 @@ function applyVolume() {
 }
 
 function fadeTo(el, target, ms, done) {
+  // 0msで呼ばれると (now - t0) / 0 が NaN になり、volume に入れた時点で例外になる
+  if (!(ms > 0)) { el.volume = Math.max(0, Math.min(1, target)); if (done) done(); return; }
   const from = el.volume, t0 = performance.now();
   const step = now => {
-    const k = Math.min(1, (now - t0) / ms);
+    // rAF の時刻は呼び出し時刻より少し前のことがあるので、負にならないようにする
+    const k = Math.max(0, Math.min(1, (now - t0) / ms));
     el.volume = Math.max(0, Math.min(1, from + (target - from) * k));
     if (k < 1) requestAnimationFrame(step); else done && done();
   };
