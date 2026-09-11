@@ -60,6 +60,8 @@ def read_events():
                     # 知らない種類（受け口の動作確認で送った selftest など）は数えない
                     if q.get('v') != '1' or not q.get('u') or q.get('e') not in KNOWN:
                         continue
+                    if q['u'].startswith('claudetest'):   # 公開後の動作確認で送ったもの
+                        continue
                     q['_ts'] = datetime.fromtimestamp(float(j.get('ts', 0)), JST)
                     yield q
         except OSError:
