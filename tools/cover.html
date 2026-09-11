@@ -1,0 +1,73 @@
+<!-- itch.io のカバー画像（630x500）。tools/cover_shot.mjs が ?lang=ja|en で撮る -->
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@900&display=swap">
+<style>
+  html,body{margin:0;width:630px;height:500px;overflow:hidden;background:#0b0d16}
+  .cv{position:relative;width:630px;height:500px;overflow:hidden;
+    background:url(../assets/backgrounds/title-bg.png) center 30%/cover}
+
+  /* 後列：最終エリアの3体を小さく、暗めに */
+  .boss{position:absolute;filter:brightness(.82) saturate(1.1) drop-shadow(0 0 12px #8a5cffaa)}
+  .boss img{display:block;width:100%}
+  .b1{left:-8px;top:120px;width:215px}
+  .b3{right:-10px;top:112px;width:225px}
+  .b2{left:50%;transform:translateX(-50%);top:126px;width:250px}
+  /* アストラリスの全身絵だけ背景が透過していないので、周りを溶かす */
+  .b3 img{-webkit-mask-image:radial-gradient(ellipse 42% 50% at 50% 50%,#000 62%,#0000 100%);
+    mask-image:radial-gradient(ellipse 42% 50% at 50% 50%,#000 62%,#0000 100%)}
+  .haze{position:absolute;inset:0;background:linear-gradient(#0b0d1600 30%,#1a1030aa 60%,#0b0d16 100%)}
+
+  /* 前列 */
+  .glow{position:absolute;bottom:-40px;width:280px;height:280px;border-radius:50%;filter:blur(30px);opacity:.55}
+  .ch{position:absolute;bottom:0;filter:drop-shadow(0 6px 14px #000c)}
+  .ch img{display:block;width:100%}
+  .f{left:-22px;width:262px}  .gf{left:-10px;background:#ff5a1f}
+  .g{right:-22px;width:262px} .gg{right:-10px;background:#3ccf4e}
+  .w{left:50%;transform:translateX(-50%);width:288px;z-index:2} .gw{left:175px;background:#2d8cff;opacity:.6}
+  /* 立ち絵は正方形の枠で切れているので、両脇の縦の切り口をぼかす */
+  .w img{-webkit-mask-image:linear-gradient(90deg,#0000 0,#000 14%,#000 86%,#0000 100%);
+    mask-image:linear-gradient(90deg,#0000 0,#000 14%,#000 86%,#0000 100%)}
+
+  .logo{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:410px;z-index:3;
+    filter:drop-shadow(0 4px 10px #000d)}
+  .tag{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:3;white-space:nowrap;
+    font:900 17px/1 "Zen Maru Gothic","Hiragino Sans","Yu Gothic",sans-serif;letter-spacing:.08em;color:#fff4d6;
+    padding:6px 15px;border-radius:999px;background:#140f0acc;border:1.5px solid #e6c070;box-shadow:0 3px 10px #000a}
+  :lang(en) .tag{letter-spacing:.14em;font-size:15px}
+
+  /* ?wide=1：Devlog・SNS 用の横長（1280x720）。キャラを横に広げ、ロゴを左上に */
+  html.wide,html.wide body{width:1280px;height:720px}
+  .wide .cv{width:1280px;height:720px}
+  .wide .logo{left:40px;top:40px;transform:none;width:560px}
+  .wide .tag{left:170px;top:270px;bottom:auto;transform:none;font-size:22px;padding:9px 20px}
+  .wide .b1{left:600px;top:40px;width:300px}
+  .wide .b2{left:auto;right:170px;top:30px;transform:none;width:320px}
+  .wide .b3{right:-30px;top:60px;width:300px}
+  .wide .f{left:300px;width:420px}
+  .wide .w{left:auto;right:300px;transform:none;width:470px}
+  .wide .g{right:-20px;width:420px}
+  .wide .gf{left:330px;width:420px;height:420px}
+  .wide .gw{left:auto;right:320px;width:420px;height:420px}
+  .wide .gg{right:0;width:420px;height:420px}
+</style>
+<div class="cv">
+  <div class="boss b1"><img src="../assets/enemies/archive/area-08-01-messenger-full.png"></div>
+  <div class="boss b3"><img src="../assets/enemies/archive/area-08-03-astralis-full.png"></div>
+  <div class="boss b2"><img src="../assets/enemies/archive/area-08-02-queen-full.png"></div>
+  <div class="haze"></div>
+  <div class="glow gf"></div><div class="glow gg"></div><div class="glow gw"></div>
+  <div class="ch f"><img src="../assets/enemies/area-02-01-pirika.png"></div>
+  <div class="ch g"><img src="../assets/enemies/area-01-01-toto.png"></div>
+  <div class="ch w"><img src="../assets/enemies/area-03-01-mina.png"></div>
+  <img class="logo" id="logo" src="../assets/ui/title-logo.svg">
+  <div class="tag" id="tag">カードバトルRPG</div>
+</div>
+<script>
+  const en = new URLSearchParams(location.search).get('lang') === 'en';
+  document.documentElement.lang = en ? 'en' : 'ja';
+  if (new URLSearchParams(location.search).get('wide')) document.documentElement.classList.add('wide');
+  if (en) {
+    document.getElementById('logo').src = '../assets/ui/title-logo-en.svg';
+    document.getElementById('tag').textContent = 'CARD BATTLE RPG';
+  }
+</script>

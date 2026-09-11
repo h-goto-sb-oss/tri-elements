@@ -708,6 +708,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   color:var(--text);font:12px/1.4 ui-monospace,Consolas,monospace;padding:8px 10px;resize:vertical;word-break:break-all}
 .codebox:focus{outline:none;border-color:var(--gold)}
 .setnote{font-size:12.5px;min-height:0;line-height:1.6}
+.checkrow{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkrow input{width:18px;height:18px;flex:none}
 .avgrid{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;max-width:740px}
 .avpick{background:#0f1620;border:2px solid var(--line);border-radius:12px;padding:6px;width:112px}
 .avpick.on{border-color:var(--gold);box-shadow:0 0 14px #f2c15b55}

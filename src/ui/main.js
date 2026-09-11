@@ -29,6 +29,7 @@ import * as Fx from './fx.js';
 import { L, kwb, lang, setLang, storedLang, guessLang } from '../i18n/lang.js';
 import '../i18n/data.js';
 import { EN_SETS } from '../i18n/en_game.js';
+import { track, statsEnabled, setStatsEnabled, firstVisit } from '../game/telemetry.js';
 
 // 言語は最初に決める（カード名などのデータもここで差し替わる）。
 // 一度も選んだことが無ければ、端末の言語で仮に表示して選択画面を出す。
@@ -74,7 +75,29 @@ const app = {
   audioInfo: null,
   playLog: [],          // 直近に召喚・発動されたカード（最大2件、新しい順）
   langChosen: LANG_CHOSEN,
+  battleT0: 0,          // 戦闘を始めた時刻（匿名データの「何秒かかったか」用）
 };
+
+// 匿名の遊び方データ：開いたこと。p＝突破済みの敵の数（どこまで進んだ人が戻ってきたか）
+track('open', {
+  l: lang(), lc: LANG_CHOSEN ? 1 : 0, n: firstVisit ? 1 : 0,
+  m: window.matchMedia?.('(pointer: coarse)').matches ? 1 : 0,
+  p: Object.keys(app.save.cleared || {}).length,
+});
+// 閉じた・裏に回した時点。最後に届いた時刻が、その回に遊んだ長さになる
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') track('hide', { sc: app.screen });
+});
+/** 戦闘の結果を送る。r は w（勝ち）／l（負け）／q（投了） */
+function trackBattleEnd(r, extra = {}) {
+  const g = app.game;
+  track('end', {
+    k: app.enemyKey, f: app.free ? 1 : 0, df: app.free ? app.free.difficulty : undefined,
+    r, tn: g ? g.turn : undefined,
+    sec: app.battleT0 ? Math.round((Date.now() - app.battleT0) / 1000) : undefined,
+    ...extra,
+  });
+}
 
 /** スマホ幅かどうか。下メニューを出すか等の判断に使う */
 function isNarrow() { return window.innerWidth <= 720; }
@@ -699,6 +722,12 @@ function renderSettings() {
       <textarea class="codebox" data-codein placeholder="${L('ここに引き継ぎコードを貼り付け', 'Paste your transfer code here')}">${esc(app.codeIn || '')}</textarea>
       <button class="btn danger" data-loadcode>${L('読み込む', 'Load')}</button>
       <div class="hint setnote">${L('今のデータは上書きされます。', 'Your current save will be overwritten.')}</div>
+    </div>
+    <div class="setrow col">
+      <label class="checkrow"><input type="checkbox" data-stats ${statsEnabled() ? 'checked' : ''}>
+        ${L('遊び方の統計を送る（匿名）', 'Send anonymous play statistics')}</label>
+      <div class="hint setnote">${L('どのライバルで負けたか、どこまで進んだか、何分遊んだかだけを送り、難しさの調整に使います。名前・デッキ・セーブの中身は送りません。',
+        'Only which rivals you lost to, how far you got, and how long you played — used to tune the difficulty. Your name, decks and save data are never sent.')}</div>
     </div>`;
 
   const panels = { player, sound, language, data };
@@ -1519,6 +1548,8 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   });
   app.game.players[1].life = (enemy.life || 20) + (diff ? diff.life : 0);
   app.enemyLifeMax = app.game.players[1].life;
+  app.battleT0 = Date.now();
+  track('start', { k: app.enemyKey, f: free ? 1 : 0, df: free ? app.freeDiff : undefined });
   lastBannerTurn = 0;
   app.phase = 'mulligan';
   app.screen = 'battle';
@@ -1763,7 +1794,7 @@ function finishGame() {
   const g = app.game;
   if (!g || g.winner === null || app.result) return;
   const win = g.winner === 0;
-  let reward = null, unlocked = null, dust = 0;
+  let reward = null, unlocked = null, dust = 0, firstClear = false;
 
   if (app.free) {
     // フリーバトル: 戦績は別枠、勝てば星屑
@@ -1791,6 +1822,7 @@ function finishGame() {
     } else st.l++;
     app.save.freeStats[key] = st;
     writeSave(app.save);
+    trackBattleEnd(win ? 'w' : 'l', { cc: charCard ? 1 : undefined });
     app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true, charCard, charLeft };
     Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
     return render();
@@ -1803,6 +1835,7 @@ function finishGame() {
     const before = app.save.clearCount[key] || 0;
     app.save.clearCount[key] = before + 1;
     const first = !app.save.cleared[key];
+    firstClear = first;
     app.save.cleared[key] = true;
     const [areaId, idx] = key.split(':');
     if (before < REWARD_LIMIT) {
@@ -1820,6 +1853,7 @@ function finishGame() {
     }
   } else app.save.stats.losses++;
   writeSave(app.save);
+  trackBattleEnd(win ? 'w' : 'l', { fc: firstClear ? 1 : undefined });
   app.result = { win, reason: g.reason, reward, unlocked };
   Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
   render();
@@ -2173,6 +2207,7 @@ function handleClick(ev) {
     app.save.stardust -= item.cost;
     app.packResult = openPack(item.pack);
     addCards(app.save, app.packResult); writeSave(app.save);
+    track('pack', { p: item.pack, shop: 1 });
     return render();
   }
   if (hit('[data-openpack]')) {
@@ -2181,6 +2216,7 @@ function handleClick(ev) {
     app.save.packs[k]--;
     app.packResult = openPack(k);
     addCards(app.save, app.packResult); writeSave(app.save);
+    track('pack', { p: k });
     return render();
   }
   if (hit('[data-closepack]')) { app.packResult = null; app.packRevealing = false; app.packRevealed = 0; return render(); }
@@ -2192,7 +2228,11 @@ function handleClick(ev) {
 
   // --- 言語 ---
   const pl = hit('[data-picklang]');
-  if (pl) { setLang(pl.dataset.picklang); applyDocLang(); renameDefaultDecks(); app.langChosen = true; return render(); }
+  if (pl) {
+    setLang(pl.dataset.picklang); applyDocLang(); renameDefaultDecks(); app.langChosen = true;
+    track('lang', { l: pl.dataset.picklang });
+    return render();
+  }
   const sl = hit('[data-setlang]');
   if (sl) { setLang(sl.dataset.setlang); applyDocLang(); renameDefaultDecks(); return render(); }
 
@@ -2237,6 +2277,11 @@ function handleClick(ev) {
 
   // --- 設定 ---
   if (t.matches('[data-mute]')) { Audio.setMuted(t.checked); return; }
+  if (t.matches('[data-stats]')) {
+    if (!t.checked) track('optout');
+    setStatsEnabled(t.checked);
+    return;
+  }
   const st = hit('[data-settab]');
   if (st) { app.settingsTab = st.dataset.settab; return render(); }
   const av = hit('[data-avatar]');
@@ -2345,6 +2390,7 @@ function handleClick(ev) {
     }
     app.quitArm = false;
     clearTimeout(app.aiTimer);
+    trackBattleEnd('q');
     return go(app.free ? 'free' : 'adventure');
   }
   const gv = hit('[data-grave]');
@@ -2500,6 +2546,11 @@ document.addEventListener('change', ev => {
   if (ev.target.matches('[data-bgmvol]')) Audio.setBgmVolume(ev.target.value / 100);
   if (ev.target.matches('[data-sevol]')) Audio.setSeVolume(ev.target.value / 100);
   if (ev.target.matches('[data-mute]')) Audio.setMuted(ev.target.checked);
+  if (ev.target.matches('[data-stats]')) {
+    // 止める直前の1回だけは送る（何人が止めたかは知っておきたい）。止めたあとは何も送らない
+    if (!ev.target.checked) track('optout');
+    setStatsEnabled(ev.target.checked);
+  }
 });
 document.addEventListener('contextmenu', ev => {
   if (app.screen !== 'battle') return;
