@@ -131,9 +131,10 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .battle{display:flex;flex-direction:column;width:1440px;height:900px;padding:4px 10px 6px;gap:4px;
   position:absolute;top:0;left:0;transform-origin:top left;isolation:isolate}
 .battle::before{content:'';position:absolute;inset:0;z-index:-2;background-image:var(--bgimg);
-  background-size:cover;background-position:center 42%;opacity:.62}
+  background-size:cover;background-position:center 42%}
+/* 暗幕は上下の帯（相手の欄・手札）だけ濃くして、盤面は背景が見えるくらいに薄く */
 .battle::after{content:'';position:absolute;inset:0;z-index:-1;
-  background:linear-gradient(180deg,#050810e8 0%,#05081088 22%,#05081066 50%,#05081088 78%,#050810ee 100%)}
+  background:linear-gradient(180deg,#050810aa 0%,#05081033 22%,#05081011 50%,#05081033 78%,#050810cc 100%)}
 .bar{display:flex;align-items:center;gap:14px;padding:4px 6px;min-height:44px;flex:none}
 .battle-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:none}
 .enemybar{position:relative;min-height:100px;padding:2px 8px;gap:16px;flex:none}
