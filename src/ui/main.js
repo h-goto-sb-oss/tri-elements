@@ -2750,10 +2750,10 @@ function handleClick(ev) {
 
   if (hit('[data-cancel]')) { app.sel = null; app.hint = ''; return render(); }
   if (hit('[data-forge]')) return actWithFx(0, { type: 'forge' }).then(afterAction);
-  if (hit('[data-endturn]')) { app.sel = null; applyAction(g, 0, { type: 'end' }); return afterAction(); }
+  if (hit('[data-endturn]')) { app.sel = null; app.hint = ''; applyAction(g, 0, { type: 'end' }); return afterAction(); }
   if (hit('[data-attackface]') && app.sel) {
     const act = { type: 'attack', slot: app.sel.slot, target: 'face' };
-    app.sel = null;
+    app.sel = null; app.hint = '';   // 残すと次のターンまで「相手を選んでください」が出たままになる
     return actWithFx(0, act).then(afterAction);
   }
 
