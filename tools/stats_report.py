@@ -84,6 +84,48 @@ def pack_list(ids):
     return '.'.join(f'{k}-{v}' if v > 1 else k for k, v in sorted(c.items()))
 
 
+# ============================================================
+# グラフ（画像ではなくHTMLの箱で描く。スマホで拡大しても文字がつぶれない）
+# ============================================================
+E = html.escape
+C_NEW, C_BACK, C_BATTLE = '#d9b25f', '#6f86a6', '#8fb4d9'
+C_EL = {'f': '#e0714f', 'w': '#4f93e0', 'g': '#5bb56c'}
+
+
+def vchart(cols, height=120, show_num=True):
+    """縦棒。cols = [(ラベル, [(値, 色), ...積み上げ], ラベルを出すか)]"""
+    mx = max((sum(v for v, _ in segs) for _, segs, _ in cols), default=0) or 1
+    out = []
+    for label, segs, show in cols:
+        tot = sum(v for v, _ in segs)
+        parts = ''.join(f'<i style="height:{v / mx * 86:.1f}%;background:{c}"></i>' for v, c in segs if v)
+        numtag = f'<b>{tot}</b>' if (show_num and tot) else ''
+        out.append(f'<div class="col"><div class="stk">{parts}{numtag}</div>'
+                   f'<span class="lab">{E(label) if show else ""}</span></div>')
+    return f'<div class="vchart" style="--h:{height}px">{"".join(out)}</div>'
+
+
+def legend(items):
+    return '<div class="legend">' + ''.join(f'<span><i style="background:{c}"></i>{E(t)}</span>' for t, c in items) + '</div>'
+
+
+def split_bar(title, counter, colors):
+    tot = sum(counter.values())
+    if not tot:
+        return ''
+    items = counter.most_common()
+    segs = ''.join(f'<i style="width:{v / tot * 100:.2f}%;background:{colors[i % len(colors)]}"></i>' for i, (_, v) in enumerate(items))
+    leg = legend([(f'{k} {v / tot * 100:.0f}%（{v}）', colors[i % len(colors)]) for i, (k, v) in enumerate(items)])
+    return f'<div class="split"><div class="st">{E(title)}</div><div class="sbar">{segs}</div>{leg}</div>'
+
+
+def element_of(cid):
+    base = cid.split('_', 1)[1] if '_' in cid else cid
+    if base[:1] == 's' and len(base) > 1:
+        base = base[1:]
+    return C_EL.get(base[:1], '#8f97a3')
+
+
 def num(v, default=None):
     try:
         return int(v)
@@ -103,7 +145,7 @@ def main():
     # ---- 日ごと ----
     by_day = defaultdict(lambda: {'u': set(), 'new': set(), 's': set(), 'battles': 0, 'plays': 0})
     for q in ev:
-        day = q['_ts'].strftime('%m/%d')
+        day = q['_ts'].date()
         dd = by_day[day]
         dd['u'].add(q['u']); dd['s'].add((q['u'], q.get('s')))
         if q['e'] == 'open' and q.get('n') == '1':
@@ -143,9 +185,9 @@ def main():
         if k not in st:
             continue
         s = st[k]
-        if q['e'] == 'start':
-            s['try'].add(q['u'])
-        else:
+        # 結果だけ届いた（開始の送信が落ちた）対戦も「挑んだ」に入れる。突破＞挑んだ にならないように
+        s['try'].add(q['u'])
+        if q['e'] == 'end':
             r = q.get('r')
             if r in ('w', 'l', 'q'):
                 s[r] += 1
@@ -196,44 +238,93 @@ def main():
     optout = len({q['u'] for q in ev if q['e'] == 'optout'})
 
     # ================= HTML =================
-    now = datetime.now(JST).strftime('%Y/%m/%d %H:%M')
-    e = html.escape
+    now = datetime.now(JST)
+    e = E
 
+    # ---- 日ごと（最初の日から今日まで、空いた日も0で並べる。最大30日）----
+    days = []
+    if by_day:
+        d0 = max(min(by_day), now.date() - timedelta(days=29))
+        d = d0
+        while d <= now.date():
+            days.append(d)
+            d += timedelta(days=1)
+    step = max(1, -(-len(days) // 7))
+    def show(i):
+        return i % step == 0 or i == len(days) - 1
+    cols_players, cols_battles = [], []
+    for i, d in enumerate(days):
+        x = by_day.get(d)
+        new = len(x['new']) if x else 0
+        allu = len(x['u']) if x else 0
+        lab = f'{d.month}/{d.day}'
+        cols_players.append((lab, [(new, C_NEW), (max(0, allu - new), C_BACK)], show(i)))
+        cols_battles.append((lab, [(x['battles'] if x else 0, C_BATTLE)], show(i)))
     rows_day = ''.join(
-        f'<tr><td>{d}</td><td>{len(x["u"])}</td><td>{len(x["new"])}</td><td>{len(x["s"])}</td><td>{x["battles"]}</td></tr>'
+        f'<tr><td>{d.month}/{d.day}</td><td>{len(x["u"])}</td><td>{len(x["new"])}</td><td>{len(x["s"])}</td><td>{x["battles"]}</td></tr>'
         for d, x in sorted(by_day.items()))
 
-    rows_stage = ''
-    for k, label, name in STAGES:
+    # ---- 1回の長さ ----
+    buckets = [(0, 1, '〜1分'), (1, 3, '1〜3'), (3, 5, '3〜5'), (5, 10, '5〜10'), (10, 20, '10〜20'), (20, 30, '20〜30'), (30, 1e9, '30分〜')]
+    cols_len = [(lab, [(sum(1 for l in lengths if a * 60 <= l < b * 60), C_BACK)], True) for a, b, lab in buckets]
+
+    # ---- ストーリーの進み具合（横棒：挑んだ・突破を重ねる）----
+    max_try = max((len(s['try']) for s in st.values()), default=0) or 1
+    last_i = max((i for i, (k, _, _) in enumerate(STAGES) if st[k]['try']), default=-1)
+    funnel, rows_stage = '', ''
+    for i, (k, label, name) in enumerate(STAGES):
+        if i > last_i:
+            break
         s = st[k]
-        if not s['try'] and not (s['w'] + s['l'] + s['q']):
-            continue
         n = s['w'] + s['l'] + s['q']
+        stuck_n = stuck.get(k, 0)
+        hot = stuck_n >= 3 and stuck_n >= len(s['try']) * 0.3
+        funnel += (f'<div class="hrow{" hot" if hot else ""}"><div class="hl"><b>{e(name)}</b><small>{e(label)}</small></div>'
+                   f'<div class="track"><i class="t" style="width:{len(s["try"]) / max_try * 100:.1f}%"></i>'
+                   f'<i class="c" style="width:{len(s["clear"]) / max_try * 100:.1f}%"></i></div>'
+                   f'<div class="hr">{len(s["clear"])}<span>/{len(s["try"])}</span>'
+                   f'{f"<small>止まり {stuck_n}</small>" if stuck_n else ""}</div></div>')
         wr = f"{s['w'] / n * 100:.0f}%" if n else '—'
         mt = f"{statistics.median(s['turns']):.0f}" if s['turns'] else '—'
-        stuck_n = stuck.get(k, 0)
-        warn = ' class="warn"' if stuck_n >= 3 and stuck_n >= len(s['try']) * 0.3 else ''
-        rows_stage += (f'<tr{warn}><td><b>{e(name)}</b><small>{e(label)}</small></td>'
+        rows_stage += (f'<tr{" class=warn" if hot else ""}><td><b>{e(name)}</b><small>{e(label)}</small></td>'
                        f'<td>{len(s["try"])}</td><td>{len(s["clear"])}</td>'
                        f'<td>{wr}<small>{s["w"]}勝{s["l"]}敗{s["q"]}投</small></td><td>{mt}</td><td>{stuck_n or ""}</td></tr>')
-
-    nb = len(deck_battles)
-    rows_card = ''
-    for cid, n in use.most_common(30):
-        wr = use_w[cid] / n * 100 if n else 0
-        rows_card += (f'<tr><td><b>{e(cn.get(cid, cid))}</b><small>{e(cid)}</small></td>'
-                      f'<td>{n / nb * 100:.0f}%<small>{n}戦</small></td><td>{wr:.0f}%</td></tr>')
-    starter_line = (f'最初のデッキのまま戦っている端末：{starter_users} / {len(last_deck)}'
-                    if last_deck else '')
 
     rows_free = ''.join(
         f'<tr><td>{DIFF.get(d, d)}</td><td>{len(x["u"])}</td><td>{x.get("w", 0)}</td><td>{x.get("l", 0)}</td><td>{x.get("q", 0)}</td></tr>'
         for d, x in sorted(free.items()))
 
-    def split(c):
-        tot = sum(c.values()) or 1
-        return '　'.join(f'{e(str(k))} {v}人（{v / tot * 100:.0f}%）' for k, v in c.most_common())
+    # ---- カード（絵つきのタイル。並べ替えはタブで切り替え）----
+    nb = len(deck_battles)
+    art_dir = os.path.join(os.path.dirname(OUT), 'art')
+    def tile(cid, sub):
+        img = f'<img src="art/{cid}.jpg" loading="lazy" alt="">' if os.path.exists(os.path.join(art_dir, cid + '.jpg')) else '<span class="noimg"></span>'
+        n = use.get(cid, 0)
+        pct = n / nb * 100 if nb else 0
+        return (f'<div class="ct" style="--el:{element_of(cid)}">{img}<div class="cn">{e(cn.get(cid, cid))}</div>'
+                f'<div class="cb"><i style="width:{pct:.1f}%"></i></div><div class="cv">{sub}</div></div>')
+    def wr_of(cid):
+        return use_w[cid] / use[cid] * 100 if use.get(cid) else 0
+    LIMIT = 20
+    used = [cid for cid, _ in use.most_common()]
+    g_use = ''.join(tile(c, f'採用 {use[c] / nb * 100:.0f}%<br>勝率 {wr_of(c):.0f}%') for c in used[:LIMIT])
+    g_use_more = ''.join(tile(c, f'採用 {use[c] / nb * 100:.0f}%<br>勝率 {wr_of(c):.0f}%') for c in used[LIMIT:])
+    strong = sorted((c for c in used if use[c] >= 5), key=lambda c: (-wr_of(c), -use[c]))
+    g_win = ''.join(tile(c, f'勝率 {wr_of(c):.0f}%<br>{use[c]}戦') for c in strong[:LIMIT])
+    unused = [c for c in cn if c not in use]
+    g_unused = ''.join(tile(c, '0戦') for c in unused[:LIMIT])
+    more_unused = len(unused) - LIMIT
+    cards_html = (f"""<div class="ctabs">
+<input type="radio" name="cs" id="cs1" checked><label for="cs1">採用率順</label>
+<input type="radio" name="cs" id="cs2"><label for="cs2">勝率順</label>
+<input type="radio" name="cs" id="cs3"><label for="cs3">未使用</label>
+<div class="pane p1"><div class="cgrid">{g_use}</div>{f'<details><summary>残り {len(used) - LIMIT} 枚も見る</summary><div class="cgrid">{g_use_more}</div></details>' if g_use_more else ''}</div>
+<div class="pane p2">{f'<div class="cgrid">{g_win}</div>' if g_win else '<p class="note">5戦以上たまったカードがまだありません</p>'}</div>
+<div class="pane p3"><p class="note">一度もデッキに入っていないカード（全{len(unused)}枚。隠しカードや手に入れにくいカードも含む）</p><div class="cgrid">{g_unused}</div>{f'<p class="note">ほか {more_unused} 枚</p>' if more_unused > 0 else ''}</div>
+</div>""" if nb else '<p class="note">まだありません</p>')
+    starter_line = (f'最初のデッキのまま戦っている端末：<b>{starter_users}</b> / {len(last_deck)}' if last_deck else '')
 
+    PAL = ['#d9b25f', '#6f86a6', '#5bb56c', '#e0714f', '#a88bd6']
     doc = f"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>TRI-ELEMENTS 遊ばれ方</title>
@@ -241,21 +332,55 @@ def main():
 :root{{--bg:#12151c;--card:#1b2029;--line:#2c3440;--ink:#e8e4da;--sub:#9aa3b0;--gold:#d9b25f;--warn:#e0706a}}
 body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Hiragino Sans","Yu Gothic",sans-serif}}
 main{{max-width:760px;margin:0 auto;padding:18px 14px 40px}}
-h1{{font-size:20px;color:var(--gold);margin:0 0 2px}} h2{{font-size:16px;margin:26px 0 8px;color:var(--gold)}}
-.sub{{color:var(--sub);font-size:12.5px}}
+h1{{font-size:20px;color:var(--gold);margin:0 0 2px}} h2{{font-size:16px;margin:28px 0 10px;color:var(--gold)}}
+.sub{{color:var(--sub);font-size:12.5px}} p.note{{color:var(--sub);font-size:12.5px;margin:4px 0 8px}}
 .kpi{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}}
 .kpi div{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}}
 .kpi b{{display:block;font-size:24px;font-variant-numeric:tabular-nums}} .kpi span{{color:var(--sub);font-size:12.5px}}
-.wrap{{overflow-x:auto}} table{{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}}
-th,td{{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:top}}
-th{{color:var(--sub);font-weight:600;font-size:12px}} td small{{display:block;color:var(--sub);font-size:11.5px}}
-tr.warn td{{background:#3a1f22}} tr.warn td:last-child{{color:var(--warn);font-weight:700}}
-.bar{{display:inline-block;width:60px;height:6px;background:#2a303a;border-radius:3px;vertical-align:middle;margin-left:4px}}
-.bar i{{display:block;height:100%;border-radius:3px}}
-p.note{{color:var(--sub);font-size:12.5px}}
+.box{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 12px 8px}}
+.box + .box{{margin-top:10px}} .box h3{{margin:0 0 8px;font-size:13.5px;color:var(--sub);font-weight:600}}
+/* 縦棒 */
+.vchart{{display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid var(--line)}}
+.vchart .col{{flex:1;min-width:0;display:flex;flex-direction:column}}
+.vchart .stk{{height:var(--h);display:flex;flex-direction:column-reverse}}
+.vchart .stk i{{display:block;border-radius:2px 2px 0 0;min-height:2px}}
+.vchart .stk b{{font-size:10.5px;font-weight:600;text-align:center;color:var(--ink);line-height:14px}}
+.vchart .lab{{height:16px;font-size:10.5px;color:var(--sub);text-align:center;white-space:nowrap;overflow:visible}}
+.legend{{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--sub);margin-top:6px}}
+.legend i{{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}}
+/* 割合の帯 */
+.split + .split{{margin-top:10px}} .split .st{{font-size:12.5px;color:var(--sub)}}
+.sbar{{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#2a303a;margin-top:3px}} .sbar i{{display:block}}
+/* 進み具合の横棒 */
+.hrow{{display:grid;grid-template-columns:minmax(0,8.8em) 1fr 3.6em;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}}
+.hrow .hl b{{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.hrow .hl small{{display:block;font-size:10.5px;color:var(--sub)}}
+.track{{position:relative;height:12px;background:#232933;border-radius:6px}}
+.track i{{position:absolute;left:0;top:0;bottom:0;border-radius:6px}} .track .t{{background:#4b5b72}} .track .c{{background:var(--gold)}}
+.hrow .hr{{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}} .hrow .hr span{{color:var(--sub);font-weight:400;font-size:12px}}
+.hrow .hr small{{display:block;font-size:10.5px;color:var(--warn);font-weight:600}}
+.hrow.hot{{background:#3a1f22}} .hrow.hot .track .c{{background:var(--warn)}}
+/* カードのタイル */
+.ctabs > input{{position:absolute;opacity:0;pointer-events:none}}
+.ctabs > label{{display:inline-block;padding:6px 12px;margin:0 6px 10px 0;border:1px solid var(--line);border-radius:999px;font-size:13px;cursor:pointer;color:var(--sub)}}
+#cs1:checked + label,#cs2:checked + label,#cs3:checked + label{{background:var(--gold);color:#1a1408;border-color:var(--gold);font-weight:700}}
+.ctabs > input:focus-visible + label{{outline:2px solid var(--gold);outline-offset:2px}}
+.pane{{display:none}} #cs1:checked ~ .p1,#cs2:checked ~ .p2,#cs3:checked ~ .p3{{display:block}}
+.cgrid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}}
+.ct{{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--el);border-radius:7px;padding:4px;min-width:0}}
+.ct img,.ct .noimg{{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;background:#232933}}
+.ct .cn{{font-size:11px;font-weight:700;line-height:1.3;margin-top:4px;height:2.6em;overflow:hidden}}
+.ct .cb{{height:5px;background:#232933;border-radius:3px;margin:3px 0}} .ct .cb i{{display:block;height:100%;background:var(--el);border-radius:3px}}
+.ct .cv{{font-size:10.5px;color:var(--sub);line-height:1.35;font-variant-numeric:tabular-nums}}
+details{{margin-top:8px}} summary{{cursor:pointer;color:var(--sub);font-size:13px;padding:4px 0}}
+/* 表（「数字で見る」の中） */
+.wrap{{overflow-x:auto}} table{{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}}
+th,td{{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:top}}
+th{{color:var(--sub);font-weight:600;font-size:12px}} td small{{display:block;color:var(--sub);font-size:11px}}
+tr.warn td{{background:#3a1f22}}
 </style></head><body><main>
 <h1>TRI-ELEMENTS の遊ばれ方</h1>
-<div class="sub">{now} 時点 ／ 匿名データ（名前・セーブの中身は含まない）／ 20分ごとに更新</div>
+<div class="sub">{now.strftime('%Y/%m/%d %H:%M')} 時点 ／ 匿名データ（名前・セーブの中身は含まない）／ 20分ごとに更新</div>
 <div class="kpi">
  <div><b>{len(players)}</b><span>遊んだ端末</span></div>
  <div><b>{len(sessions)}</b><span>起動した回数</span></div>
@@ -265,23 +390,31 @@ p.note{{color:var(--sub);font-size:12.5px}}
  <div><b>{optout}</b><span>送信を止めた端末</span></div>
 </div>
 
-<h2>どこで遊ばれているか</h2>
-<p>{split(where)}<br>{split(dev)}<br>{split(lng)}</p>
-
 <h2>日ごと</h2>
-<div class="wrap"><table><tr><th>日</th><th>端末</th><th>はじめて</th><th>起動</th><th>対戦</th></tr>{rows_day}</table></div>
+<div class="box"><h3>遊んだ端末</h3>{vchart(cols_players) if days else '<p class="note">まだありません</p>'}
+{legend([('はじめて', C_NEW), ('また来た', C_BACK)])}</div>
+<div class="box"><h3>対戦した回数</h3>{vchart(cols_battles) if days else '<p class="note">まだありません</p>'}</div>
+<details><summary>数字で見る</summary><div class="wrap"><table><tr><th>日</th><th>端末</th><th>はじめて</th><th>起動</th><th>対戦</th></tr>{rows_day}</table></div></details>
 
-<h2>ストーリー：ライバルごと</h2>
-<p class="note">挑んだ＝戦った端末の数 ／ 突破＝一度でも勝った端末 ／ 止まっている＝ここで勝てず、その先に進んでいない端末（赤は3人以上かつ挑んだ人の3割以上）</p>
-<div class="wrap"><table><tr><th>ライバル</th><th>挑んだ</th><th>突破</th><th>勝率</th><th>ターン</th><th>止まっている</th></tr>{rows_stage or '<tr><td colspan="6">まだありません</td></tr>'}</table></div>
+<h2>1回に遊んだ長さ</h2>
+<div class="box">{vchart(cols_len, 100) if lengths else '<p class="note">まだありません</p>'}</div>
+
+<h2>どこで遊ばれているか</h2>
+<div class="box">{split_bar('場所', where, PAL)}{split_bar('端末', dev, PAL)}{split_bar('言語', lng, PAL)}</div>
+
+<h2>ストーリーの進み具合</h2>
+<p class="note">金＝突破した端末、灰＝挑んだ端末。数字は「突破／挑んだ」。
+赤い行は「ここで勝てずに先へ進んでいない端末」が3人以上かつ3割以上（難しすぎるかも）</p>
+<div class="box">{funnel or '<p class="note">まだありません</p>'}</div>
+<details><summary>数字で見る（勝率・ターン数）</summary><div class="wrap"><table><tr><th>ライバル</th><th>挑んだ</th><th>突破</th><th>勝率</th><th>ターン</th><th>止まり</th></tr>{rows_stage}</table></div></details>
 
 <h2>フリーバトル</h2>
 <div class="wrap"><table><tr><th>難易度</th><th>端末</th><th>勝ち</th><th>負け</th><th>投了</th></tr>{rows_free or '<tr><td colspan="5">まだありません</td></tr>'}</table></div>
 
-<h2>デッキに入っているカード（採用率の高い順・30枚まで）</h2>
-<p class="note">採用率＝その対戦のデッキに入っていた割合（全{nb}戦）／勝率＝入っていた対戦で勝った割合（投了は負け扱い）。
+<h2>カード</h2>
+<p class="note">採用＝対戦のデッキに入っていた割合（全{nb}戦）／勝率＝入っていた対戦で勝った割合（投了は負け）。
 戦う相手の強さが混ざるので、勝率は数十戦たまってから見る。<br>{starter_line}</p>
-<div class="wrap"><table><tr><th>カード</th><th>採用率</th><th>勝率</th></tr>{rows_card or '<tr><td colspan="3">まだありません</td></tr>'}</table></div>
+{cards_html}
 
 <h2>開けたパック</h2>
 <p>{'　'.join(f'{e(str(k))} {v}' for k, v in packs.most_common()) or 'まだありません'}</p>
