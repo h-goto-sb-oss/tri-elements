@@ -1791,7 +1791,7 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   app.enemy = enemy;
   app.enemyKey = `${area.id}:${enemyIndex}`;
   app.result = null; app.sel = null; app.popup = null; app.hint = ''; app.detail = null;
-  app.tutElementReady = false; clearFeed();
+  app.tutElementReady = false; app.feedLogHinted = false; clearFeed();
   const seed = (Math.random() * 1e9) | 0;
   // フリーバトルの「極」では、そのキャラ自身のカードを1枚だけ持ってくる。
   // 狙っているカードを手に入れる前に見られる、という導線でもある。
@@ -1885,7 +1885,7 @@ function clearFeed() {
 }
 
 /** 攻撃1回ぶんの知らせ。atk/def は攻撃の前に控えた {id, el, mode} */
-function attackFeedHtml(g, pi, action, atk, def, entries) {
+function attackFeedHtml(g, pi, action, atk, def, entries, logHint = false) {
   const you = pi === 1;   // 相手の攻撃＝こちらが受けた側
   const target = action.target === 'face'
     ? (you ? L('あなた', 'you') : esc(g.players[1].name))
@@ -1915,6 +1915,8 @@ function attackFeedHtml(g, pi, action, atk, def, entries) {
     }
   }
   if (out.length) lines.push(out.join(L('／', ' · ')));
+  // 1回目だけ：この知らせは最初の対戦だけなので、あとで振り返れる場所を教えておく
+  if (logHint) lines.push(`<small class="bf-hint">${L('対戦の流れは、画面上の「ログ」でいつでも見られます', 'You can always see what happened in the Log (top of the screen)')}</small>`);
   return `<div class="bf-card ${you ? 'foe' : ''}">${lines.map(x => `<div>${x}</div>`).join('')}</div>`;
 }
 
@@ -2026,11 +2028,15 @@ async function runActionFx(g, pi, action) {
     if (action.type === 'summon') tutDone('play');
     if (action.type === 'attack') tutDone('attack');
   }
-  // 攻撃の知らせ：相手の攻撃は毎回。自分の攻撃は、思いどおりにいかなかったとき（返り討ち・耐えられた）だけ
-  if (ok && action.type === 'attack' && atkInfo) {
+  // 攻撃の知らせ：最初の対戦だけ（スマホでは盤面に重なって見づらく、その間も相手は動き続けるため）。
+  // 相手の攻撃は毎回、自分の攻撃は思いどおりにいかなかったとき（返り討ち・耐えられた）だけ
+  if (ok && action.type === 'attack' && atkInfo && isFirstTimer()) {
     const surprising = entries.some(e => (e.kind === 'destroy' && e.p === 0) || e.kind === 'guard');
-    if (pi === 1 || surprising) showFeed(attackFeedHtml(g, pi, action, atkInfo, defInfo, entries));
-    if (pi === 1 && isFirstTimer()) app.tutElementReady = true;
+    if (pi === 1 || surprising) {
+      showFeed(attackFeedHtml(g, pi, action, atkInfo, defInfo, entries, !app.feedLogHinted));
+      app.feedLogHinted = true;
+    }
+    if (pi === 1) app.tutElementReady = true;
   }
   render();
 

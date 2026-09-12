@@ -1448,7 +1448,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 }
 
 /* ============================================================
-   攻撃の知らせ（相手の攻撃で何が起きたか）と、初めての対戦の手引き
+   攻撃の知らせ（最初の対戦だけ・相手の攻撃で何が起きたか）と、初めての対戦の手引き
    ============================================================ */
 /* 横長：盤面の右の空いたところ（中央は攻撃の突進が通るので避ける）。縦持ちは下で上書き */
 #battlefeed{position:fixed;right:clamp(12px,3vw,40px);top:clamp(86px,13vh,120px);z-index:45;
@@ -1462,6 +1462,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .bf-card b{color:#fff}
 .bf-el{color:#ffd98a;font-weight:700}
 .bf-el .gi{width:16px;height:16px;vertical-align:-3px}
+.bf-hint{display:block;margin-top:3px;font-size:11.5px;color:#9fb2c8}
 
 .coach{position:fixed;z-index:46;right:clamp(12px,3vw,40px);top:50%;width:min(300px,86vw);padding:12px 14px 12px;
   border-radius:14px;background:linear-gradient(180deg,#1b2a40f5,#0f1a2af5);border:1px solid var(--gold);
