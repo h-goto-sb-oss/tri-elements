@@ -536,7 +536,10 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .title-action.feature small{color:var(--tasub);text-shadow:0 1px 2px #000}
 .title-action.fb{--tapos:center 12%;--tatint:#2c0d06d9;--taedge:#e0784e;--taglow:#e0784e40;--tasub:#ffd6c2}
 .title-action.dr{--tapos:center 24%;--tatint:#0a1336d4;--taedge:#86a8ff;--taglow:#86a8ff40;--tasub:#d4e1ff}
-@media (prefers-reduced-motion:reduce){.title-action.feature::before{transition:none}}
+.ta-new{position:absolute;top:6px;right:8px;z-index:2;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:900;
+  letter-spacing:.08em;color:#2a1600;background:linear-gradient(180deg,#ffe9a8,#e7b54a);box-shadow:0 0 10px #ffd36a99;animation:tanew 1.8s ease-in-out infinite}
+@keyframes tanew{50%{box-shadow:0 0 18px #ffd36acc}}
+@media (prefers-reduced-motion:reduce){.title-action.feature::before{transition:none}.ta-new{animation:none}}
 .grid{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:1240px}
 
 /* ============================================================

@@ -379,6 +379,15 @@ export function cardArtSource(c) {
   return withBase(c.img || ART_MAP[c.id] || '');
 }
 
+/**
+ * 拡大表示で見せる絵。選定の儀の限定カード（set 10）は背景まで描いた一枚絵が別にあり、
+ * カードには上半身を切り抜いた版（tools/rite_art.py）を使っているので、拡大では元の絵を全部見せる。
+ */
+export function cardArtFull(c) {
+  if (c.set === 10 && ART_MAP[c.id]) return withBase(`/assets/art_full/${c.id}.webp`);
+  return cardArtSource(c);
+}
+
 export function cardArtSvg(c) {
   const uid = c.id.replace(/[^\w]/g, '');
   const src = cardArtSource(c);

@@ -11,7 +11,7 @@ import {
   isMonster, matchFilter, hasKw, canForge, canSummonAt, summonCostOf, canEquipTo,
 } from '../engine/game.js';
 import { aiChooseAction } from '../engine/ai.js';
-import { cardArtSource, cardArtSvg } from './art.js';
+import { cardArtFull, cardArtSvg } from './art.js';
 import { cardHtml, monsterHtml, supportHtml, detailHtml, esc } from './cardview.js';
 import {
   AREAS, REWARD, openPack, PACK_TYPES, loadSave, writeSave,
@@ -129,6 +129,11 @@ function go(screen) {
   Audio.stopSe();
   app.screen = screen; app.result = null; app.popup = null; app.sel = null; app.detail = null; app.artZoom = null;
   if (screen === 'deck') app.deckDraft = [...app.save.deck];
+  // 新しいモードは一度開くまでタイトルに「NEW」を出す
+  if (screen === 'draft' && !(app.save.seen && app.save.seen.draft)) {
+    app.save.seen = { ...(app.save.seen || {}), draft: 1 };
+    writeSave(app.save);
+  }
   syncBgm(); render({ resetScroll: true });   // 画面を変えたときは先頭から
 }
 
@@ -296,7 +301,7 @@ function renderTitle() {
       <div class="title-menu">
         <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>${L('冒険へ出る', 'Adventure')}</b><small>${L('物語を進める', 'Continue the story')}</small></span></button>
         <button class="title-action feature fb" data-go="free" style="--tabg:url(${withBase('/assets/backgrounds/battle-common.webp')})"><span class="ta-icon">${icon('freebattle')}</span><span><b>${L('フリーバトル', 'Free Battle')}</b><small>${L('好きな相手と対戦', 'Fight any opponent you like')}</small></span></button>
-        <button class="title-action feature dr" data-go="draft" style="--tabg:url(${withBase('/assets/backgrounds/draft_bg.webp')})"><span class="ta-icon">${icon('draft')}</span><span><b>${L('選定の儀', 'Rite of Choosing')}</b><small>${app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
+        <button class="title-action feature dr" data-go="draft" style="--tabg:url(${withBase('/assets/backgrounds/draft_bg.webp')})">${app.save.seen && app.save.seen.draft ? '' : '<span class="ta-new">NEW</span>'}<span class="ta-icon">${icon('draft')}</span><span><b>${L('選定の儀', 'Rite of Choosing')}</b><small>${app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
         <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>${L('デッキ編集', 'Deck Builder')}</b><small>${L('30枚を編成', 'Build a 30-card deck')}</small></span></button>
         <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>${L('カード図鑑', 'Card Library')}</b><small>${L(`全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める`, `Browse all ${ALL_CARDS.filter(c => !c.hidden).length} cards`)}</small></span></button>
         <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>${L('カードショップ', 'Card Shop')}</b><small>${L(`星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換`, `Trade ${icon('stardust')}${app.save.stardust || 0} Stardust for packs`)}</small></span></button>
@@ -1477,7 +1482,7 @@ function observeOverlay() {
 function artZoomOverlay() {
   const c = card(app.artZoom);
   if (!c) return '';
-  const src = cardArtSource(c);
+  const src = cardArtFull(c);
   const art = src
     ? `<img src="${src}" alt="${esc(c.name)}">`
     : cardArtSvg(c);
