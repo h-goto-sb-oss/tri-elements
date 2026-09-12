@@ -276,6 +276,8 @@ def main():
         if i > last_i:
             break
         s = st[k]
+        if not s['try']:      # 誰も挑んでいない敵は並べない（途中のエリアから遊んだ人だけのときに空行が続く）
+            continue
         n = s['w'] + s['l'] + s['q']
         stuck_n = stuck.get(k, 0)
         hot = stuck_n >= 3 and stuck_n >= len(s['try']) * 0.3
