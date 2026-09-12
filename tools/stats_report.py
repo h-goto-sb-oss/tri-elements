@@ -336,6 +336,7 @@ body{{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Hiragino San
 main{{max-width:760px;margin:0 auto;padding:18px 14px 40px}}
 h1{{font-size:20px;color:var(--gold);margin:0 0 2px}} h2{{font-size:16px;margin:28px 0 10px;color:var(--gold)}}
 .sub{{color:var(--sub);font-size:12.5px}} p.note{{color:var(--sub);font-size:12.5px;margin:4px 0 8px}}
+.livebtn{{display:inline-block;margin-top:10px;padding:7px 14px;border-radius:999px;background:#1f3a2a;color:#8ff0b4;border:1px solid #2f6b45;text-decoration:none;font-weight:700;font-size:14px}}
 .kpi{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}}
 .kpi div{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}}
 .kpi b{{display:block;font-size:24px;font-variant-numeric:tabular-nums}} .kpi span{{color:var(--sub);font-size:12.5px}}
@@ -383,6 +384,7 @@ tr.warn td{{background:#3a1f22}}
 </style></head><body><main>
 <h1>TRI-ELEMENTS の遊ばれ方</h1>
 <div class="sub">{now.strftime('%Y/%m/%d %H:%M')} 時点 ／ 匿名データ（名前・セーブの中身は含まない）／ 20分ごとに更新</div>
+<p><a class="livebtn" href="live.html">● いま遊んでいる人を見る</a></p>
 <div class="kpi">
  <div><b>{len(players)}</b><span>遊んだ端末</span></div>
  <div><b>{len(sessions)}</b><span>起動した回数</span></div>
