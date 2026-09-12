@@ -515,6 +515,21 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .title-action .ta-icon{font-size:30px;width:38px;text-align:center;filter:drop-shadow(0 2px 3px #0008)}
 .title-action b{display:block;font-size:14px;line-height:1.2}.title-action small{display:block;margin-top:3px;color:#aebdd0;font-size:10px}
 .title-action.main b{font-size:17px}.title-action.main small{color:#fff0c7}.title-action.quiet .ta-icon{font-size:20px}
+/* 対戦の2モードは、その場面の絵を敷いた大きめのボタンに（冒険の次に目に入るように） */
+.title-action.feature{position:relative;isolation:isolate;overflow:hidden;min-height:76px;color:#fff;
+  border-color:var(--taedge);box-shadow:inset 0 1px #ffffff26,0 6px 16px #0007,0 0 14px var(--taglow)}
+.title-action.feature::before{content:'';position:absolute;inset:0;z-index:-2;
+  background:var(--tabg) var(--tapos,center)/cover no-repeat;transition:transform .35s}
+.title-action.feature::after{content:'';position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(100deg,var(--tatint) 0%,var(--tatint) 38%,transparent 115%),linear-gradient(0deg,#0008,#0000 60%)}
+.title-action.feature:hover{border-color:var(--taedge);box-shadow:0 9px 22px #0009,0 0 20px var(--taglow)}
+.title-action.feature:hover::before{transform:scale(1.07)}
+.title-action.feature .ta-icon{font-size:34px;width:40px}
+.title-action.feature b{font-size:15px;text-shadow:0 1px 3px #000,0 0 8px #000a}
+.title-action.feature small{color:var(--tasub);text-shadow:0 1px 2px #000}
+.title-action.fb{--tapos:center 12%;--tatint:#2c0d06d9;--taedge:#e0784e;--taglow:#e0784e40;--tasub:#ffd6c2}
+.title-action.dr{--tapos:center 24%;--tatint:#0a1336d4;--taedge:#86a8ff;--taglow:#86a8ff40;--tasub:#d4e1ff}
+@media (prefers-reduced-motion:reduce){.title-action.feature::before{transition:none}}
 .grid{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:1240px}
 
 /* ============================================================
@@ -926,6 +941,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .title-action.main{min-height:61px}.title-action.quiet{min-height:41px}
   .title-action .ta-icon{font-size:26px;width:32px}.title-action b{font-size:12px}.title-action small{font-size:8.8px}
   .title-action.main b{font-size:15px}
+  .title-action.feature{min-height:66px}.title-action.feature .ta-icon{font-size:29px;width:34px}
+  .title-action.feature b{font-size:13.5px}.title-action.feature small{font-size:9.5px}
 
   .collection-screen{padding:0}
   .dexhead{min-height:58px;gap:8px;padding:8px 10px 5px}
@@ -944,7 +961,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .title-screen{padding:9px 18px;gap:14px}
   .title-logo{width:min(49vw,560px)}
   .title-tagline{margin-top:-18px;font-size:11px}.title-elements{margin-top:8px}
-  .title-panel{padding:9px}.title-action{min-height:50px}.title-action.main{min-height:58px}
+  .title-panel{padding:9px}.title-action{min-height:50px}.title-action.main{min-height:58px}.title-action.feature{min-height:56px}
+  .title-menu{gap:6px;margin-top:8px}
   .title-panel .titleprof{padding:2px 6px 7px}
 }
 
