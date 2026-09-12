@@ -34,6 +34,7 @@ for a, ens in [('a1', ['見習いのトト', '罠師のガロ', '草原の主 �
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 SCREEN = {'battle': '対戦中', 'adventure': '冒険のマップ', 'free': 'フリーバトル', 'deck': 'デッキ編集', 'collection': '図鑑',
           'title': 'タイトル', 'settings': '設定', 'rules': 'ルール', 'shop': 'ショップ'}
+OWNER = {'neyqzar7'}   # 作者自身の端末（stats_report.py と同じ）
 KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb'}
 E = html.escape
 
@@ -61,6 +62,8 @@ def events():
             continue
         q = dict(parse_qsl(urlsplit(uri).query))
         if q.get('v') != '1' or not q.get('u') or q.get('e') not in KNOWN or q['u'].startswith('claudetest'):
+            continue
+        if q['u'] in OWNER:
             continue
         q['_ts'] = datetime.fromtimestamp(float(j.get('ts', 0)), JST)
         out.append(q)

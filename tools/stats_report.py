@@ -38,6 +38,8 @@ AREAS = [
 STAGES = [(f'{a}:{i}', f'{an} {i + 1}', n) for a, an, ens in AREAS for i, n in enumerate(ens)]
 NAME = {k: n for k, _, n in STAGES}
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
+# 作者自身の端末（数字に混ぜない）。博史さんのスマホの GitHub Pages 版＝2026-09-12 に判明
+OWNER = {'neyqzar7'}
 KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb'}
 
 
@@ -61,6 +63,8 @@ def read_events():
                     if q.get('v') != '1' or not q.get('u') or q.get('e') not in KNOWN:
                         continue
                     if q['u'].startswith('claudetest'):   # 公開後の動作確認で送ったもの
+                        continue
+                    if q['u'] in OWNER:                   # 作者自身の端末
                         continue
                     q['_ts'] = datetime.fromtimestamp(float(j.get('ts', 0)), JST)
                     yield q
