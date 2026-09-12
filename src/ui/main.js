@@ -1245,7 +1245,7 @@ function renderBattle() {
       if (app.sel && app.sel.kind === 'attack' && app.sel.slot === i) cls = 'attacking';
       else if (myTurn && (canAttack(g, 0, i) || canChangeMode(g, 0, i))) cls = 'canact';
       if (dropSelf.includes(i)) cls += ' targetable';
-      if (coach === 'attack' && canAttack(g, 0, i)) cls += ' coach-pulse';
+      if (coach === 'direct' && canAttack(g, 0, i)) cls += ' coach-pulse';
     }
     const drop = dropMonster.includes(i) || (m && dropSelf.includes(i));
     return `<div class="slot mon ${m ? '' : 'empty'} ${drop ? 'drop' : ''}" data-mslot="${i}">${m ? monsterHtml(m, 0, i, { cls }) : ''}</div>`;
@@ -1260,7 +1260,7 @@ function renderBattle() {
     const playable = myTurn && g.phase === 'main' &&
       (isMonster(id) ? canSummon(g, 0, i) : canPlaySupport(g, 0, i));
     return cardHtml(c, {
-      cls: `${playable || discardMode ? 'selectable' : 'disabled'} ${app.drag && app.drag.from === 'hand' && app.drag.index === i ? 'dragging' : ''} ${coach === 'play' && playable && isMonster(id) ? 'coach-pulse' : ''}`,
+      cls: `${playable || discardMode ? 'selectable' : 'disabled'} ${app.drag && app.drag.from === 'hand' && app.drag.index === i ? 'dragging' : ''} ${coach === 'play' && playable && id === 'w01' ? 'coach-pulse' : ''}`,
       attr: `data-hand="${i}"`,
     });
   }).join('');
@@ -1363,7 +1363,7 @@ function renderBattle() {
         ${app.sel ? `<button class="btn small" data-cancel>${L('選択解除', 'Deselect')}</button>` : ''}
         <button class="btn small" data-forge ${myTurn && g.phase === 'main' && canForge(g, 0) ? '' : 'disabled'}
           title="${L('余ったコストでカードを1枚引く', 'Spend leftover cost to draw 1 card')}">${icon('forge')} ${L('鍛錬', 'Forge')} <small>${L(`${g.rules.forgeCost}コストで1枚引く`, `${g.rules.forgeCost} cost: draw 1`)}</small></button>
-        <button class="btn primary" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>${L('ターン終了', 'End Turn')}</button>
+        <button class="btn primary ${coach === 'end' ? 'coach-pulse' : ''}" data-endturn ${myTurn && g.phase === 'main' ? '' : 'disabled'}>${L('ターン終了', 'End Turn')}</button>
       </div>
     </div>
     <div class="hand">${hand}</div>
@@ -1410,6 +1410,7 @@ function overlays() {
   if (app.graveView !== null) h += graveOverlay();
   if (app.gravePick) h += gravePickOverlay();
   if (app.game?.pendingChoice?.type === 'observe') h += observeOverlay();
+  if (app.tutModal && app.screen === 'battle') h += tutModalOverlay();
   if (app.result) h += resultOverlay();
   if (app.packResult) h += packOverlay();
   return h;
@@ -1791,7 +1792,12 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   app.enemy = enemy;
   app.enemyKey = `${area.id}:${enemyIndex}`;
   app.result = null; app.sel = null; app.popup = null; app.hint = ''; app.detail = null;
-  app.tutElementReady = false; app.feedLogHinted = false; clearFeed();
+  app.feedLogHinted = false; app.tutModal = null; app.tutPending = null; app.tutEndTurn = false; clearFeed();
+  // 一度も対戦を終えていない人は、ここで手引きを始める（すでに遊んだ人には何も出さない）
+  if (isFirstTimer() && !tutOn()) tutDone('started');
+  // 台本の試合：最初のトト戦。デッキにクラゲが無ければ（先にデッキを組み替えた人）台本は使わない
+  app.tutorial = tutOn() && !tutHas('script') && !free && !dr && `${area.id}:${enemyIndex}` === 'a1:0'
+    && app.save.deck.includes('w01');
   const seed = (Math.random() * 1e9) | 0;
   // フリーバトルの「極」では、そのキャラ自身のカードを1枚だけ持ってくる。
   // 狙っているカードを手に入れる前に見られる、という導線でもある。
@@ -1807,7 +1813,7 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
     decks: [[...(dr ? dr.picks : app.save.deck)], foeDeck],
     seed, names: [myName(), enemy.name],
     startCost: [0, (enemy.startCost || 0) + (diff ? diff.cost : 0)],
-    signature: [null, foeSig],
+    signature: app.tutorial ? ['w01', 'g01'] : [null, foeSig],
   });
   app.game.players[1].life = (enemy.life || 20) + (diff ? diff.life : 0);
   app.enemyLifeMax = app.game.players[1].life;
@@ -1921,48 +1927,116 @@ function attackFeedHtml(g, pi, action, atk, def, entries, logHint = false) {
 }
 
 // ============================================================
-// 初めての対戦の手引き（3つ。1回ずつ、OK か実際にやったら消える）
-//   play：カードを出す  element：属性の相性と防御モード（相手に初めて攻撃されたあと）  attack：攻撃する
-// まだ一度も対戦を終えていない人だけ（冒険・フリー・選定の儀のどれも）。
+// 最初の試合の手引き（台本つき）。どれも1回きり（save.tut に印）。
+//   最初のトト戦（冒険 a1:0）だけ台本どおりに進める：
+//     play   … 手札に必ずあるシズククラゲを、攻撃モードで出す
+//     direct … 相手の場が空なら直接攻撃できる
+//     end    … やることが終わったらターン終了
+//     相手の番 … トトがふたばウサギを出して、クラゲを攻撃（草は水に強い）
+//   試合を止めて説明する（最初の試合でなくても、初めて起きたときに1回）：
+//     element … 相手に属性有利で攻撃されたあと、自分の番のはじめに
+//     defense … 自分が初めて防御モードの相手を攻撃したとき
+//   すでに遊んだことのある人（手引きを始めていない人）には一切出さない。
 // ============================================================
 function isFirstTimer() {
   const s = app.save;
   return !(s.stats && (s.stats.wins || s.stats.losses)) && !Object.keys(s.freeStats || {}).length
     && !(s.draftStats && s.draftStats.runs) && !Object.keys(s.cleared || {}).length;
 }
+const tutOn = () => !!(app.save.tut && app.save.tut.started);
+const tutHas = k => !!(app.save.tut && app.save.tut[k]);
 function tutDone(k) {
-  if (app.save.tut && app.save.tut[k]) return;
+  if (tutHas(k)) return;
   app.save.tut = { ...(app.save.tut || {}), [k]: 1 };
   writeSave(app.save);
 }
+/** いま出す吹き出し（play / direct / end）。台本の試合の、自分の番だけ */
 function coachStep(g) {
-  if (!isFirstTimer() || !g || g.winner !== null || app.phase !== 'play' || g.active !== 0 || app.result) return null;
-  if (g.pendingChoice || app.fxBusy) return null;
-  const t = app.save.tut || {};
-  const me = g.players[0];
-  if (!t.play && !app.sel && me.hand.some((id, i) => isMonster(id) && canSummon(g, 0, i))) return 'play';
-  if (app.tutElementReady && !t.element) return 'element';
-  if (t.play && !t.attack && !app.sel && !app.popup && me.field.some((m, i) => m && canAttack(g, 0, i))) return 'attack';
+  if (!app.tutorial || !g || g.winner !== null || app.phase !== 'play' || g.active !== 0 || app.result) return null;
+  if (g.pendingChoice || app.fxBusy || app.tutModal) return null;
+  const me = g.players[0], op = g.players[1];
+  if (!tutHas('play')) return me.hand.includes('w01') ? 'play' : null;
+  if (!tutHas('direct')) {
+    return !op.field.some(Boolean) && me.field.some((m, i) => m && canAttack(g, 0, i)) ? 'direct' : null;
+  }
+  if (!tutHas('end') && g.turn === 1) return 'end';
   return null;
 }
 function coachHtml(step) {
   if (!step) return '';
-  const tri = `<span class="coach-tri">${icon('fire')}→${icon('grass')}→${icon('water')}→${icon('fire')}</span>`;
   const T = {
-    play: [L('カードを出してみよう', 'Play a card'),
-      L('光っているカードを押して、置き場所 → 攻撃モード／防御モード の順に選びます。', 'Click a glowing card, then choose a slot and Attack or Defense Mode.')],
-    attack: [L('攻撃してみよう', 'Attack!'),
-      L('場にいる自分のモンスターを押して「攻撃」。攻撃モードどうしなら、攻撃力が高いほうが勝ちます。相手の場が空なら、直接攻撃できます。',
-        'Click your monster on the field, then Attack. When two Attack Mode monsters clash, the higher ATK wins. If their side is empty, you can attack directly.')],
-    element: [L('属性の相性', 'Element advantage'),
-      `${tri}<br>${L('有利な属性で攻撃すると攻撃力+2。勝てない相手には、防御モード（横向き）で受け止めましょう。',
-        'Attacking with the advantaged element gives +2 ATK. If you can’t win the clash, turn your monster sideways into Defense Mode to absorb the hit.')}`],
+    play: [L('シズククラゲを出そう', 'Play Droplet Jelly'),
+      L('光っているシズククラゲを押して、置き場所を選び、「攻撃モード」で出しましょう。', 'Click the glowing Droplet Jelly, choose a slot, and summon it in Attack Mode.')],
+    direct: [L('直接攻撃しよう', 'Attack directly'),
+      L('相手の場にモンスターがいないときは、相手に直接攻撃できます。クラゲを押して「攻撃」→「直接攻撃！」。', 'When your opponent has no monsters, you can attack them directly. Click your Jelly, then Attack → Direct Attack!')],
+    end: [L('ターン終了', 'End your turn'),
+      L('できることが終わったら「ターン終了」を押します。次は相手の番です。', 'When you’re done, press End Turn. Then it’s your opponent’s turn.')],
   }[step];
   return `<div class="coach coach-${step}" role="note">
     <div class="coach-head">${icon('info')}<b>${T[0]}</b></div>
     <p>${T[1]}</p>
     <button class="btn tiny" data-coachok="${step}">${L('OK', 'Got it')}</button>
   </div>`;
+}
+
+/** 試合を止めて説明する（OK を押すまで進まない）。data は攻撃の前後の数字 */
+function tutModalHtml(m) {
+  const tri = `<div class="tm-tri">${icon('fire')}<span>→</span>${icon('grass')}<span>→</span>${icon('water')}<span>→</span>${icon('fire')}</div>`;
+  const d = m.data;
+  const nm = id => esc(card(id).name);
+  const eln = e => ELEMENTS[e].name;
+  let title = '', body = '';
+  if (m.kind === 'element') {
+    title = L('属性の相性', 'Element advantage');
+    const lines = [
+      L(`${nm(d.atkId)}（${eln(d.pair[0])}）が、あなたの${nm(d.defId)}（${eln(d.pair[1])}）を攻撃しました。`,
+        `${nm(d.atkId)} (${eln(d.pair[0])}) attacked your ${nm(d.defId)} (${eln(d.pair[1])}).`),
+      L(`<b>${eln(d.pair[0])}は${eln(d.pair[1])}に強い</b>ので、攻撃力が +${d.bonus}（${d.atk} → ${d.atk + d.bonus}）。`,
+        `<b>${eln(d.pair[0])} beats ${eln(d.pair[1])}</b>, so its ATK gets +${d.bonus} (${d.atk} → ${d.atk + d.bonus}).`),
+    ];
+    if (d.defMode === 'attack') {
+      lines.push(d.destroyed
+        ? L(`攻撃モードどうしは、攻撃力が高いほうが勝ち。${d.atk + d.bonus} 対 ${d.defAtk} で${nm(d.defId)}が倒されました。`,
+          `When two Attack Mode monsters clash, the higher ATK wins: ${d.atk + d.bonus} vs ${d.defAtk}, so ${nm(d.defId)} was destroyed.`)
+        : L(`攻撃モードどうしは、攻撃力が高いほうが勝ちます。`, `When two Attack Mode monsters clash, the higher ATK wins.`));
+      if (d.dmg) lines.push(L(`倒しきって余った分（${d.atk + d.bonus} − ${d.defAtk} = ${d.dmg}）が、あなたのライフに入りました。`,
+        `The leftover (${d.atk + d.bonus} − ${d.defAtk} = ${d.dmg}) went through to your Life.`));
+    } else if (d.destroyed) {
+      lines.push(L(`防御力 ${d.defDef} を上回ったので倒されました。`, `It beat DEF ${d.defDef}, so your monster was destroyed.`));
+    }
+    body = `${tri}<p>${lines.join('<br>')}</p>
+      <p class="tm-tip">${L('有利な属性で攻撃すると攻撃力+2。不利な相手には、防御モード（横向き）で受け止めるのも手です。', 'Attack with the advantaged element for +2 ATK. Against a bad matchup, turning your monster sideways into Defense Mode can save you.')}</p>`;
+  } else {
+    title = L('防御モード', 'Defense Mode');
+    const A = d.atk + (d.bonus || 0);
+    const lines = [L(`${nm(d.defId)}は防御モード（横向き）で、攻撃を受け止めます。`, `${nm(d.defId)} is in Defense Mode (sideways) and absorbs the attack.`)];
+    if (d.destroyed) {
+      lines.push(L(`攻撃力 ${A} が防御力 ${d.defDef} を上回ったので倒せました。`, `Your ATK ${A} beat its DEF ${d.defDef}, so it was destroyed.`));
+      const exc = A - d.defDef, odd = exc % 2 ? L('、端数は切り上げ', ', rounded up') : '';
+      lines.push(L(`ただし防御モードの相手なので、相手のライフに入るのは<b>超えた分の半分</b>だけ（超えた分 ${exc} の半分 → ${d.dmg || 0}${odd}）。`,
+        `But against Defense Mode, only <b>half of the leftover</b> reaches their Life (half of ${exc} → ${d.dmg || 0}${odd}).`));
+    } else {
+      lines.push(L(`攻撃力 ${A} が防御力 ${d.defDef} を超えなかったので、耐えられました。どちらも倒れず、ライフも減りません。`,
+        `Your ATK ${A} didn’t beat its DEF ${d.defDef}, so it held. Nothing is destroyed and no one loses Life.`));
+    }
+    body = `<p>${lines.join('<br>')}</p>
+      <p class="tm-tip">${L('あなたも、勝てない相手の攻撃は防御モードで受け止めると、被害を減らせます。', 'You can do the same: put a monster in Defense Mode to soak up attacks you can’t win.')}</p>`;
+  }
+  return `<div class="overlay tm-overlay"><div class="modal tm-modal">
+    <h2>${icon('info')} ${title}</h2>
+    ${body}
+    <div class="row-btn"><button class="btn primary" data-tutok="${m.kind}">${L('OK', 'Got it')}</button></div>
+  </div></div>`;
+}
+function tutModalOverlay() {
+  return app.tutModal ? tutModalHtml(app.tutModal) : '';
+}
+/** 相手の番のあいだに起きた説明は、自分の番になってから出す（相手が動いている最中に止めない） */
+function flushTutPending() {
+  const g = app.game;
+  if (!app.tutPending || app.tutModal || !g || g.active !== 0 || g.winner !== null || app.phase !== 'play') return;
+  app.tutModal = app.tutPending; app.tutPending = null;
+  render();
 }
 
 async function actWithFx(pi, action) {
@@ -2001,8 +2075,8 @@ async function runActionFx(g, pi, action) {
   const sumCard = action.type === 'summon' ? card(g.players[pi].hand[action.hand]) : null;
   const attacker = action.type === 'attack' ? g.players[pi].field[action.slot] : null;
   const defender = action.type === 'attack' && action.target !== 'face' ? g.players[1 - pi].field[action.target] : null;
-  const atkInfo = attacker ? { id: attacker.id, el: monsterElements(attacker) } : null;
-  const defInfo = defender ? { id: defender.id, el: monsterElements(defender), mode: defender.mode } : null;
+  const atkInfo = attacker ? { id: attacker.id, el: monsterElements(attacker), atk: effAtk(attacker) } : null;
+  const defInfo = defender ? { id: defender.id, el: monsterElements(defender), mode: defender.mode, atk: effAtk(defender), def: effDef(defender) } : null;
   const mark = g.log.length;
 
   // 召喚・発動されたカードは、どちらの手番でもカード情報欄の履歴に積む
@@ -2024,9 +2098,23 @@ async function runActionFx(g, pi, action) {
   const ok = applyAction(g, pi, action);
   const entries = g.log.slice(mark);
   // 手引き：実際にやったら、その手引きは終わり
-  if (ok && pi === 0 && isFirstTimer()) {
+  if (ok && pi === 0 && app.tutorial) {
     if (action.type === 'summon') tutDone('play');
-    if (action.type === 'attack') tutDone('attack');
+    if (action.type === 'attack' && action.target === 'face') tutDone('direct');
+  }
+  // 試合を止めて説明する（手引きを始めた人だけ・1回きり）
+  if (ok && action.type === 'attack' && defInfo && tutOn()) {
+    const atkLog = entries.find(e => e.kind === 'attack');
+    const bonus = (atkLog && atkLog.bonus) || 0;
+    const destroyed = entries.some(e => e.kind === 'destroy' && e.p === 1 - pi && e.cardId === defInfo.id);
+    const dmgE = entries.find(e => e.kind === 'damage' && e.slot == null && e.p === 1 - pi);
+    const data = { atkId: atkInfo.id, defId: defInfo.id, atk: atkInfo.atk, bonus, defMode: defInfo.mode,
+      defAtk: defInfo.atk, defDef: defInfo.def, destroyed, dmg: dmgE ? dmgE.v : 0 };
+    if (pi === 1 && bonus && !tutHas('element') && !app.tutPending) {
+      const pair = atkInfo.el.flatMap(a => defInfo.el.filter(x => STRONG_AGAINST[a] === x).map(x => [a, x]))[0];
+      if (pair) app.tutPending = { kind: 'element', data: { ...data, pair } };
+    }
+    if (pi === 0 && defInfo.mode === 'defense' && !tutHas('defense') && !app.tutPending) app.tutPending = { kind: 'defense', data };
   }
   // 攻撃の知らせ：最初の対戦だけ（スマホでは盤面に重なって見づらく、その間も相手は動き続けるため）。
   // 相手の攻撃は毎回、自分の攻撃は思いどおりにいかなかったとき（返り討ち・耐えられた）だけ
@@ -2036,7 +2124,6 @@ async function runActionFx(g, pi, action) {
       showFeed(attackFeedHtml(g, pi, action, atkInfo, defInfo, entries, !app.feedLogHinted));
       app.feedLogHinted = true;
     }
-    if (pi === 1) app.tutElementReady = true;
   }
   render();
 
@@ -2124,6 +2211,7 @@ function afterAction() {
   maybeTurnBanner();
   if (g.winner !== null) return finishGame();
   if (g.active === 1) scheduleAi();
+  else flushTutPending();
 }
 
 // 相手が何をしているか目で追えるだけの間を置く。
@@ -2165,8 +2253,8 @@ function aiStep() {
   }
   // 「極」はミスをしない全力のAIにする（キャラごとのnoiseは弱め設定なので上書き）
   const aiNoise = app.free?.difficulty === 'extreme' ? 0 : (app.enemy?.noise || 0);
-  const act = aiChooseAction(g, 1, { noise: aiNoise, profile: app.enemy?.profile || 'balanced' });
-  if (act) {
+  const act = tutorialAiAction(g) || aiChooseAction(g, 1, { noise: aiNoise, profile: app.enemy?.profile || 'balanced' });
+  if (act && act.type !== 'end') {
     const pause = aiPauseFor(g, act);
     actWithFx(1, act).then(() => scheduleAi(pause));
     return;
@@ -2176,6 +2264,33 @@ function aiStep() {
   maybeTurnBanner();
   if (g.winner !== null) return finishGame();
   if (g.active === 1) return scheduleAi();
+  flushTutPending();
+}
+
+/**
+ * 台本の試合で、トトの最初の番だけ決まった手を打つ：ふたばウサギを攻撃モードで出し、
+ * こちらのモンスター（クラゲ）を攻撃する。場にいなければ直接攻撃。終わったら普段のAIに戻す。
+ */
+function tutorialAiAction(g) {
+  if (!app.tutorial || g.active !== 1) return null;
+  // 台本の攻撃を終えたら、その番はそこで終える（残りのコストで畳みかけると、何が起きたか分からなくなる）
+  if (app.tutEndTurn) { app.tutEndTurn = false; return { type: 'end' }; }
+  if (tutHas('script')) return null;
+  const op = g.players[1], me = g.players[0];
+  const hi = op.hand.indexOf('g01');
+  const bunny = op.field.findIndex(m => m && m.id === 'g01');
+  if (bunny < 0 && hi >= 0 && canSummon(g, 1, hi)) {
+    const slot = op.field.findIndex(m => !m);
+    return { type: 'summon', hand: hi, mode: 'attack', slot: slot < 0 ? 1 : slot };
+  }
+  tutDone('script');
+  if (bunny >= 0 && canAttack(g, 1, bunny)) {
+    const legal = legalAttackTargets(g, 1, bunny);
+    const target = me.field.findIndex((m, i) => m && legal.includes(i));
+    app.tutEndTurn = true;
+    return { type: 'attack', slot: bunny, target: target >= 0 ? target : (legal.includes('face') ? 'face' : legal[0]) };
+  }
+  return null;
 }
 
 /** お礼の欄は種類ごとに1回だけ。出したらセーブに印を付ける（writeSave は呼び出し側で） */
@@ -2571,11 +2686,9 @@ function handleClick(ev) {
   const hit = sel => t.closest(sel);
 
   const coachOk = hit('[data-coachok]');
-  if (coachOk) {
-    tutDone(coachOk.dataset.coachok);
-    if (coachOk.dataset.coachok === 'element') app.tutElementReady = false;
-    return render();
-  }
+  if (coachOk) { tutDone(coachOk.dataset.coachok); return render(); }
+  const tutOk = hit('[data-tutok]');
+  if (tutOk) { tutDone(tutOk.dataset.tutok); app.tutModal = null; return render(); }
 
   const observe = hit('[data-observe]');
   if (observe && app.game?.pendingChoice) {
@@ -2887,7 +3000,11 @@ function handleClick(ev) {
 
   if (hit('[data-cancel]')) { app.sel = null; app.hint = ''; return render(); }
   if (hit('[data-forge]')) return actWithFx(0, { type: 'forge' }).then(afterAction);
-  if (hit('[data-endturn]')) { app.sel = null; app.hint = ''; applyAction(g, 0, { type: 'end' }); return afterAction(); }
+  if (hit('[data-endturn]')) {
+    app.sel = null; app.hint = '';
+    if (app.tutorial) tutDone('end');
+    applyAction(g, 0, { type: 'end' }); return afterAction();
+  }
   if (hit('[data-attackface]') && app.sel) {
     const act = { type: 'attack', slot: app.sel.slot, target: 'face' };
     app.sel = null; app.hint = '';   // 残すと次のターンまで「相手を選んでください」が出たままになる

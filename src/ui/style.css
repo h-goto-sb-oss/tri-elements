@@ -1470,14 +1470,22 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .coach-head{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:15px}
 .coach-head .gi{width:20px;height:20px}
 .coach p{margin:6px 0 10px;font-size:13.5px;line-height:1.6}
-.coach-tri{display:inline-flex;align-items:center;gap:3px;font-weight:800;color:#c9d3e2}
-.coach-tri .gi{width:20px;height:20px}
 .coach .btn{float:right}
 .coach::after{content:'';display:block;clear:both}
 /* 縦持ち：下はプレイヤーの帯とターン終了のボタンなので、相手の帯のすぐ下に出す。知らせは盤面の中央へ */
 .battle.portrait .coach{right:auto;left:50%;top:120px;transform:translateX(-50%);width:min(360px,94vw);padding:9px 12px}
 .battle.portrait .coach p{margin:4px 0 6px;font-size:13px;line-height:1.5}
 body:has(.battle.portrait) #battlefeed{top:42%;right:auto;left:50%;transform:translateX(-50%);width:min(560px,94vw)}
-.card.coach-pulse,.mini.coach-pulse{animation:coachpulse 1.4s ease-in-out infinite}
+.card.coach-pulse,.mini.coach-pulse,.btn.coach-pulse{animation:coachpulse 1.4s ease-in-out infinite}
 @keyframes coachpulse{0%,100%{box-shadow:0 0 0 2px #f2c15b,0 0 10px #f2c15b66}50%{box-shadow:0 0 0 3px #ffe08a,0 0 24px #f2c15bcc}}
-@media (prefers-reduced-motion:reduce){.card.coach-pulse,.mini.coach-pulse,.bf-item{animation:none}}
+@media (prefers-reduced-motion:reduce){.card.coach-pulse,.mini.coach-pulse,.btn.coach-pulse,.bf-item{animation:none}}
+/* 試合を止めて説明する窓（属性の相性・防御モード） */
+.tm-modal{max-width:min(520px,94vw);text-align:left}
+.tm-modal h2{display:flex;align-items:center;gap:8px;color:var(--gold);font-size:20px;margin:0 0 10px}
+.tm-modal h2 .gi{width:24px;height:24px}
+.tm-modal p{font-size:14.5px;line-height:1.75;margin:8px 0}
+.tm-modal b{color:#ffd98a}
+.tm-tip{padding:8px 12px;border-radius:10px;background:#ffffff0d;color:#c9d3e2;font-size:13.5px!important}
+.tm-tri{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;color:#9fb2c8;margin:2px 0 6px}
+.tm-tri .gi{width:30px;height:30px}
+.tm-modal .row-btn{justify-content:flex-end}
