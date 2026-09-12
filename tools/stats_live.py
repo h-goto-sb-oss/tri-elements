@@ -34,7 +34,7 @@ for a, ens in [('a1', ['見習いのトト', '罠師のガロ', '草原の主 �
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 SCREEN = {'battle': '対戦中', 'adventure': '冒険のマップ', 'free': 'フリーバトル', 'deck': 'デッキ編集', 'collection': '図鑑',
           'title': 'タイトル', 'settings': '設定', 'rules': 'ルール', 'shop': 'ショップ'}
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb'}
 E = html.escape
 
 
@@ -131,6 +131,10 @@ def say(q):
         return f'💤 閉じた／裏に回した（{SCREEN.get(q.get("sc"), q.get("sc"))}）'
     if e == 'optout':
         return '送信を止めた'
+    if e == 'thanks':
+        return '💌 お礼のメッセージが出た（' + ('ラスボス初撃破' if q.get('k') == 'final' else 'キャラカード初入手') + '）'
+    if e == 'fb':
+        return '📣 感想ボタンを押した（' + ('X' if q.get('to') == 'x' else 'itch.io') + '）'
     return e
 
 
@@ -194,7 +198,7 @@ def main():
     def cls(q):
         if q['e'] == 'end':
             return {'w': 'win', 'l': 'lose', 'q': 'lose'}.get(q.get('r'), '')
-        return {'start': 'fight', 'hide': 'dim', 'open': 'open'}.get(q['e'], '')
+        return {'start': 'fight', 'hide': 'dim', 'open': 'open', 'thanks': 'win', 'fb': 'win'}.get(q['e'], '')
     def line(q):
         t = say(q)
         if q['e'] == 'end' and q.get('sec'):

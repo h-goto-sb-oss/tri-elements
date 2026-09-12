@@ -1308,6 +1308,30 @@ function graveOverlay() {
   </div></div>`;
 }
 
+/**
+ * やり込んでくれた人へのお礼（2026-09-12）。初めてキャラカードを取ったとき／ラスボスを初めて倒したときに1回ずつ。
+ * 遊んでいる人には連絡できない（匿名）ので、向こうから声をかけてもらう入口を、いちばん楽しんでいる瞬間に置く。
+ */
+const FEEDBACK = {
+  x: text => `https://x.com/intent/post?text=${encodeURIComponent(text)}`,
+  itch: 'https://chicken-ball.itch.io/tri-elements',
+};
+function thanksHtml(kind) {
+  const head = kind === 'final'
+    ? L('星辰王を倒しました。ここまで遊んでくれて、本当にありがとうございます！', 'You defeated the Star King. Thank you so much for playing all the way here!')
+    : L('キャラクターカード、おめでとうございます！ここまでやり込んでくれて、本当にありがとうございます！', 'Congratulations on your character card — thank you so much for playing this deep!');
+  const tweet = L('「TRI-ELEMENTS 三属の戦記」遊びました！\n\n\n@ChickenBallgame #TRIELEMENTS', 'I played TRI-ELEMENTS!\n\n\n@ChickenBallgame #TRIELEMENTS');
+  return `<div class="thanks">
+    <div class="thanks-head">${head}</div>
+    <p>${L('このゲームは個人で作っています。感想や「ここが難しかった」「このカードが好き」など、ひとことでも聞かせてもらえると、とてもうれしいです。',
+      'This game is made by a solo indie developer. A few words — what you liked, what felt too hard, your favorite card — would make my day.')}</p>
+    <div class="row-btn">
+      <a class="btn" href="${FEEDBACK.x(tweet)}" target="_blank" rel="noopener" data-feedback="x">${L('X で感想を送る', 'Share on X')}</a>
+      <a class="btn" href="${FEEDBACK.itch}" target="_blank" rel="noopener" data-feedback="itch">${L('itch.io にコメントする', 'Comment on itch.io')}</a>
+    </div>
+  </div>`;
+}
+
 function resultOverlay() {
   const r = app.result;
   return `<div class="overlay"><div class="modal">
@@ -1322,6 +1346,7 @@ function resultOverlay() {
       <div class="charget-name">${esc(card(r.charCard).name)}</div>
     </div>` : ''}
     ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">${L(`「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります`, `Beat them <b>${r.charLeft}</b> more times on Extreme to get their character card`)}</p>` : ''}
+    ${r.thanks ? thanksHtml(r.thanks) : ''}
     <div class="row-btn">
       <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? L('フリーバトルへ戻る', 'Back to Free Battle') : L('冒険へ戻る', 'Back to Adventure')}</button>
       <button class="btn" data-rematch>${L('もう一度', 'Rematch')}</button>
@@ -1791,6 +1816,14 @@ function aiStep() {
   if (g.active === 1) return scheduleAi();
 }
 
+/** お礼の欄は種類ごとに1回だけ。出したらセーブに印を付ける（writeSave は呼び出し側で） */
+function takeThanks(kind) {
+  app.save.thanked = app.save.thanked || {};
+  if (app.save.thanked[kind]) return null;
+  app.save.thanked[kind] = true;
+  return kind;
+}
+
 function finishGame() {
   const g = app.game;
   if (!g || g.winner === null || app.result) return;
@@ -1822,9 +1855,11 @@ function finishGame() {
       }
     } else st.l++;
     app.save.freeStats[key] = st;
+    const thanks = charCard ? takeThanks('char') : null;
     writeSave(app.save);
     trackBattleEnd(win ? 'w' : 'l', { cc: charCard ? 1 : undefined });
-    app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true, charCard, charLeft };
+    if (thanks) track('thanks', { k: thanks });
+    app.result = { win, reason: g.reason, reward: null, unlocked: null, dust, free: true, charCard, charLeft, thanks };
     Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
     return render();
   }
@@ -1853,9 +1888,13 @@ function finishGame() {
       }
     }
   } else app.save.stats.losses++;
+  // ラスボス（最後のエリアの最後の敵）を初めて倒したとき
+  const lastArea = AREAS[AREAS.length - 1];
+  const thanks = firstClear && app.enemyKey === `${lastArea.id}:${lastArea.enemies.length - 1}` ? takeThanks('final') : null;
   writeSave(app.save);
   trackBattleEnd(win ? 'w' : 'l', { fc: firstClear ? 1 : undefined });
-  app.result = { win, reason: g.reason, reward, unlocked };
+  if (thanks) track('thanks', { k: thanks });
+  app.result = { win, reason: g.reason, reward, unlocked, thanks };
   Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
   render();
 }
@@ -2187,6 +2226,10 @@ function handleClick(ev) {
     toast(d.list.length === 30 ? L(`「${d.name}」で戦います`, `Using “${d.name}”`) : L(`「${d.name}」は${d.list.length}/30枚です`, `“${d.name}” has ${d.list.length}/30 cards`));
     return render();
   }
+
+  // --- お礼の欄のリンク（外のページを開く。ここでは記録だけして、既定の動作は止めない）---
+  const fb = hit('[data-feedback]');
+  if (fb) { track('fb', { to: fb.dataset.feedback }); return; }
 
   // --- 画面遷移など ---
   const goEl = hit('[data-go]');

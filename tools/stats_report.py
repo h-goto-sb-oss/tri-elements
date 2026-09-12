@@ -38,7 +38,7 @@ AREAS = [
 STAGES = [(f'{a}:{i}', f'{an} {i + 1}', n) for a, an, ens in AREAS for i, n in enumerate(ens)]
 NAME = {k: n for k, _, n in STAGES}
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb'}
 
 
 def read_events():
@@ -236,6 +236,8 @@ def main():
 
     packs = Counter(q.get('p') for q in ev if q['e'] == 'pack')
     optout = len({q['u'] for q in ev if q['e'] == 'optout'})
+    n_thanks = sum(1 for q in ev if q['e'] == 'thanks')
+    n_fb = sum(1 for q in ev if q['e'] == 'fb')
 
     # ================= HTML =================
     now = datetime.now(JST)
@@ -392,6 +394,7 @@ tr.warn td{{background:#3a1f22}}
  <div><b>{long_share:.0f}%</b><span>10分以上遊んだ回</span></div>
  <div><b>{len(returned)}</b><span>別の日にも来た端末</span></div>
  <div><b>{optout}</b><span>送信を止めた端末</span></div>
+ <div><b>{n_fb}<small style="font-size:14px;color:var(--sub)"> / {n_thanks}</small></b><span>感想ボタン／お礼が出た回数</span></div>
 </div>
 
 <h2>日ごと</h2>

@@ -1221,6 +1221,14 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   0%{opacity:0;transform:scale(.5) rotate(-8deg)}
   100%{opacity:1;transform:none}
 }
+/* やり込んでくれた人へのお礼（キャラカード初入手・ラスボス初撃破で1回ずつ） */
+.thanks{margin:14px 0 4px;padding:12px 14px;border-radius:12px;text-align:left;max-width:460px;
+  border:1px solid #6fb7ff55;background:linear-gradient(#16263a,#111a26)}
+.thanks-head{font-weight:900;color:#bfe0ff;font-size:15px;line-height:1.5}
+.thanks p{font-size:13px;line-height:1.7;color:#c9d3df;margin:6px 0 10px}
+.thanks .row-btn{justify-content:flex-start;flex-wrap:wrap;gap:8px}
+.thanks a.btn{text-decoration:none;color:#e8eef6}
+.thanks a.btn:hover{color:#fff}
 
 /* 図鑑の未入手キャラ（何が居るかも伏せる） */
 .card.secretcard{display:flex;align-items:center;justify-content:center;
