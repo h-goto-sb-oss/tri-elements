@@ -1536,6 +1536,8 @@ function graveOverlay() {
  * 遊んでいる人には連絡できない（匿名）ので、向こうから声をかけてもらう入口を、いちばん楽しんでいる瞬間に置く。
  */
 const FEEDBACK = {
+  // X の @ChickenBallgame は 2026-09-13 に凍結された（異議申し立て中）。解除されたら true に戻す
+  xEnabled: false,
   x: text => `https://x.com/intent/post?text=${encodeURIComponent(text)}`,
   itch: 'https://chicken-ball.itch.io/tri-elements',
 };
@@ -1549,7 +1551,7 @@ function thanksHtml(kind) {
     <p>${L('このゲームは個人で作っています。感想や「ここが難しかった」「このカードが好き」など、ひとことでも聞かせてもらえると、とてもうれしいです。',
       'This game is made by a solo indie developer. A few words — what you liked, what felt too hard, your favorite card — would make my day.')}</p>
     <div class="row-btn">
-      <a class="btn" href="${FEEDBACK.x(tweet)}" target="_blank" rel="noopener" data-feedback="x">${L('X で感想を送る', 'Share on X')}</a>
+      ${FEEDBACK.xEnabled ? `<a class="btn" href="${FEEDBACK.x(tweet)}" target="_blank" rel="noopener" data-feedback="x">${L('X で感想を送る', 'Share on X')}</a>` : ''}
       <a class="btn" href="${FEEDBACK.itch}" target="_blank" rel="noopener" data-feedback="itch">${L('itch.io にコメントする', 'Comment on itch.io')}</a>
     </div>
   </div>`;
