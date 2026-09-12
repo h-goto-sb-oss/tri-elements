@@ -311,6 +311,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   /* 枠の大きさは変化させない（色と影と拡大だけ） */
   transition:border-color .12s,background .12s,box-shadow .12s,transform .12s}
 .slot.sup{width:112px;height:76px}
+/* 空いたモンスターの置き場。背景の絵に溶けて見えず、サポートの黒い枠のほうが置き場に見えていた */
+.slot.mon.empty{border-color:#b7c7dd5c;background:rgba(6,11,20,.34)}
 .slot.drop{border-color:var(--gold);background:rgba(242,193,91,.13);box-shadow:0 0 12px #f2c15b33}
 .slot.drop:has(.mini){border-color:#ff9a4d;background:rgba(255,154,77,.16);box-shadow:0 0 12px #ff9a4d44}
 .slot.drop.hot{background:rgba(242,193,91,.28);transform:scale(1.04)}
@@ -1444,3 +1446,37 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .dr-options{grid-template-columns:1fr}
   .dr-or{text-align:center}
 }
+
+/* ============================================================
+   攻撃の知らせ（相手の攻撃で何が起きたか）と、初めての対戦の手引き
+   ============================================================ */
+/* 横長：盤面の右の空いたところ（中央は攻撃の突進が通るので避ける）。縦持ちは下で上書き */
+#battlefeed{position:fixed;right:clamp(12px,3vw,40px);top:clamp(86px,13vh,120px);z-index:45;
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;pointer-events:none;width:min(340px,40vw)}
+.bf-item{animation:bfin .25s ease-out both;transition:opacity .4s,transform .4s}
+.bf-item.out{opacity:0;transform:translateY(-6px)}
+@keyframes bfin{from{opacity:0;transform:translateY(-8px)}}
+.bf-card{padding:8px 14px;border-radius:12px;background:#0b1220ee;border:1px solid #6f86a655;
+  box-shadow:0 8px 22px #000a;font-size:13.5px;line-height:1.55;text-align:center;color:#e8eef6}
+.bf-card.foe{border-color:#ff8a6a77}
+.bf-card b{color:#fff}
+.bf-el{color:#ffd98a;font-weight:700}
+.bf-el .gi{width:16px;height:16px;vertical-align:-3px}
+
+.coach{position:fixed;z-index:46;right:clamp(12px,3vw,40px);top:50%;width:min(300px,86vw);padding:12px 14px 12px;
+  border-radius:14px;background:linear-gradient(180deg,#1b2a40f5,#0f1a2af5);border:1px solid var(--gold);
+  box-shadow:0 10px 30px #000b,0 0 18px #f2c15b33;color:#e8eef6}
+.coach-head{display:flex;align-items:center;gap:6px;color:var(--gold);font-size:15px}
+.coach-head .gi{width:20px;height:20px}
+.coach p{margin:6px 0 10px;font-size:13.5px;line-height:1.6}
+.coach-tri{display:inline-flex;align-items:center;gap:3px;font-weight:800;color:#c9d3e2}
+.coach-tri .gi{width:20px;height:20px}
+.coach .btn{float:right}
+.coach::after{content:'';display:block;clear:both}
+/* 縦持ち：下はプレイヤーの帯とターン終了のボタンなので、相手の帯のすぐ下に出す。知らせは盤面の中央へ */
+.battle.portrait .coach{right:auto;left:50%;top:120px;transform:translateX(-50%);width:min(360px,94vw);padding:9px 12px}
+.battle.portrait .coach p{margin:4px 0 6px;font-size:13px;line-height:1.5}
+body:has(.battle.portrait) #battlefeed{top:42%;right:auto;left:50%;transform:translateX(-50%);width:min(560px,94vw)}
+.card.coach-pulse,.mini.coach-pulse{animation:coachpulse 1.4s ease-in-out infinite}
+@keyframes coachpulse{0%,100%{box-shadow:0 0 0 2px #f2c15b,0 0 10px #f2c15b66}50%{box-shadow:0 0 0 3px #ffe08a,0 0 24px #f2c15bcc}}
+@media (prefers-reduced-motion:reduce){.card.coach-pulse,.mini.coach-pulse,.bf-item{animation:none}}
