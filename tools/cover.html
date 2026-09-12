@@ -49,6 +49,16 @@
   .wide .gf{left:330px;width:420px;height:420px}
   .wide .gw{left:auto;right:320px;width:420px;height:420px}
   .wide .gg{right:0;width:420px;height:420px}
+
+  /* ?yt=1：YouTube のサムネ用。左下の空いたところに大きく「無料」（右下は再生時間が重なるので避ける） */
+  .yt{display:none;position:absolute;left:34px;bottom:40px;z-index:4;
+    font:900 42px/1.12 "Zen Maru Gothic","Hiragino Sans","Yu Gothic",sans-serif;color:#fff6dc;letter-spacing:.02em;
+    text-shadow:0 4px 0 #7a1d12,0 6px 18px #000}
+  .yt b{display:inline-block;margin-bottom:10px;padding:4px 18px 6px;border-radius:12px;font-size:58px;color:#1a1204;
+    background:linear-gradient(#ffe59a,#e0a93a);text-shadow:none;box-shadow:0 6px 0 #8a5a12,0 10px 26px #000c}
+  .yt small{display:block;margin-top:8px;font-size:22px;color:#ffe59a;text-shadow:0 3px 10px #000}
+  html.ytmode .yt{display:block}
+  html.ytmode .tag{display:none}
 </style>
 <div class="cv">
   <div class="boss b1"><img src="../assets/enemies/archive/area-08-01-messenger-full.png"></div>
@@ -61,13 +71,16 @@
   <div class="ch w"><img src="../assets/enemies/area-03-01-mina.png"></div>
   <img class="logo" id="logo" src="../assets/ui/title-logo.svg">
   <div class="tag" id="tag">カードバトルRPG</div>
+  <div class="yt" id="yt"><b>無料</b><br>ブラウザで遊べる<br>カードバトル<small>PC・スマホ／登録不要</small></div>
 </div>
 <script>
   const en = new URLSearchParams(location.search).get('lang') === 'en';
   document.documentElement.lang = en ? 'en' : 'ja';
   if (new URLSearchParams(location.search).get('wide')) document.documentElement.classList.add('wide');
+  if (new URLSearchParams(location.search).get('yt')) document.documentElement.classList.add('ytmode');
   if (en) {
     document.getElementById('logo').src = '../assets/ui/title-logo-en.svg';
     document.getElementById('tag').textContent = 'CARD BATTLE RPG';
+    document.getElementById('yt').innerHTML = '<b>FREE</b><br>Card Battle<br>in your browser<small>PC &amp; mobile · no sign-up</small>';
   }
 </script>
