@@ -1,7 +1,8 @@
 // ============================================================
 // 匿名の遊び方データ（どこまで進んだか・どこで負けたか・何分遊んだか）
 //
-// 送るのは track() に渡す短い値だけ。**名前・デッキ・セーブの中身は送らない。**
+// 送るのは track() に渡す短い値だけ。**名前・セーブの中身は送らない。**
+// デッキは「対戦に使った30枚の構成」だけ送る（カードの採用率・勝率を見るため。2026-09-12〜）。
 // 人の区別は、この端末で最初に作る乱数の id だけ（誰かは分からない）。
 // 受け口はサーバーの Caddy が 204 を返して1行記録するだけ（IP は記録から消している）。
 // 集計は tools/stats_report.py。設定→データで止められる。
@@ -60,6 +61,13 @@ export function track(ev, data = {}) {
   // 画面を閉じる瞬間でも届くよう sendBeacon を先に使う。使えなければ画像の読み込みで送る
   try { if (navigator.sendBeacon && navigator.sendBeacon(url)) return; } catch { /* 次へ */ }
   try { new Image().src = url; } catch { /* 送れなくても遊ぶ邪魔はしない */ }
+}
+
+/** デッキを「f05-3.w02-2.x_g3」の形に詰める（id に - と . は使われていない）。並びは id 順 */
+export function packDeck(deck) {
+  const n = {};
+  for (const id of deck || []) n[id] = (n[id] || 0) + 1;
+  return Object.keys(n).sort().map(id => (n[id] > 1 ? `${id}-${n[id]}` : id)).join('.');
 }
 
 /** 初めてこの端末で開いたか（id を今作ったか） */

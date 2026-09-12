@@ -68,6 +68,22 @@ def read_events():
             continue
 
 
+def unpack(dk):
+    """'f05-3.w02' → ['f05','f05','f05','w02']（並びは id 順で揃う）"""
+    out = []
+    for part in (dk or '').split('.'):
+        if not part:
+            continue
+        cid, _, n = part.partition('-')
+        out += [cid] * (num(n, 1) if n else 1)
+    return sorted(out)
+
+
+def pack_list(ids):
+    c = Counter(ids)
+    return '.'.join(f'{k}-{v}' if v > 1 else k for k, v in sorted(c.items()))
+
+
 def num(v, default=None):
     try:
         return int(v)
@@ -152,6 +168,30 @@ def main():
         if u not in st[order[i]]['clear']:
             stuck[order[i]] += 1
 
+    # ---- デッキ（対戦の終わりに届く dk="f05-3.w02-2..."）----
+    cn = {}
+    starter_key = None
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'card_names.json'), encoding='utf-8') as fh:
+            cj = json.load(fh)
+        cn = cj.get('names', {})
+        starter_key = unpack(pack_list(cj.get('starter', [])))
+    except (OSError, ValueError):
+        pass
+    deck_battles = [q for q in ev if q['e'] == 'end' and q.get('dk')]
+    use = Counter()
+    use_w = Counter()
+    for q in deck_battles:
+        ids = set(unpack(q['dk']))
+        for cid in ids:
+            use[cid] += 1
+            if q.get('r') == 'w':
+                use_w[cid] += 1
+    last_deck = {}
+    for q in deck_battles:
+        last_deck[q['u']] = unpack(q['dk'])
+    starter_users = sum(1 for d in last_deck.values() if starter_key is not None and d == starter_key)
+
     packs = Counter(q.get('p') for q in ev if q['e'] == 'pack')
     optout = len({q['u'] for q in ev if q['e'] == 'optout'})
 
@@ -176,6 +216,15 @@ def main():
         rows_stage += (f'<tr{warn}><td><b>{e(name)}</b><small>{e(label)}</small></td>'
                        f'<td>{len(s["try"])}</td><td>{len(s["clear"])}</td>'
                        f'<td>{wr}<small>{s["w"]}勝{s["l"]}敗{s["q"]}投</small></td><td>{mt}</td><td>{stuck_n or ""}</td></tr>')
+
+    nb = len(deck_battles)
+    rows_card = ''
+    for cid, n in use.most_common(30):
+        wr = use_w[cid] / n * 100 if n else 0
+        rows_card += (f'<tr><td><b>{e(cn.get(cid, cid))}</b><small>{e(cid)}</small></td>'
+                      f'<td>{n / nb * 100:.0f}%<small>{n}戦</small></td><td>{wr:.0f}%</td></tr>')
+    starter_line = (f'最初のデッキのまま戦っている端末：{starter_users} / {len(last_deck)}'
+                    if last_deck else '')
 
     rows_free = ''.join(
         f'<tr><td>{DIFF.get(d, d)}</td><td>{len(x["u"])}</td><td>{x.get("w", 0)}</td><td>{x.get("l", 0)}</td><td>{x.get("q", 0)}</td></tr>'
@@ -228,6 +277,11 @@ p.note{{color:var(--sub);font-size:12.5px}}
 
 <h2>フリーバトル</h2>
 <div class="wrap"><table><tr><th>難易度</th><th>端末</th><th>勝ち</th><th>負け</th><th>投了</th></tr>{rows_free or '<tr><td colspan="5">まだありません</td></tr>'}</table></div>
+
+<h2>デッキに入っているカード（採用率の高い順・30枚まで）</h2>
+<p class="note">採用率＝その対戦のデッキに入っていた割合（全{nb}戦）／勝率＝入っていた対戦で勝った割合（投了は負け扱い）。
+戦う相手の強さが混ざるので、勝率は数十戦たまってから見る。<br>{starter_line}</p>
+<div class="wrap"><table><tr><th>カード</th><th>採用率</th><th>勝率</th></tr>{rows_card or '<tr><td colspan="3">まだありません</td></tr>'}</table></div>
 
 <h2>開けたパック</h2>
 <p>{'　'.join(f'{e(str(k))} {v}' for k, v in packs.most_common()) or 'まだありません'}</p>

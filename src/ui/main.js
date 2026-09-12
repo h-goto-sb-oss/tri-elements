@@ -29,7 +29,7 @@ import * as Fx from './fx.js';
 import { L, kwb, lang, setLang, storedLang, guessLang } from '../i18n/lang.js';
 import '../i18n/data.js';
 import { EN_SETS } from '../i18n/en_game.js';
-import { track, statsEnabled, setStatsEnabled, firstVisit } from '../game/telemetry.js';
+import { track, statsEnabled, setStatsEnabled, firstVisit, packDeck } from '../game/telemetry.js';
 
 // 言語は最初に決める（カード名などのデータもここで差し替わる）。
 // 一度も選んだことが無ければ、端末の言語で仮に表示して選択画面を出す。
@@ -88,13 +88,14 @@ track('open', {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') track('hide', { sc: app.screen });
 });
-/** 戦闘の結果を送る。r は w（勝ち）／l（負け）／q（投了） */
+/** 戦闘の結果を送る。r は w（勝ち）／l（負け）／q（投了）。dk は使ったデッキの構成 */
 function trackBattleEnd(r, extra = {}) {
   const g = app.game;
   track('end', {
     k: app.enemyKey, f: app.free ? 1 : 0, df: app.free ? app.free.difficulty : undefined,
     r, tn: g ? g.turn : undefined,
     sec: app.battleT0 ? Math.round((Date.now() - app.battleT0) / 1000) : undefined,
+    dk: packDeck(app.save.deck),
     ...extra,
   });
 }
@@ -726,8 +727,8 @@ function renderSettings() {
     <div class="setrow col">
       <label class="checkrow"><input type="checkbox" data-stats ${statsEnabled() ? 'checked' : ''}>
         ${L('遊び方の統計を送る（匿名）', 'Send anonymous play statistics')}</label>
-      <div class="hint setnote">${L('どのライバルで負けたか、どこまで進んだか、何分遊んだかだけを送り、難しさの調整に使います。名前・デッキ・セーブの中身は送りません。',
-        'Only which rivals you lost to, how far you got, and how long you played — used to tune the difficulty. Your name, decks and save data are never sent.')}</div>
+      <div class="hint setnote">${L('どのライバルで負けたか、どこまで進んだか、対戦に使ったデッキの構成、何分遊んだかだけを送り、難しさとカードの調整に使います。名前やセーブの中身は送りません。',
+        'Only which rivals you lost to, how far you got, the cards in the deck you battled with, and how long you played — used to tune the difficulty and the cards. Your name and save data are never sent.')}</div>
     </div>`;
 
   const panels = { player, sound, language, data };
