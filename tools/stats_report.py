@@ -40,7 +40,7 @@ NAME = {k: n for k, _, n in STAGES}
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 # 作者自身の端末（数字に混ぜない）。博史さんのスマホの GitHub Pages 版＝2026-09-12 に判明
 OWNER = {'neyqzar7'}
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft'}
 
 
 def read_events():
@@ -180,6 +180,8 @@ def main():
         if q['e'] not in ('start', 'end'):
             continue
         k = q.get('k')
+        if q.get('dr') == '1':          # 2ピックの対戦はストーリー・フリーに混ぜない
+            continue
         if q.get('f') == '1':
             if q['e'] == 'end':
                 fd = free[q.get('df') or '?']
@@ -237,6 +239,16 @@ def main():
     for q in deck_battles:
         last_deck[q['u']] = unpack(q['dk'])
     starter_users = sum(1 for d in last_deck.values() if starter_key is not None and d == starter_key)
+
+    # ---- 2ピック ----
+    PAIR_JA = {'fire,water': '炎×水', 'water,grass': '水×草', 'grass,fire': '草×炎'}
+    dr_start = [q for q in ev if q['e'] == 'draft' and q.get('st') == 'start']
+    dr_done = [q for q in ev if q['e'] == 'draft' and q.get('st') == 'done']
+    dr_quit = [q for q in ev if q['e'] == 'draft' and q.get('st') == 'quit']
+    dr_pairs = Counter(PAIR_JA.get(q.get('pr'), q.get('pr')) for q in dr_start)
+    dr_wins = Counter(num(q.get('w'), 0) for q in dr_done)
+    dr_battles = [q for q in ev if q['e'] == 'end' and q.get('dr') == '1']
+    dr_wr = (sum(1 for q in dr_battles if q.get('r') == 'w') / len(dr_battles) * 100) if dr_battles else 0
 
     packs = Counter(q.get('p') for q in ev if q['e'] == 'pack')
     optout = len({q['u'] for q in ev if q['e'] == 'optout'})
@@ -421,6 +433,11 @@ tr.warn td{{background:#3a1f22}}
 
 <h2>フリーバトル</h2>
 <div class="wrap"><table><tr><th>難易度</th><th>端末</th><th>勝ち</th><th>負け</th><th>投了</th></tr>{rows_free or '<tr><td colspan="5">まだありません</td></tr>'}</table></div>
+
+<h2>2ピック</h2>
+<div class="box">{f'''<p>挑戦 <b>{len(dr_start)}</b>回 ／ 最後まで {len(dr_done)}回 ／ やめた {len(dr_quit)}回 ／ 対戦 {len(dr_battles)}戦・勝率 {dr_wr:.0f}%</p>
+{split_bar('選ばれた組み合わせ', dr_pairs, ['#e0714f', '#4f93e0', '#5bb56c'])}
+{vchart([(f"{w}勝", [(dr_wins.get(w, 0), C_NEW)], True) for w in range(6)], 90) if dr_done else '<p class="note">まだ最後まで遊んだ人はいません</p>'}''' if dr_start else '<p class="note">まだありません</p>'}</div>
 
 <h2>カード</h2>
 <p class="note">採用＝対戦のデッキに入っていた割合（全{nb}戦）／勝率＝入っていた対戦で勝った割合（投了は負け）。

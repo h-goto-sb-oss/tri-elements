@@ -26,6 +26,8 @@ const ICON = {
   info: '/assets/ui/icons/icon_info.webp',
   lock: '/assets/ui/icons/icon_lock.webp',
   home: '/assets/ui/icons/icon_home.webp',
+  // 2ピック。専用のアイコンが届くまではデッキのアイコンを借りる（発注書：release/発注_2ピック素材.md）
+  draft: '/assets/ui/icons/icon_deck.webp',
 };
 
 const PACK_ICON = {

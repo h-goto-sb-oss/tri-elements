@@ -35,7 +35,7 @@ DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 SCREEN = {'battle': '対戦中', 'adventure': '冒険のマップ', 'free': 'フリーバトル', 'deck': 'デッキ編集', 'collection': '図鑑',
           'title': 'タイトル', 'settings': '設定', 'rules': 'ルール', 'shop': 'ショップ'}
 OWNER = {'neyqzar7'}   # 作者自身の端末（stats_report.py と同じ）
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft'}
 E = html.escape
 
 
@@ -103,6 +103,8 @@ def chip(u):
 
 def enemy(q):
     n = NAMES.get(q.get('k'), q.get('k') or '?')
+    if q.get('dr') == '1':
+        return f'2ピック {n}'
     if q.get('f') == '1':
         return f'フリー（{DIFF.get(q.get("df"), q.get("df"))}）{n}'
     return n
@@ -134,6 +136,15 @@ def say(q):
         return f'💤 閉じた／裏に回した（{SCREEN.get(q.get("sc"), q.get("sc"))}）'
     if e == 'optout':
         return '送信を止めた'
+    if e == 'draft':
+        pj = {'fire,water': '炎×水', 'water,grass': '水×草', 'grass,fire': '草×炎'}.get(q.get('pr'), '')
+        st = q.get('st')
+        if st == 'start':
+            return f'🃏 2ピックを始めた（{pj}）'
+        if st == 'done':
+            return f'🏅 2ピック終了：{q.get("w", "?")}勝（{pj}）'
+        if st == 'quit':
+            return '2ピックをやめた'
     if e == 'thanks':
         return '💌 お礼のメッセージが出た（' + ('ラスボス初撃破' if q.get('k') == 'final' else 'キャラカード初入手') + '）'
     if e == 'fb':

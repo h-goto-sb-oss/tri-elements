@@ -30,6 +30,9 @@ import { L, kwb, lang, setLang, storedLang, guessLang } from '../i18n/lang.js';
 import '../i18n/data.js';
 import { EN_SETS } from '../i18n/en_game.js';
 import { track, statsEnabled, setStatsEnabled, firstVisit, packDeck } from '../game/telemetry.js';
+import {
+  DRAFT_ROUNDS, DRAFT_BATTLES, DRAFT_PAIRS, newDraft, applyPick, draftPhase, draftOpponent, draftReward,
+} from '../game/draft.js';
 
 // 言語は最初に決める（カード名などのデータもここで差し替わる）。
 // 一度も選んだことが無ければ、端末の言語で仮に表示して選択画面を出す。
@@ -95,7 +98,8 @@ function trackBattleEnd(r, extra = {}) {
     k: app.enemyKey, f: app.free ? 1 : 0, df: app.free ? app.free.difficulty : undefined,
     r, tn: g ? g.turn : undefined,
     sec: app.battleT0 ? Math.round((Date.now() - app.battleT0) / 1000) : undefined,
-    dk: packDeck(app.save.deck),
+    dk: packDeck(app.draftBattle && app.save.draft ? app.save.draft.picks : app.save.deck),
+    dr: app.draftBattle ? 1 : undefined,
     ...extra,
   });
 }
@@ -108,7 +112,7 @@ function isNarrow() { return window.innerWidth <= 720; }
 // ============================================================
 const SCENE_BGM = {
   title: 'bgm_menu', deck: 'bgm_menu', collection: 'bgm_menu', rules: 'bgm_menu', settings: 'bgm_menu',
-  adventure: 'bgm_map', free: 'bgm_map', battle: 'bgm_battle',
+  adventure: 'bgm_map', free: 'bgm_map', draft: 'bgm_map', battle: 'bgm_battle',
 };
 /** ここから先の戦闘は後半用の曲に切り替える（黄昏の回廊＝6番目のエリア） */
 const LATE_AREA_FROM = 5;
@@ -124,6 +128,13 @@ function go(screen) {
   app.screen = screen; app.result = null; app.popup = null; app.sel = null; app.detail = null; app.artZoom = null;
   if (screen === 'deck') app.deckDraft = [...app.save.deck];
   syncBgm(); render({ resetScroll: true });   // 画面を変えたときは先頭から
+}
+
+/** 効果音なしの知らせ（toast は失敗の音が鳴るので、うれしい知らせにはこちら） */
+function notice(msg, ms = 2000) {
+  app.toast = msg; render();
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { app.toast = ''; render(); }, ms);
 }
 
 function toast(msg, ms = 1700) {
@@ -283,6 +294,7 @@ function renderTitle() {
       <div class="title-menu">
         <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>${L('冒険へ出る', 'Adventure')}</b><small>${L('物語を進める', 'Continue the story')}</small></span></button>
         <button class="title-action" data-go="free"><span class="ta-icon">${icon('freebattle')}</span><span><b>${L('フリーバトル', 'Free Battle')}</b><small>${L('好きな相手と対戦', 'Fight any opponent you like')}</small></span></button>
+        <button class="title-action" data-go="draft"><span class="ta-icon">${icon('draft')}</span><span><b>${L('2ピック', '2-Pick Draft')}</b><small>${app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
         <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>${L('デッキ編集', 'Deck Builder')}</b><small>${L('30枚を編成', 'Build a 30-card deck')}</small></span></button>
         <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>${L('カード図鑑', 'Card Library')}</b><small>${L(`全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める`, `Browse all ${ALL_CARDS.filter(c => !c.hidden).length} cards`)}</small></span></button>
         <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>${L('カードショップ', 'Card Shop')}</b><small>${L(`星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換`, `Trade ${icon('stardust')}${app.save.stardust || 0} Stardust for packs`)}</small></span></button>
@@ -484,6 +496,152 @@ function renderFree() {
       <button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button>
     </div>
   </div>`;
+}
+
+// ============================================================
+// 2ピック（その場で30枚を組んで5連戦）。計算は game/draft.js
+// ============================================================
+const ELEMENT_ORDER = { fire: 0, water: 1, grass: 2, none: 3 };
+function pairName(pair) {
+  return (pair || []).map(e => ELEMENTS[e].name).join(L('×', ' × '));
+}
+function pairIcons(pair) {
+  return `<span class="dr-pairicons">${(pair || []).map(e => icon(e)).join('')}</span>`;
+}
+
+/** 5戦ぶんの勝ち負けを丸で並べる */
+function draftPipsHtml(d) {
+  const log = (d && d.log) || [];
+  return `<div class="dr-pips">${Array.from({ length: DRAFT_BATTLES }, (_, i) => {
+    const r = log[i];
+    return `<span class="${r ? (r.win ? 'w' : 'l') : ''}">${r ? (r.win ? L('勝', 'W') : L('負', 'L')) : i + 1}</span>`;
+  }).join('')}</div>`;
+}
+
+/** 組んだデッキのコスト配分と中身（名前だけの小さな一覧） */
+function draftDeckHtml(picks) {
+  const curve = deckCurve(picks);
+  const max = Math.max(1, ...Object.values(curve));
+  const bars = [1, 2, 3, 4, 5, 6, 7].map(k => `<div class="dr-cb"><i style="height:${(curve[k] || 0) / max * 100}%"></i><b>${curve[k] || ''}</b><span>${k === 7 ? '7+' : k}</span></div>`).join('');
+  const count = {};
+  picks.forEach(id => { count[id] = (count[id] || 0) + 1; });
+  const ids = Object.keys(count).sort((a, b) => (card(a).cost - card(b).cost) || (ELEMENT_ORDER[card(a).element] - ELEMENT_ORDER[card(b).element]) || a.localeCompare(b));
+  const mons = picks.filter(id => card(id).type === 'monster').length;
+  const chips = ids.map(id => {
+    const c = card(id);
+    return `<button class="dr-chip ${c.element}" data-card="${id}"><span class="dc-cost">${c.cost}</span><span class="dc-name">${esc(c.name)}</span>${count[id] > 1 ? `<span class="dc-n">×${count[id]}</span>` : ''}</button>`;
+  }).join('');
+  return `<div class="dr-deck">
+    <div class="dr-deckhead"><b>${L(`デッキ ${picks.length}/30`, `Deck ${picks.length}/30`)}</b><span>${L(`モンスター ${mons}・サポート ${picks.length - mons}`, `${mons} monsters · ${picks.length - mons} supports`)}</span></div>
+    <div class="dr-curve">${bars}</div>
+    <div class="dr-chips">${chips || `<span class="hint">${L('まだ何も取っていません', 'Nothing picked yet')}</span>`}</div>
+  </div>`;
+}
+
+const PAIR_BLURB = {
+  'fire,water': ['攻めの炎と、粘りの水', 'Fire’s offense, Water’s endurance'],
+  'water,grass': ['守りと回復で、じっくり勝つ', 'Win slowly with walls and healing'],
+  'grass,fire': ['大きく育てて、焼き払う', 'Grow big, then burn it down'],
+};
+
+function renderDraft() {
+  const d = app.save.draft;
+  const phase = draftPhase(d);
+  const stats = app.save.draftStats || { runs: 0, best: 0 };
+  let body = '';
+
+  if (phase === 'none') {
+    const pairs = DRAFT_PAIRS.map(p => `
+      <button class="dr-pairbtn" data-draftpair="${p.join(',')}">
+        ${pairIcons(p)}<b>${pairName(p)}</b><small>${L(...PAIR_BLURB[p.join(',')])}</small>
+      </button>`).join('');
+    body = `<div class="dr-intro">
+      <p class="dr-lead">${L('2枚1組のセットが2つ出てくるので、どちらかを取ります。15回くり返して30枚のデッキを組み、5人のライバルと戦います。',
+        'Two sets of two cards appear — take one. Repeat 15 times to build a 30-card deck, then fight 5 rivals.')}</p>
+      <ul class="dr-rules">
+        <li>${L('持っていないカードも使えます（無属性のカードはどの組でも出ます）', 'You can use cards you don’t own (neutral cards appear in every pair)')}</li>
+        <li>${L(`勝った数で星屑 ${icon('stardust')}（最大10）。5戦全勝でプリズムパック`, `Earn Stardust ${icon('stardust')} for your wins (up to 10). Win all 5 for a Prism Pack`)}</li>
+        <li>${L('途中で閉じても、続きから再開できます', 'You can close the game and pick up where you left off')}</li>
+      </ul>
+      <h3>${L('属性の組み合わせを選ぶ', 'Choose your element pair')}</h3>
+      <div class="dr-pairs">${pairs}</div>
+      ${stats.runs ? `<p class="hint dr-best">${L(`これまで ${stats.runs}回挑戦・最高 ${stats.best}勝`, `${stats.runs} runs so far · best ${stats.best} wins`)}</p>` : ''}
+    </div>`;
+  } else if (phase === 'pick') {
+    const round = d.picks.length / 2 + 1;
+    const opt = (set, i) => `
+      <div class="dr-opt">
+        <div class="dr-cards">${set.map(id => cardHtml(card(id), {})).join('')}</div>
+        <button class="btn primary dr-take" data-draftpick="${i}">${L('このセットを取る', 'Take this set')}</button>
+      </div>`;
+    body = `<div class="dr-top">
+        ${pairIcons(d.pair)}<b>${L(`ピック ${round} / ${DRAFT_ROUNDS}`, `Pick ${round} / ${DRAFT_ROUNDS}`)}</b>
+        <div class="dr-progress"><i style="width:${(round - 1) / DRAFT_ROUNDS * 100}%"></i></div>
+      </div>
+      <div class="dr-options">${opt(d.options[0], 0)}<div class="dr-or">${L('または', 'or')}</div>${opt(d.options[1], 1)}</div>
+      <p class="hint dr-tip">${L('カードを押すと、効果を詳しく見られます', 'Tap a card to see its details')}</p>
+      ${draftDeckHtml(d.picks)}
+      <div class="dr-quit"><button class="btn tiny" data-draftquit>${app.draftQuitArm ? L('もう一度押すとやめます', 'Press again to abandon') : L('この挑戦をやめる', 'Abandon this run')}</button></div>`;
+  } else if (phase === 'battle') {
+    const o = d.opp;
+    const a = o ? AREAS[o.area] : null, e = a ? a.enemies[o.index] : null;
+    body = `<div class="dr-status">
+        ${pairIcons(d.pair)}<b>${L(`${d.wins}勝 ${d.losses}敗`, `${d.wins}W ${d.losses}L`)}</b>
+        <span class="hint">${L(`${d.played + 1}戦目 / ${DRAFT_BATTLES}`, `Battle ${d.played + 1} of ${DRAFT_BATTLES}`)}</span>
+        ${draftPipsHtml(d)}
+      </div>
+      ${e ? `<div class="adv-stage dr-stage" ${AREA_BG[a.id] ? `style="--bgimg:url(${AREA_BG[a.id]})"` : ''}>
+        ${AREA_BG[a.id] ? '<div class="stagebg"></div>' : ''}
+        <div class="foes"><div class="foe">
+          ${portraitHtml(a.id, o.index, e)}
+          <div class="fname">${esc(e.name)}</div>
+          <div class="fdesc">${pairIcons(o.pair)} ${L(`${pairName(o.pair)}のドラフトデッキ`, `${pairName(o.pair)} draft deck`)}</div>
+          <button class="btn primary fbtn" data-draftfight>${L('対戦する', 'Fight')}</button>
+        </div></div>
+      </div>` : ''}
+      ${draftDeckHtml(d.picks)}
+      <div class="dr-quit"><button class="btn tiny" data-draftquit>${app.draftQuitArm ? L('もう一度押すとやめます（報酬はもらえません）', 'Press again to abandon (no reward)') : L('この挑戦をやめる', 'Abandon this run')}</button></div>`;
+  } else {
+    const rw = draftReward(d.wins);
+    body = `<div class="dr-done">
+      <h3>${L('挑戦終了', 'Run complete')}</h3>
+      <div class="dr-bigscore">${L(`${d.wins}勝 ${d.losses}敗`, `${d.wins}W ${d.losses}L`)}</div>
+      ${draftPipsHtml(d)}
+      <div class="dr-reward">${L('報酬', 'Reward')}：${rw.dust ? `${icon('stardust')} ${L(`星屑 ${rw.dust}`, `${rw.dust} Stardust`)}` : L('なし', 'none')}${rw.prism ? ` ＋ ${packIcon('prism')} ${PACK_TYPES.prism.name}` : ''}</div>
+      <button class="btn primary" data-draftclaim>${L('受け取って終わる', 'Claim and finish')}</button>
+    </div>
+    ${draftDeckHtml(d.picks)}`;
+  }
+
+  return `<div class="adventure draft">
+    <div class="adv-head">
+      <h2>${L('2ピック', '2-Pick Draft')}</h2>
+      <div class="desc">${L('その場でデッキを組んで、5人のライバルと連戦するモードです。', 'Draft a deck on the spot and battle 5 rivals in a row.')}</div>
+      <div class="dust">${icon('stardust')} ${app.save.stardust || 0}</div>
+    </div>
+    ${body}
+    <div class="adv-foot"><button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button></div>
+  </div>`;
+}
+
+/** 2ピックの対戦を始める（相手がまだ決まっていなければここで決めて、セーブに残す） */
+function startDraftBattle() {
+  const d = app.save.draft;
+  if (draftPhase(d) !== 'battle') return;
+  if (!d.opp) { d.opp = draftOpponent(d.played, AREAS, Math.random, d.pair); writeSave(app.save); }
+  startBattle(d.opp.area, d.opp.index, false, { draft: true });
+}
+
+/** 2ピックの1戦の結果を記録して、次の相手を決める */
+function recordDraftBattle(win) {
+  const d = app.save.draft;
+  if (!d) return { wins: 0, losses: 0, played: 0 };
+  d.log.push({ key: d.opp ? d.opp.key : null, win });
+  if (win) d.wins++; else d.losses++;
+  d.played++;
+  d.opp = d.played < DRAFT_BATTLES ? draftOpponent(d.played, AREAS, Math.random, d.pair) : null;
+  writeSave(app.save);
+  return d;
 }
 
 // ============================================================
@@ -1347,10 +1505,11 @@ function resultOverlay() {
     </div>` : ''}
     ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">${L(`「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります`, `Beat them <b>${r.charLeft}</b> more times on Extreme to get their character card`)}</p>` : ''}
     ${r.thanks ? thanksHtml(r.thanks) : ''}
-    <div class="row-btn">
+    ${r.draft ? `<div class="dr-resline">${draftPipsHtml(app.save.draft)}<p>${L(`2ピック：${r.draft.wins}勝 ${r.draft.losses}敗（${r.draft.played}/${DRAFT_BATTLES}戦）`, `2-Pick: ${r.draft.wins}W ${r.draft.losses}L (${r.draft.played}/${DRAFT_BATTLES})`)}</p></div>` : ''}
+    ${r.draft ? `<div class="row-btn"><button class="btn primary" data-go="draft">${r.draft.played >= DRAFT_BATTLES ? L('結果を見る', 'See results') : L('次の対戦へ', 'Next battle')}</button></div>` : `<div class="row-btn">
       <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? L('フリーバトルへ戻る', 'Back to Free Battle') : L('冒険へ戻る', 'Back to Adventure')}</button>
       <button class="btn" data-rematch>${L('もう一度', 'Rematch')}</button>
-    </div>
+    </div>`}
   </div></div>`;
 }
 
@@ -1504,6 +1663,7 @@ function render(opts = {}) {
   switch (app.screen) {
     case 'adventure': html = renderAdventure(); break;
     case 'free': html = renderFree(); break;
+    case 'draft': html = renderDraft(); break;
     case 'deck': html = renderDeck(); break;
     case 'collection': html = renderCollection(); break;
     case 'shop': html = renderShop(); break;
@@ -1537,20 +1697,30 @@ function render(opts = {}) {
 // ============================================================
 // バトル進行
 // ============================================================
-function startBattle(areaIndex, enemyIndex, free = false) {
+/**
+ * @param opts.draft  2ピックの対戦。自分は2ピックで組んだ30枚、相手は save.draft.opp のドラフトデッキ。
+ *                    顔と名前だけ冒険のライバルを借りる（強さは draft.opp.noise、ライフは20で揃える）
+ */
+function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   // 勝敗の効果音がまだ鳴っている途中で「もう一度」を押した場合に備えて、
   // 鳴りかけの音を止め、下げたままのBGM音量を戻しておく
   Audio.stopSe();
   Audio.unduckBgm(0);
+  const dr = opts.draft ? app.save.draft : null;
   // 複数スロットのせいで、30枚に満たないデッキを選んだまま挑めてしまわないように
-  if (app.save.deck.length !== 30) {
+  if (!dr && app.save.deck.length !== 30) {
     const d = app.save.decks[app.save.activeDeck];
     toast(L(`「${d ? d.name : 'デッキ'}」は${app.save.deck.length}枚です。30枚にしてください`, `“${d ? d.name : 'Deck'}” has ${app.save.deck.length} cards. It needs exactly 30`));
     return go('deck');
   }
-  const area = AREAS[areaIndex], enemy = area.enemies[enemyIndex];
+  const area = AREAS[areaIndex];
+  const enemy = dr
+    ? { ...area.enemies[enemyIndex], deck: dr.opp.deck, noise: dr.opp.noise, life: 20, startCost: 0, profile: 'balanced',
+        desc: L(`${pairName(dr.opp.pair)}のドラフトデッキ`, `${pairName(dr.opp.pair)} draft deck`) }
+    : area.enemies[enemyIndex];
   const diff = free ? FREE_DIFFICULTY[app.freeDiff] : null;
   app.free = free ? { difficulty: app.freeDiff } : null;
+  app.draftBattle = !!dr;
   app.areaIndex = areaIndex;
   app.enemy = enemy;
   app.enemyKey = `${area.id}:${enemyIndex}`;
@@ -1567,7 +1737,7 @@ function startBattle(areaIndex, enemyIndex, free = false) {
     foeSig = selfCard;
   }
   app.game = createGame({
-    decks: [[...app.save.deck], foeDeck],
+    decks: [[...(dr ? dr.picks : app.save.deck)], foeDeck],
     seed, names: [myName(), enemy.name],
     startCost: [0, (enemy.startCost || 0) + (diff ? diff.cost : 0)],
     signature: [null, foeSig],
@@ -1575,7 +1745,7 @@ function startBattle(areaIndex, enemyIndex, free = false) {
   app.game.players[1].life = (enemy.life || 20) + (diff ? diff.life : 0);
   app.enemyLifeMax = app.game.players[1].life;
   app.battleT0 = Date.now();
-  track('start', { k: app.enemyKey, f: free ? 1 : 0, df: free ? app.freeDiff : undefined });
+  track('start', { k: app.enemyKey, f: free ? 1 : 0, df: free ? app.freeDiff : undefined, dr: dr ? 1 : undefined });
   lastBannerTurn = 0;
   app.phase = 'mulligan';
   app.screen = 'battle';
@@ -1829,6 +1999,15 @@ function finishGame() {
   if (!g || g.winner === null || app.result) return;
   const win = g.winner === 0;
   let reward = null, unlocked = null, dust = 0, firstClear = false;
+
+  if (app.draftBattle) {
+    // 2ピック：勝ち負けを数えて次の相手を決める（冒険・フリーの戦績には入れない）
+    const d = recordDraftBattle(win);
+    trackBattleEnd(win ? 'w' : 'l');
+    app.result = { win, reason: g.reason, draft: { wins: d.wins, losses: d.losses, played: d.played } };
+    Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
+    return render();
+  }
 
   if (app.free) {
     // フリーバトル: 戦績は別枠、勝てば星屑
@@ -2231,6 +2410,54 @@ function handleClick(ev) {
   const fb = hit('[data-feedback]');
   if (fb) { track('fb', { to: fb.dataset.feedback }); return; }
 
+  // --- 2ピック ---
+  const dp = hit('[data-draftpair]');
+  if (dp) {
+    app.save.draft = newDraft(dp.dataset.draftpair.split(','));
+    app.draftQuitArm = 0;
+    writeSave(app.save);
+    track('draft', { st: 'start', pr: dp.dataset.draftpair });
+    return render({ resetScroll: true });
+  }
+  const pk = hit('[data-draftpick]');
+  if (pk && app.save.draft && app.save.draft.options) {
+    const d = applyPick(app.save.draft, Number(pk.dataset.draftpick));
+    // 30枚そろったら、1戦目の相手をここで決めて残す（読み込み直しで相手が変わらないように）
+    if (draftPhase(d) === 'battle' && !d.opp) d.opp = draftOpponent(0, AREAS, Math.random, d.pair);
+    writeSave(app.save);
+    Audio.playSe('se_draw');
+    return render({ resetScroll: true });
+  }
+  if (hit('[data-draftfight]')) return startDraftBattle();
+  if (hit('[data-draftquit]')) {
+    // 取り返しがつかないので2回押させる（投了と同じ作法）
+    const now = Date.now();
+    if (!app.draftQuitArm || now - app.draftQuitArm > 5000) { app.draftQuitArm = now; return render(); }
+    app.draftQuitArm = 0;
+    track('draft', { st: 'quit', w: app.save.draft ? app.save.draft.wins : 0, n: app.save.draft ? app.save.draft.picks.length : 0 });
+    app.save.draft = null;
+    writeSave(app.save);
+    return render({ resetScroll: true });
+  }
+  if (hit('[data-draftclaim]')) {
+    const d = app.save.draft;
+    if (!d) return;
+    const rw = draftReward(d.wins);
+    app.save.stardust = (app.save.stardust || 0) + rw.dust;
+    if (rw.prism) app.save.packs.prism = (app.save.packs.prism || 0) + 1;
+    const st = app.save.draftStats || { runs: 0, best: 0, wins: 0 };
+    st.runs++; st.best = Math.max(st.best, d.wins); st.wins = (st.wins || 0) + d.wins;
+    app.save.draftStats = st;
+    track('draft', { st: 'done', w: d.wins, pr: d.pair.join(',') });
+    app.save.draft = null;
+    writeSave(app.save);
+    Audio.playSe(rw.prism ? 'se_rare' : 'se_confirm');
+    notice(rw.prism
+      ? L('プリズムパックは、冒険の画面で開けられます', 'Open your Prism Pack from the Adventure screen')
+      : L(`星屑 ${rw.dust} を受け取りました`, `Received ${rw.dust} Stardust`), 2600);
+    return render({ resetScroll: true });
+  }
+
   // --- 画面遷移など ---
   const goEl = hit('[data-go]');
   if (goEl) return go(goEl.dataset.go);
@@ -2387,7 +2614,7 @@ function handleClick(ev) {
   }
 
   // --- 図鑑・デッキ編集でカードをクリック → 詳細 ---
-  if ((app.screen === 'collection') && hit('[data-card]')) {
+  if ((app.screen === 'collection' || app.screen === 'draft') && hit('[data-card]')) {
     app.detail = hit('[data-card]').dataset.card; return render();
   }
 
@@ -2435,6 +2662,7 @@ function handleClick(ev) {
     app.quitArm = false;
     clearTimeout(app.aiTimer);
     trackBattleEnd('q');
+    if (app.draftBattle) { recordDraftBattle(false); app.draftBattle = false; return go('draft'); }
     return go(app.free ? 'free' : 'adventure');
   }
   const gv = hit('[data-grave]');
