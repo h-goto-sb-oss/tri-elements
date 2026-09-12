@@ -100,6 +100,7 @@ function trackBattleEnd(r, extra = {}) {
     sec: app.battleT0 ? Math.round((Date.now() - app.battleT0) / 1000) : undefined,
     dk: packDeck(app.draftBattle && app.save.draft ? app.save.draft.picks : app.save.deck),
     dr: app.draftBattle ? 1 : undefined,
+    ...(app.draftBattle && app.draftInfo ? app.draftInfo : {}),
     ...extra,
   });
 }
@@ -1723,6 +1724,8 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   const diff = free ? FREE_DIFFICULTY[app.freeDiff] : null;
   app.free = free ? { difficulty: app.freeDiff } : null;
   app.draftBattle = !!dr;
+  // 集計用：自分と相手の属性の組、何戦目か（組ごとの勝率＝釣り合いを見る）
+  app.draftInfo = dr ? { pr: dr.pair.join(','), op: dr.opp.pair.join(','), bn: dr.played + 1 } : null;
   app.areaIndex = areaIndex;
   app.enemy = enemy;
   app.enemyKey = `${area.id}:${enemyIndex}`;

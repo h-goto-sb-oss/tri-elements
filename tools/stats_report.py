@@ -249,6 +249,19 @@ def main():
     dr_wins = Counter(num(q.get('w'), 0) for q in dr_done)
     dr_battles = [q for q in ev if q['e'] == 'end' and q.get('dr') == '1']
     dr_wr = (sum(1 for q in dr_battles if q.get('r') == 'w') / len(dr_battles) * 100) if dr_battles else 0
+    # 組み合わせごと（自分の組 × 相手の組）の勝率。pr/op が載るのは 2026-09-12 の版から
+    dr_mu = defaultdict(lambda: [0, 0])
+    for q in dr_battles:
+        if q.get('pr') and q.get('op'):
+            c = dr_mu[(q['pr'], q['op'])]
+            c[0] += 1
+            c[1] += q.get('r') == 'w'
+    dr_bn = defaultdict(lambda: [0, 0])
+    for q in dr_battles:
+        if q.get('bn'):
+            c = dr_bn[num(q['bn'], 0)]
+            c[0] += 1
+            c[1] += q.get('r') == 'w'
 
     packs = Counter(q.get('p') for q in ev if q['e'] == 'pack')
     optout = len({q['u'] for q in ev if q['e'] == 'optout'})
@@ -437,7 +450,9 @@ tr.warn td{{background:#3a1f22}}
 <h2>選定の儀（2ピック）</h2>
 <div class="box">{f'''<p>挑戦 <b>{len(dr_start)}</b>回 ／ 最後まで {len(dr_done)}回 ／ やめた {len(dr_quit)}回 ／ 対戦 {len(dr_battles)}戦・勝率 {dr_wr:.0f}%</p>
 {split_bar('選ばれた組み合わせ', dr_pairs, ['#e0714f', '#4f93e0', '#5bb56c'])}
-{vchart([(f"{w}勝", [(dr_wins.get(w, 0), C_NEW)], True) for w in range(6)], 90) if dr_done else '<p class="note">まだ最後まで遊んだ人はいません</p>'}''' if dr_start else '<p class="note">まだありません</p>'}</div>
+{vchart([(f"{w}勝", [(dr_wins.get(w, 0), C_NEW)], True) for w in range(6)], 90) if dr_done else '<p class="note">まだ最後まで遊んだ人はいません</p>'}
+{f"""<details><summary>数字で見る（組み合わせ・何戦目ごとの勝率）</summary><div class="wrap"><table><tr><th>自分</th><th>相手</th><th>対戦</th><th>勝率</th></tr>{''.join(f'<tr><td>{PAIR_JA.get(a, e(a))}</td><td>{PAIR_JA.get(b, e(b))}</td><td>{c[0]}</td><td>{c[1] / c[0] * 100:.0f}%</td></tr>' for (a, b), c in sorted(dr_mu.items()))}</table>
+<table><tr><th>何戦目</th><th>対戦</th><th>勝率</th></tr>{''.join(f'<tr><td>{n}戦目</td><td>{c[0]}</td><td>{c[1] / c[0] * 100:.0f}%</td></tr>' for n, c in sorted(dr_bn.items()))}</table></div></details>""" if dr_mu else ''}''' if dr_start else '<p class="note">まだありません</p>'}</div>
 
 <h2>カード</h2>
 <p class="note">採用＝対戦のデッキに入っていた割合（全{nb}戦）／勝率＝入っていた対戦で勝った割合（投了は負け）。
