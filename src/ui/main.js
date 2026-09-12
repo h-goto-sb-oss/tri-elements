@@ -114,14 +114,19 @@ function isNarrow() { return window.innerWidth <= 720; }
 // ============================================================
 const SCENE_BGM = {
   title: 'bgm_menu', deck: 'bgm_menu', collection: 'bgm_menu', rules: 'bgm_menu', settings: 'bgm_menu',
-  adventure: 'bgm_map', free: 'bgm_map', draft: 'bgm_map', battle: 'bgm_battle',
+  adventure: 'bgm_map', free: 'bgm_map', draft: 'bgm_draft', battle: 'bgm_battle',
 };
 /** ここから先の戦闘は後半用の曲に切り替える（黄昏の回廊＝6番目のエリア） */
 const LATE_AREA_FROM = 5;
 function syncBgm() {
   let key = SCENE_BGM[app.screen] || 'bgm_menu';
-  if (key === 'bgm_battle' && !app.free && app.areaIndex >= LATE_AREA_FROM) key = 'bgm_battle_late';
+  // 選定の儀の対戦は、選定の儀の曲のまま（画面が変わっても曲を切らない）
+  if (key === 'bgm_battle' && app.draftBattle) key = 'bgm_draft';
+  else if (key === 'bgm_battle' && !app.free && app.areaIndex >= LATE_AREA_FROM) key = 'bgm_battle_late';
   Audio.playBgm(key);
+  // 戦闘の曲は大きいので、冒険・フリーの画面にいるうちに読んでおく
+  if (app.screen === 'adventure') Audio.prefetchBgm(app.areaIndex >= LATE_AREA_FROM ? 'bgm_battle_late' : 'bgm_battle');
+  if (app.screen === 'free') Audio.prefetchBgm('bgm_battle');
 }
 
 function go(screen) {
