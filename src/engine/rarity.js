@@ -77,6 +77,9 @@ export const RARITY_OF = {
   c_yue: 'legend', c_kairos: 'legend', c_astel: 'legend',
   c_nox: 'legend', c_dione: 'legend', c_astralis: 'legend',
 
+  // ---------------- 選定の儀の限定カード（隠し・全てレジェンド） ----------------
+  r_shiena: 'legend', r_mirte: 'legend', r_kagura: 'legend', r_elsion: 'legend',
+
   // ---------------- 第4弾『鉄旗の陣』 ----------------
   b_f3: 'uncommon', b_f4: 'rare', b_f5: 'rare', b_lf1: 'legend',
   b_sf2: 'uncommon', b_sf3: 'epic',

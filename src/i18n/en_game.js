@@ -9,6 +9,7 @@ export const EN_KEYWORDS = {
   double: ['Double Strike', 'Can attack twice per turn.'],
   accelerate: ['Accelerate', 'When summoned, increase your max cost by 1 (up to 10).'],
   observe: ['Observe', 'On Summon: Look at the top 3 cards of your deck, add 1 to your hand, and put the rest on the bottom.'],
+  select: ['Choose', 'On Summon: Look at the top 2 cards of your deck, add 1 to your hand, and put the other on the bottom.'],
   dual: ['Dual', 'Counts as both Fire and Water. Easier to gain an advantage, but also easier to be at a disadvantage.'],
   tri: ['Tri', 'Counts as all three elements. Always has the advantage, and always has the disadvantage too.'],
   charge: ['Cleave', 'When it attacks, it also deals damage equal to half its ATK to the monsters on both sides of the target. This damage lowers their DEF directly (destroyed at 0 or less). Normal battles never lower DEF, so this is the one exception.'],
@@ -93,4 +94,5 @@ export const EN_SETS = {
   3: ['Set 3', 'Gate of Stars'],
   4: ['Set 4', 'Iron Banner'],
   9: ['Characters', 'Those who appear beyond Extreme'],
+  10: ['Rite of Choosing', 'For those who prevailed in the rite'],
 };

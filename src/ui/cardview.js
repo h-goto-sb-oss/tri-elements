@@ -34,7 +34,7 @@ function bodyHtml(text) {
 export function cardHtml(c, opts = {}) {
   const sup = c.type === 'support';
   const cls = ['card', c.element, `r-${c.rarity || 'common'}`,
-    sup ? 'is-support' : 'is-monster', opts.cls || ''].join(' ');
+    sup ? 'is-support' : 'is-monster', c.set === 10 ? 'rite' : '', opts.cls || ''].join(' ');
   // 【双属】【三属】はキーワード欄と同じ場所に出す
   const multi = c.elements && c.elements.length > 1
     ? [c.elements.length >= 3 ? KEYWORDS.tri.name : KEYWORDS.dual.name] : [];
@@ -117,7 +117,7 @@ export function detailHtml(c, extra = '', opts = {}) {
         <span>${L('コスト', 'Cost')} ${c.cost}</span>
         ${c.type === 'monster' ? `<span class="atk">${icon('atk')} ${c.atk}</span><span class="def">${icon('def')} ${c.def}</span>` : `<span>${L('サポート', 'Support')}</span>`}
         <span style="color:${r.color}">${r.name}</span>
-        <span>${(c.set || 1) === 9 ? L('キャラクター', 'Character') : L(`第${c.set || 1}弾`, `Set ${c.set || 1}`)}</span>
+        <span>${(c.set || 1) === 9 ? L('キャラクター', 'Character') : c.set === 10 ? L('選定の儀の限定カード', 'Rite of Choosing exclusive') : L(`第${c.set || 1}弾`, `Set ${c.set || 1}`)}</span>
       </div>
       <div class="d-text">${esc(c.text || L('このカードに効果はありません（バニラ）。', 'This card has no effect (vanilla).'))}</div>
       ${kw}

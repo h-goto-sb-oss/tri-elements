@@ -245,6 +245,8 @@ def main():
     dr_start = [q for q in ev if q['e'] == 'draft' and q.get('st') == 'start']
     dr_done = [q for q in ev if q['e'] == 'draft' and q.get('st') == 'done']
     dr_quit = [q for q in ev if q['e'] == 'draft' and q.get('st') == 'quit']
+    RITE_JA = {'r_shiena': 'シエナ', 'r_mirte': 'ミルテ', 'r_kagura': 'カグラ', 'r_elsion': 'エルシオン'}
+    dr_cards = Counter(RITE_JA.get(q.get('c'), q.get('c')) for q in ev if q['e'] == 'draft' and q.get('st') == 'card')
     dr_pairs = Counter(PAIR_JA.get(q.get('pr'), q.get('pr')) for q in dr_start)
     dr_wins = Counter(num(q.get('w'), 0) for q in dr_done)
     dr_battles = [q for q in ev if q['e'] == 'end' and q.get('dr') == '1']
@@ -450,6 +452,7 @@ tr.warn td{{background:#3a1f22}}
 <h2>選定の儀（2ピック）</h2>
 <div class="box">{f'''<p>挑戦 <b>{len(dr_start)}</b>回 ／ 最後まで {len(dr_done)}回 ／ やめた {len(dr_quit)}回 ／ 対戦 {len(dr_battles)}戦・勝率 {dr_wr:.0f}%</p>
 {split_bar('選ばれた組み合わせ', dr_pairs, ['#e0714f', '#4f93e0', '#5bb56c'])}
+<p>限定カードを入手：{' ／ '.join(f'{k} {v}人' for k, v in dr_cards.most_common()) if dr_cards else 'まだ誰も'}</p>
 {vchart([(f"{w}勝", [(dr_wins.get(w, 0), C_NEW)], True) for w in range(6)], 90) if dr_done else '<p class="note">まだ最後まで遊んだ人はいません</p>'}
 {f"""<details><summary>数字で見る（組み合わせ・何戦目ごとの勝率）</summary><div class="wrap"><table><tr><th>自分</th><th>相手</th><th>対戦</th><th>勝率</th></tr>{''.join(f'<tr><td>{PAIR_JA.get(a, e(a))}</td><td>{PAIR_JA.get(b, e(b))}</td><td>{c[0]}</td><td>{c[1] / c[0] * 100:.0f}%</td></tr>' for (a, b), c in sorted(dr_mu.items()))}</table>
 <table><tr><th>何戦目</th><th>対戦</th><th>勝率</th></tr>{''.join(f'<tr><td>{n}戦目</td><td>{c[0]}</td><td>{c[1] / c[0] * 100:.0f}%</td></tr>' for n, c in sorted(dr_bn.items()))}</table></div></details>""" if dr_mu else ''}''' if dr_start else '<p class="note">まだありません</p>'}</div>

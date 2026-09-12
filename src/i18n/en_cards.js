@@ -198,4 +198,10 @@ export const EN_CARDS = {
   c_nox: ['Nox, the Faceless Envoy', 'On Summon: Copy the ATK and DEF of the enemy monster with the highest ATK, then gain +1/+1.', 'It wears the face of whoever it faces, and hands it right back.'],
   c_dione: ['Dione, Twin-Pole Queen', '[Dual] On Summon: Switch all enemy monsters to Attack Mode, then destroy all enemy monsters with 3 or less DEF.', 'With both hands, she scorches and freezes at the same time.'],
   c_astralis: ['Astralis, Star King', 'On Summon: Stun all enemy monsters. Turn Start: Deal 1 damage to the opponent.', 'When the king takes the throne, stars and people alike stand still.'],
+
+  // ---------------- 選定の儀の限定カード ----------------
+  r_shiena: ['Shiena, Selector of the Evening Calm', '[Dual] [Choose] On Summon: Deal 2 damage to the opponent.', 'Even underwater, the flame endures. The evening calm is the hour two powers stop fighting.'],
+  r_mirte: ['Mirte, Selector of the Tidewood', '[Dual] [Choose] Turn Start: Restore 1 Life.', 'For every drop she pours, a new leaf nods back.'],
+  r_kagura: ['Kagura, Selector of the Wildfire', '[Dual] [Choose] On Summon: Give all your monsters +1/+0.', 'New shoots rise from burned fields. Each ring of the bell sets the sparks dancing.'],
+  r_elsion: ['Elsion, High Priest of Three Crystals', '[Tri] [Choose] On Summon: Give all your monsters +1/+1.', 'Chosen one, you are as strong as the paths you have chosen.'],
 };

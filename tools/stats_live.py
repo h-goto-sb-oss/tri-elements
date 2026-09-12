@@ -145,6 +145,9 @@ def say(q):
             return f'🏅 選定の儀 終了：{q.get("w", "?")}勝（{pj}）'
         if st == 'quit':
             return '選定の儀をやめた'
+        if st == 'card':
+            rite = {'r_shiena': 'シエナ', 'r_mirte': 'ミルテ', 'r_kagura': 'カグラ', 'r_elsion': 'エルシオン'}
+            return f'🎴 限定カードを入手：{rite.get(q.get("c"), q.get("c"))}'
     if e == 'thanks':
         return '💌 お礼のメッセージが出た（' + ('ラスボス初撃破' if q.get('k') == 'final' else 'キャラカード初入手') + '）'
     if e == 'fb':

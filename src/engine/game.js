@@ -298,10 +298,12 @@ function applyOp(state, pi, op, ctx) {
         const [chosen] = seen.splice(best, 1);
         me.hand.push(chosen);
         me.deck.unshift(...seen);
-        log(state, 'draw', L(`${me.name} が【観測】で ${card(chosen).name} を手札に加えた`, `${me.name} added ${card(chosen).name} to their hand with [Observe]`), { p: pi, cardId: chosen });
+        const kw = KEYWORDS[op.kw || 'observe'].name;
+        log(state, 'draw', L(`${me.name} が【${kw}】で ${card(chosen).name} を手札に加えた`, `${me.name} added ${card(chosen).name} to their hand with [${kw}]`), { p: pi, cardId: chosen });
       } else {
-        state.pendingChoice = { type: 'observe', pi, cards: seen };
-        log(state, 'info', L(`${me.name} が山札の上から ${seen.length} 枚を観測している`, `${me.name} is observing the top ${seen.length} cards of their deck`));
+        // kw：【観測】か【選定】か（どちらも中身は同じ。画面の見出しとログの名前だけ変える）
+        state.pendingChoice = { type: 'observe', pi, cards: seen, kw: op.kw || 'observe' };
+        log(state, 'info', L(`${me.name} が山札の上から ${seen.length} 枚を見ている`, `${me.name} is looking at the top ${seen.length} cards of their deck`));
       }
       break;
     }
@@ -1030,7 +1032,8 @@ export function applyAction(state, pi, act) {
       state.players[pi].hand.push(chosen);
       state.players[pi].deck.unshift(...cards);
       state.pendingChoice = null;
-      log(state, 'draw', L(`${state.players[pi].name} が【観測】で ${card(chosen).name} を手札に加えた`, `${state.players[pi].name} added ${card(chosen).name} to their hand with [Observe]`), { p: pi, cardId: chosen });
+      const kw = KEYWORDS[choice.kw || 'observe'].name;
+      log(state, 'draw', L(`${state.players[pi].name} が【${kw}】で ${card(chosen).name} を手札に加えた`, `${state.players[pi].name} added ${card(chosen).name} to their hand with [${kw}]`), { p: pi, cardId: chosen });
       return true;
     }
     default: return false;

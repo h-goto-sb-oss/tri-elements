@@ -32,6 +32,7 @@ import { EN_SETS } from '../i18n/en_game.js';
 import { track, statsEnabled, setStatsEnabled, firstVisit, packDeck } from '../game/telemetry.js';
 import {
   DRAFT_ROUNDS, DRAFT_BATTLES, DRAFT_PAIRS, newDraft, applyPick, draftPhase, draftOpponent, draftReward,
+  RITE_PAIR_CARD, riteProgress, riteUnlocks, addDraftWin,
 } from '../game/draft.js';
 
 // 言語は最初に決める（カード名などのデータもここで差し替わる）。
@@ -552,21 +553,29 @@ function renderDraft() {
   let body = '';
 
   if (phase === 'none') {
-    const pairs = DRAFT_PAIRS.map(p => `
+    const prog = riteProgress(app.save.draftStats, app.save.collection);
+    const pairs = DRAFT_PAIRS.map(p => {
+      const r = prog.find(x => x.id === RITE_PAIR_CARD[p.join(',')]);
+      const nm = riteShort(card(r.id));
+      return `
       <button class="dr-pairbtn" data-draftpair="${p.join(',')}">
         ${pairIcons(p)}<b>${pairName(p)}</b><small>${L(...PAIR_BLURB[p.join(',')])}</small>
-      </button>`).join('');
+        <em class="dr-pairrite ${r.owned ? 'ok' : ''}">${r.owned ? L(`${nm} 入手済み`, `${nm} owned`) : L(`${nm}まで ${r.have}/${r.need}勝`, `${nm}: ${r.have}/${r.need} wins`)}</em>
+      </button>`;
+    }).join('');
     body = `<div class="dr-intro">
       <p class="dr-lead">${L('2枚1組のセットが2つ出てくるので、どちらかを取ります。15回くり返して30枚のデッキを組み、5人のライバルと戦います。',
         'Two sets of two cards appear — take one. Repeat 15 times to build a 30-card deck, then fight 5 rivals.')}</p>
       <ul class="dr-rules">
         <li>${L('持っていないカードも使えます（無属性のカードはどの組でも出ます）', 'You can use cards you don’t own (neutral cards appear in every pair)')}</li>
         <li>${L(`勝った数で星屑 ${icon('stardust')}（最大10）。5戦全勝でプリズムパック`, `Earn Stardust ${icon('stardust')} for your wins (up to 10). Win all 5 for a Prism Pack`)}</li>
+        <li>${L('勝ち続けると、ここでしか手に入らない限定カード（下の4枚）', 'Keep winning to earn 4 exclusive cards (below)')}</li>
         <li>${L('途中で閉じても、続きから再開できます', 'You can close the game and pick up where you left off')}</li>
       </ul>
       <h3>${L('属性の組み合わせを選ぶ', 'Choose your element pair')}</h3>
       <div class="dr-pairs">${pairs}</div>
       ${stats.runs ? `<p class="hint dr-best">${L(`これまで ${stats.runs}回挑戦・最高 ${stats.best}勝`, `${stats.runs} runs so far · best ${stats.best} wins`)}</p>` : ''}
+      ${riteHtml()}
     </div>`;
   } else if (phase === 'pick') {
     const round = d.picks.length / 2 + 1;
@@ -611,6 +620,7 @@ function renderDraft() {
       <div class="dr-reward">${L('報酬', 'Reward')}：${rw.dust ? `${icon('stardust')} ${L(`星屑 ${rw.dust}`, `${rw.dust} Stardust`)}` : L('なし', 'none')}${rw.prism ? ` ＋ ${packIcon('prism')} ${PACK_TYPES.prism.name}` : ''}</div>
       <button class="btn primary" data-draftclaim>${L('受け取って終わる', 'Claim and finish')}</button>
     </div>
+    ${riteHtml()}
     ${draftDeckHtml(d.picks)}`;
   }
 
@@ -638,13 +648,49 @@ function startDraftBattle() {
 /** 2ピックの1戦の結果を記録して、次の相手を決める */
 function recordDraftBattle(win) {
   const d = app.save.draft;
-  if (!d) return { wins: 0, losses: 0, played: 0 };
+  if (!d) return { d: { wins: 0, losses: 0, played: 0 }, got: [] };
   d.log.push({ key: d.opp ? d.opp.key : null, win });
   if (win) d.wins++; else d.losses++;
   d.played++;
   d.opp = d.played < DRAFT_BATTLES ? draftOpponent(d.played, AREAS, Math.random, d.pair) : null;
+  // 限定カードは1勝ごとに数える（挑戦を最後までやらなくても、勝った分は残る）
+  let got = [];
+  if (win) {
+    app.save.draftStats = addDraftWin(app.save.draftStats, d.pair);
+    got = riteUnlocks(app.save.draftStats, app.save.collection);
+    got.forEach(id => { app.save.collection[id] = 1; });
+  }
   writeSave(app.save);
-  return d;
+  return { d, got };
+}
+
+/** 限定カードの呼び名（日本語「夕凪の選定官 シエナ」→ シエナ、英語「Shiena, Selector of …」→ Shiena） */
+const riteShort = c => (lang() === 'en' ? c.name.split(',')[0] : c.name.split(' ').pop());
+
+/** 限定カードの一覧と進み具合（選定の儀の最初の画面・挑戦終了の画面） */
+function riteHtml() {
+  const rows = riteProgress(app.save.draftStats, app.save.collection);
+  const tiles = rows.map(r => {
+    const c = card(r.id);
+    const short = riteShort(c);
+    const cond = r.owned
+      ? `<span class="dr-riteok">${L('入手済み', 'Owned')}</span>`
+      : r.pair
+        ? `${pairIcons(r.pair)} ${L(`${pairName(r.pair)}で ${r.have}/${r.need}勝`, `${r.have}/${r.need} wins as ${pairName(r.pair)}`)}`
+        : r.locked
+          ? L('選定官3人をそろえると挑める', 'Collect all 3 Selectors first')
+          : L(`合計 ${r.have}/${r.need}勝`, `${r.have}/${r.need} total wins`);
+    return `<div class="dr-ritecard ${r.owned ? 'owned' : 'locked'}">
+      ${cardHtml(c, { cls: 'rite-mini' })}
+      <div class="dr-riteinfo"><b>${esc(short)}</b><small>${cond}</small>
+        ${r.owned ? '' : `<div class="dr-ritebar"><i style="width:${r.locked ? 0 : r.have / r.need * 100}%"></i></div>`}</div>
+    </div>`;
+  }).join('');
+  return `<section class="dr-rite">
+    <h3>${L('限定カード', 'Exclusive cards')}</h3>
+    <p class="hint">${L('選定の儀で勝つと手に入る、ここだけのカードです。途中でやめた挑戦でも、勝った数は残ります。', 'Cards you can only earn here. Every win counts — even in a run you abandon.')}</p>
+    <div class="dr-ritegrid">${tiles}</div>
+  </section>`;
 }
 
 // ============================================================
@@ -775,10 +821,11 @@ function renderCollection() {
       3: { name: '第3弾', sub: '星辰の門' },
       4: { name: '第4弾', sub: '鉄旗の陣' },
       9: { name: 'キャラクター', sub: '極の果てに現れる者たち' },
+      10: { name: '選定の儀', sub: '儀式を勝ち抜いた者へ' },
     };
-  // キャラクターカードは隠し。1枚でも入手するまで弾のタブごと出さない
-  const charOwned = ALL_CARDS.filter(c => c.hidden && app.save.collection[c.id]).length;
-  const visible = ALL_CARDS.filter(c => !c.hidden || charOwned);
+  // キャラクター・選定の儀のカードは隠し。その枠のカードを1枚でも入手するまで、タブごと出さない
+  const hiddenOwned = new Set(ALL_CARDS.filter(c => c.hidden && app.save.collection[c.id]).map(c => c.set));
+  const visible = ALL_CARDS.filter(c => !c.hidden || hiddenOwned.has(c.set));
   const sets = [...new Set(visible.map(c => c.set || 1))].sort((a, b) => a - b);
   const activeSet = sets.includes(app.collectionSet) ? app.collectionSet : sets[0];
   const setCards = visible.filter(c => (c.set || 1) === activeSet);
@@ -1420,7 +1467,7 @@ function observeOverlay() {
   const cards = choice.cards.map((id, i) =>
     `<button class="observe-card" data-observe="${i}">${cardHtml(card(id), { cls: 'big selectable' })}</button>`).join('');
   return `<div class="overlay"><div class="modal observe-modal">
-    <h2>${kwb(KEYWORDS.observe.name)}</h2>
+    <h2>${kwb(KEYWORDS[choice.kw || 'observe'].name)}</h2>
     <p>${L('山札の上から見えたカードです。手札に加える1枚を選んでください。', 'These are the top cards of your deck. Choose 1 to add to your hand.')}<br>
       <span style="color:#9fb2c8">${L('残りは山札の底へ戻ります。', 'The rest go to the bottom of your deck.')}</span></p>
     <div class="observe-list">${cards}</div>
@@ -1506,6 +1553,11 @@ function resultOverlay() {
       ${cardHtml(card(r.charCard), { cls: 'big' })}
       <div class="charget-name">${esc(card(r.charCard).name)}</div>
     </div>` : ''}
+    ${(r.riteCards || []).map(id => `<div class="charget riteget">
+      <div class="charget-label">${icon('stardust')} ${L('限定カードを入手', 'Exclusive card get!')} ${icon('stardust')}</div>
+      ${cardHtml(card(id), { cls: 'big' })}
+      <div class="charget-name">${esc(card(id).name)}</div>
+    </div>`).join('')}
     ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">${L(`「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります`, `Beat them <b>${r.charLeft}</b> more times on Extreme to get their character card`)}</p>` : ''}
     ${r.thanks ? thanksHtml(r.thanks) : ''}
     ${r.draft ? `<div class="dr-resline">${draftPipsHtml(app.save.draft)}<p>${L(`選定の儀：${r.draft.wins}勝 ${r.draft.losses}敗（${r.draft.played}/${DRAFT_BATTLES}戦）`, `Rite of Choosing: ${r.draft.wins}W ${r.draft.losses}L (${r.draft.played}/${DRAFT_BATTLES})`)}</p></div>` : ''}
@@ -2007,10 +2059,12 @@ function finishGame() {
 
   if (app.draftBattle) {
     // 2ピック：勝ち負けを数えて次の相手を決める（冒険・フリーの戦績には入れない）
-    const d = recordDraftBattle(win);
+    const { d, got } = recordDraftBattle(win);
     trackBattleEnd(win ? 'w' : 'l');
-    app.result = { win, reason: g.reason, draft: { wins: d.wins, losses: d.losses, played: d.played } };
+    got.forEach(id => track('draft', { st: 'card', c: id }));
+    app.result = { win, reason: g.reason, draft: { wins: d.wins, losses: d.losses, played: d.played }, riteCards: got };
     Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
+    if (got.length) setTimeout(() => Audio.playSe('se_rare'), 700);
     return render();
   }
 
@@ -2451,7 +2505,7 @@ function handleClick(ev) {
     app.save.stardust = (app.save.stardust || 0) + rw.dust;
     if (rw.prism) app.save.packs.prism = (app.save.packs.prism || 0) + 1;
     const st = app.save.draftStats || { runs: 0, best: 0, wins: 0 };
-    st.runs++; st.best = Math.max(st.best, d.wins); st.wins = (st.wins || 0) + d.wins;
+    st.runs = (st.runs || 0) + 1; st.best = Math.max(st.best || 0, d.wins);   // wins は対戦ごとに足してある
     app.save.draftStats = st;
     track('draft', { st: 'done', w: d.wins, pr: d.pair.join(',') });
     app.save.draft = null;

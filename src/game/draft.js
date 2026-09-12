@@ -148,6 +148,51 @@ export function draftOpponent(battleNo, areas, rand = Math.random, myPair = DRAF
   };
 }
 
+// ---- 限定カード（engine/cards_rite.js）----
+// 選定官は「その組で勝った数の合計」、大祭司は「選定官3人をそろえて、全部の組で勝った数の合計」で手に入る。
+// 全勝を条件にしない：5戦全勝は数%しか出ないので、ほとんどの人が届かずにやめてしまう。
+export const RITE_PAIR_CARD = { 'fire,water': 'r_shiena', 'water,grass': 'r_mirte', 'grass,fire': 'r_kagura' };
+export const RITE_PAIR_WINS = 5;
+export const RITE_FINAL_CARD = 'r_elsion';
+export const RITE_FINAL_WINS = 20;
+
+/** 限定カードそれぞれの進み具合：[{ id, pair, have, need, owned }]（pair が null なのは大祭司） */
+export function riteProgress(stats, collection) {
+  const pw = (stats && stats.pw) || {};
+  const total = (stats && stats.wins) || 0;
+  const rows = DRAFT_PAIRS.map(p => {
+    const key = p.join(',');
+    const id = RITE_PAIR_CARD[key];
+    return { id, pair: p, have: Math.min(pw[key] || 0, RITE_PAIR_WINS), need: RITE_PAIR_WINS, owned: !!collection[id] };
+  });
+  const allThree = rows.every(r => r.owned);
+  rows.push({ id: RITE_FINAL_CARD, pair: null, have: Math.min(total, RITE_FINAL_WINS), need: RITE_FINAL_WINS,
+    owned: !!collection[RITE_FINAL_CARD], locked: !allThree });
+  return rows;
+}
+
+/** いま条件を満たしていて、まだ持っていない限定カード（選定官が先、大祭司は同じ勝利でそろったらその後に） */
+export function riteUnlocks(stats, collection) {
+  const got = [];
+  const have = { ...collection };
+  for (const r of riteProgress(stats, have).slice(0, 3)) {
+    if (!r.owned && r.have >= r.need) { got.push(r.id); have[r.id] = 1; }
+  }
+  const fin = riteProgress(stats, have)[3];
+  if (!fin.owned && !fin.locked && fin.have >= fin.need) got.push(fin.id);
+  return got;
+}
+
+/** 1勝ぶんを戦績に足す（組ごとの勝ち数 pw と、全体の勝ち数 wins） */
+export function addDraftWin(stats, pair) {
+  const st = stats || { runs: 0, best: 0, wins: 0 };
+  st.pw = st.pw || {};
+  const key = pair.join(',');
+  st.pw[key] = (st.pw[key] || 0) + 1;
+  st.wins = (st.wins || 0) + 1;
+  return st;
+}
+
 export function draftReward(wins) {
   return { dust: DRAFT_REWARD[Math.max(0, Math.min(wins, DRAFT_REWARD.length - 1))], prism: wins >= DRAFT_PRISM_AT };
 }

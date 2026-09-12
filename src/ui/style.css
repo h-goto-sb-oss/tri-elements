@@ -105,6 +105,13 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .card.r-epic .shine{background:linear-gradient(115deg,transparent 30%,#e9c9ff55 46%,#8fe4ff44 54%,transparent 68%);
   background-size:260% 260%;animation:sheen 3.4s linear infinite}
 .card.r-legend{box-shadow:0 0 0 2px #ffcf5a,0 0 24px #ffcf5a66,0 3px 9px #0009}
+/* 選定の儀の限定カード：金の二重枠と、三属の色が流れるきらめき */
+.card.rite{box-shadow:0 0 0 2px #ffe08a,0 0 0 4px #6b4c16,0 0 28px #ffcf5a88,0 3px 9px #0009;
+  background:linear-gradient(180deg,#2e2a3c,#16131f)}
+.card.rite::before{content:'';position:absolute;inset:3px;border:1px solid #ffe7a666;border-radius:7px;pointer-events:none;z-index:5}
+.card.rite .shine{background:linear-gradient(115deg,transparent 26%,#ff8f6a3a 38%,#fff1bf5c 47%,#7fd3ff3a 55%,#8dffa53a 62%,transparent 74%);
+  background-size:260% 260%;animation:sheen 4.2s linear infinite}
+@media (prefers-reduced-motion:reduce){.card.rite .shine,.card.r-epic .shine{animation:none}}
 @keyframes sheen{0%{background-position:130% 0}100%{background-position:-30% 0}}
 
 .card.selectable{cursor:grab}
@@ -1354,6 +1361,24 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .dr-pairicons{display:inline-flex;gap:2px;vertical-align:middle}
 .dr-pairicons .gi{width:26px;height:26px}
 .dr-pairbtn .dr-pairicons .gi{width:40px;height:40px}
+.dr-pairrite{font-style:normal;font-size:12px;font-weight:700;color:#ffd98a}
+.dr-pairrite.ok{color:#8fe0a8}
+/* 限定カード：一覧と進み具合 */
+.dr-rite{margin-top:18px}
+.dr-rite > .hint{margin:0 0 10px}
+.dr-ritegrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.dr-ritecard{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 10px;border-radius:12px;
+  background:#0b1220c4;border:1px solid #ffffff16}
+.dr-ritecard.owned{border-color:#ffcf5a66}
+.dr-ritecard .card{cursor:pointer}
+.dr-ritecard.locked .card{filter:saturate(.5) brightness(.7)}
+.dr-riteinfo{width:100%;text-align:center}
+.dr-riteinfo b{display:block;font-size:15px;color:#ffe4a1;letter-spacing:.04em}
+.dr-riteinfo small{display:block;margin-top:3px;font-size:12px;color:#c7d2e2;line-height:1.45}
+.dr-riteinfo .dr-pairicons .gi{width:18px;height:18px}
+.dr-ritebar{height:6px;margin:7px 10px 0;border-radius:3px;background:#ffffff1c;overflow:hidden}
+.dr-ritebar i{display:block;height:100%;background:linear-gradient(90deg,#b8862e,#ffe08a)}
+.dr-riteok{color:#8fe0a8;font-weight:800}
 .dr-best{text-align:center;margin-top:12px}
 
 .dr-top,.dr-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:880px;width:100%;margin:0 auto}
@@ -1410,6 +1435,9 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   .dr-pairs{grid-template-columns:1fr}
   .dr-pairbtn{flex-direction:row;justify-content:flex-start;text-align:left;padding:12px 14px}
   .dr-pairbtn small{text-align:left}
+  .dr-pairbtn{flex-wrap:wrap;row-gap:2px}
+  .dr-pairrite{flex-basis:100%;padding-left:94px}
+  .dr-ritegrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .dr-options{grid-template-columns:1fr}
   .dr-or{text-align:center}
 }
