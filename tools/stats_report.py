@@ -434,7 +434,7 @@ tr.warn td{{background:#3a1f22}}
 <h2>フリーバトル</h2>
 <div class="wrap"><table><tr><th>難易度</th><th>端末</th><th>勝ち</th><th>負け</th><th>投了</th></tr>{rows_free or '<tr><td colspan="5">まだありません</td></tr>'}</table></div>
 
-<h2>2ピック</h2>
+<h2>選定の儀（2ピック）</h2>
 <div class="box">{f'''<p>挑戦 <b>{len(dr_start)}</b>回 ／ 最後まで {len(dr_done)}回 ／ やめた {len(dr_quit)}回 ／ 対戦 {len(dr_battles)}戦・勝率 {dr_wr:.0f}%</p>
 {split_bar('選ばれた組み合わせ', dr_pairs, ['#e0714f', '#4f93e0', '#5bb56c'])}
 {vchart([(f"{w}勝", [(dr_wins.get(w, 0), C_NEW)], True) for w in range(6)], 90) if dr_done else '<p class="note">まだ最後まで遊んだ人はいません</p>'}''' if dr_start else '<p class="note">まだありません</p>'}</div>

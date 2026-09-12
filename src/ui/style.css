@@ -1312,7 +1312,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .gi{display:inline-block;width:1em;height:1em;vertical-align:-0.15em;object-fit:contain;flex:none}
 
 /* ============================================================
-   2ピック（その場で30枚を組んで5連戦）
+   選定の儀（2ピック：その場で30枚を組んで5連戦）
    ============================================================ */
 .adventure.draft{overflow-y:auto}
 .adventure.draft > *{flex:none}

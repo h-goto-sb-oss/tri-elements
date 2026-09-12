@@ -104,7 +104,7 @@ def chip(u):
 def enemy(q):
     n = NAMES.get(q.get('k'), q.get('k') or '?')
     if q.get('dr') == '1':
-        return f'2ピック {n}'
+        return f'選定の儀 {n}'
     if q.get('f') == '1':
         return f'フリー（{DIFF.get(q.get("df"), q.get("df"))}）{n}'
     return n
@@ -140,11 +140,11 @@ def say(q):
         pj = {'fire,water': '炎×水', 'water,grass': '水×草', 'grass,fire': '草×炎'}.get(q.get('pr'), '')
         st = q.get('st')
         if st == 'start':
-            return f'🃏 2ピックを始めた（{pj}）'
+            return f'🃏 選定の儀を始めた（{pj}）'
         if st == 'done':
-            return f'🏅 2ピック終了：{q.get("w", "?")}勝（{pj}）'
+            return f'🏅 選定の儀 終了：{q.get("w", "?")}勝（{pj}）'
         if st == 'quit':
-            return '2ピックをやめた'
+            return '選定の儀をやめた'
     if e == 'thanks':
         return '💌 お礼のメッセージが出た（' + ('ラスボス初撃破' if q.get('k') == 'final' else 'キャラカード初入手') + '）'
     if e == 'fb':

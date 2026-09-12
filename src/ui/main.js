@@ -294,7 +294,7 @@ function renderTitle() {
       <div class="title-menu">
         <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>${L('冒険へ出る', 'Adventure')}</b><small>${L('物語を進める', 'Continue the story')}</small></span></button>
         <button class="title-action" data-go="free"><span class="ta-icon">${icon('freebattle')}</span><span><b>${L('フリーバトル', 'Free Battle')}</b><small>${L('好きな相手と対戦', 'Fight any opponent you like')}</small></span></button>
-        <button class="title-action" data-go="draft"><span class="ta-icon">${icon('draft')}</span><span><b>${L('2ピック', '2-Pick Draft')}</b><small>${app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
+        <button class="title-action" data-go="draft"><span class="ta-icon">${icon('draft')}</span><span><b>${L('選定の儀', 'Rite of Choosing')}</b><small>${app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
         <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>${L('デッキ編集', 'Deck Builder')}</b><small>${L('30枚を編成', 'Build a 30-card deck')}</small></span></button>
         <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>${L('カード図鑑', 'Card Library')}</b><small>${L(`全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める`, `Browse all ${ALL_CARDS.filter(c => !c.hidden).length} cards`)}</small></span></button>
         <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>${L('カードショップ', 'Card Shop')}</b><small>${L(`星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換`, `Trade ${icon('stardust')}${app.save.stardust || 0} Stardust for packs`)}</small></span></button>
@@ -499,7 +499,7 @@ function renderFree() {
 }
 
 // ============================================================
-// 2ピック（その場で30枚を組んで5連戦）。計算は game/draft.js
+// 選定の儀（2ピック：その場で30枚を組んで5連戦）。計算は game/draft.js
 // ============================================================
 const ELEMENT_ORDER = { fire: 0, water: 1, grass: 2, none: 3 };
 function pairName(pair) {
@@ -615,7 +615,7 @@ function renderDraft() {
 
   return `<div class="adventure draft">
     <div class="adv-head">
-      <h2>${L('2ピック', '2-Pick Draft')}</h2>
+      <h2>${L('選定の儀', 'Rite of Choosing')}</h2>
       <div class="desc">${L('その場でデッキを組んで、5人のライバルと連戦するモードです。', 'Draft a deck on the spot and battle 5 rivals in a row.')}</div>
       <div class="dust">${icon('stardust')} ${app.save.stardust || 0}</div>
     </div>
@@ -1505,7 +1505,7 @@ function resultOverlay() {
     </div>` : ''}
     ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">${L(`「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります`, `Beat them <b>${r.charLeft}</b> more times on Extreme to get their character card`)}</p>` : ''}
     ${r.thanks ? thanksHtml(r.thanks) : ''}
-    ${r.draft ? `<div class="dr-resline">${draftPipsHtml(app.save.draft)}<p>${L(`2ピック：${r.draft.wins}勝 ${r.draft.losses}敗（${r.draft.played}/${DRAFT_BATTLES}戦）`, `2-Pick: ${r.draft.wins}W ${r.draft.losses}L (${r.draft.played}/${DRAFT_BATTLES})`)}</p></div>` : ''}
+    ${r.draft ? `<div class="dr-resline">${draftPipsHtml(app.save.draft)}<p>${L(`選定の儀：${r.draft.wins}勝 ${r.draft.losses}敗（${r.draft.played}/${DRAFT_BATTLES}戦）`, `Rite of Choosing: ${r.draft.wins}W ${r.draft.losses}L (${r.draft.played}/${DRAFT_BATTLES})`)}</p></div>` : ''}
     ${r.draft ? `<div class="row-btn"><button class="btn primary" data-go="draft">${r.draft.played >= DRAFT_BATTLES ? L('結果を見る', 'See results') : L('次の対戦へ', 'Next battle')}</button></div>` : `<div class="row-btn">
       <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? L('フリーバトルへ戻る', 'Back to Free Battle') : L('冒険へ戻る', 'Back to Adventure')}</button>
       <button class="btn" data-rematch>${L('もう一度', 'Rematch')}</button>
