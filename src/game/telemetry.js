@@ -15,12 +15,18 @@ const KEY_OFF = 'tri-elements-stats';    // 'off' で送らない
 const SESSION = Math.random().toString(36).slice(2, 8);
 const T0 = Date.now();
 
+/** 端末の暦での今日（YYYY-MM-DD）。toISOString は世界標準時なので、日本の0〜9時に前日になってしまう */
+function today() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+}
+
 function readId() {
   try {
     const v = JSON.parse(localStorage.getItem(KEY_ID) || 'null');
     if (v && v.id) return { ...v, fresh: false };
   } catch { /* 壊れていたら作り直す */ }
-  const v = { id: Math.random().toString(36).slice(2, 10), first: new Date().toISOString().slice(0, 10) };
+  const v = { id: Math.random().toString(36).slice(2, 10), first: today() };
   try { localStorage.setItem(KEY_ID, JSON.stringify(v)); } catch { /* 保存できない環境でも送れる */ }
   return { ...v, fresh: true };
 }
@@ -43,7 +49,8 @@ function where() {
 
 /** 初めて開いた日から何日目か（0＝初日） */
 function dayIndex() {
-  const d = (Date.parse(new Date().toISOString().slice(0, 10)) - Date.parse(ME.first)) / 864e5;
+  // 両方とも「YYYY-MM-DD」を同じ規則で読むので、差はちょうど日数になる
+  const d = (Date.parse(today()) - Date.parse(ME.first)) / 864e5;
   return Number.isFinite(d) ? Math.max(0, Math.round(d)) : 0;
 }
 
