@@ -67,8 +67,35 @@ def events():
     return out
 
 
+ADJ = ['炎の', '水の', '草の', '星の', '月の', '風の', '雷の', '氷の', '森の', '夜の', '光の', '霧の']
+ANI = ['キツネ', 'ネコ', 'フクロウ', 'オオカミ', 'ウサギ', 'クマ', 'タカ', 'カメ', 'リス', 'シカ', 'クジラ', 'ドラゴン']
+HUE = [18, 200, 120, 45, 270, 330, 170, 90, 230, 0, 60, 300]
+
+
+def _h(u):
+    """id から毎回同じ数を作る（Python の hash() は起動ごとに変わるので自前で）"""
+    n = 0
+    for ch in u:
+        n = (n * 131 + ord(ch)) % 1_000_003
+    return n
+
+
 def who(q):
     return q['u'][-4:].upper()
+
+
+def nick(u):
+    """乱数の id から決まるニックネーム（個人の情報は使わない）"""
+    n = _h(u)
+    return ADJ[n % len(ADJ)] + ANI[(n // len(ADJ)) % len(ANI)]
+
+
+def hue(u):
+    return HUE[(_h(u) // 7) % len(HUE)]
+
+
+def chip(u):
+    return f'<span class="nk" style="--hu:{hue(u)}">{E(nick(u))}</span>'
 
 
 def enemy(q):
@@ -138,16 +165,46 @@ def main():
             'スマホ' if first.get('m') == '1' else 'PC',
             {'ja': '日本語', 'en': 'English'}.get(first.get('l'), ''),
         ]))
-        cards.append((last['_ts'], f'''<div class="pc">
-  <div class="top"><span class="id">#{E(who(last))}</span><span class="tg">{E(tags)}</span><span class="ago">{ago(now - last['_ts'])}</span></div>
+        base = max((int(q.get('p') or 0) for q in xs if q['e'] == 'open'), default=0)
+        last_open = max((i for i, q in enumerate(xs) if q['e'] == 'open'), default=0)
+        cleared = min(24, base + sum(1 for q in xs[last_open:] if q['e'] == 'end' and q.get('fc') == '1'))
+        cards.append((last['_ts'], f'''<div class="pc" style="--hu:{hue(u)}">
+  <div class="top">{chip(u)}<span class="tg">{E(tags)}</span><span class="ago">{ago(now - last['_ts'])}</span></div>
+  <div class="prog"><i style="width:{cleared / 24 * 100:.0f}%"></i></div><div class="progt">ストーリー {cleared}/24 突破</div>
   <div class="doing">{doing if last['e'] == 'start' else E(doing)}</div>
   <div class="meta">この回 {int((now - start_ts).total_seconds() // 60)}分 ／ {w}勝 {l}敗</div>
 </div>'''))
     cards.sort(key=lambda c: c[0], reverse=True)
 
+    # 挑戦→結果 は1行にまとめる。同じ人の「閉じた」が続くときは1回だけ
+    items = []
+    open_start = {}
+    for q in ev:
+        u = q['u']
+        if q['e'] == 'start':
+            open_start[u] = len(items)
+            items.append(q)
+            continue
+        if q['e'] == 'end' and u in open_start and items[open_start[u]].get('k') == q.get('k'):
+            items[open_start.pop(u)] = None
+        if q['e'] == 'hide' and items and items[-1] is not None and items[-1]['u'] == u and items[-1]['e'] == 'hide':
+            continue
+        items.append(q)
+    items = [q for q in items if q is not None]
+    def cls(q):
+        if q['e'] == 'end':
+            return {'w': 'win', 'l': 'lose', 'q': 'lose'}.get(q.get('r'), '')
+        return {'start': 'fight', 'hide': 'dim', 'open': 'open'}.get(q['e'], '')
+    def line(q):
+        t = say(q)
+        if q['e'] == 'end' and q.get('sec'):
+            t = t.replace('ターン）', f'ターン・{max(1, int(q["sec"]) // 60)}分）', 1)
+        if q['e'] == 'start':
+            t = t + ('（対戦中）' if by_u[q['u']][-1] is q else '（中断）')
+        return t
     feed = ''.join(
-        f'<li><time>{q["_ts"].strftime("%H:%M")}</time><span class="id">#{E(who(q))}</span>{E(say(q))}</li>'
-        for q in reversed(ev[-FEED:]))
+        f'<li class="{cls(q)}"><time>{q["_ts"].strftime("%H:%M")}</time>{chip(q["u"])}<span class="tx">{E(line(q))}</span></li>'
+        for q in reversed(items[-FEED:]))
     today = {q['u'] for q in ev if q['_ts'].date() == now.date()}
 
     doc = f"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
@@ -166,14 +223,18 @@ h1{{font-size:20px;color:var(--gold);margin:0}} h2{{font-size:16px;color:var(--g
 @keyframes p{{70%{{box-shadow:0 0 0 10px #5bd68a00}}100%{{box-shadow:0 0 0 0 #5bd68a00}}}}
 @media (prefers-reduced-motion:reduce){{.dot{{animation:none}}}}
 .now b{{font-size:26px;font-variant-numeric:tabular-nums}}
-.pc{{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--live);border-radius:10px;padding:10px 12px;margin-top:8px}}
-.pc .top{{display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--sub)}}
+.pc{{background:var(--card);border:1px solid var(--line);border-left:4px solid hsl(var(--hu) 60% 55%);border-radius:10px;padding:10px 12px;margin-top:8px}}
+.nk{{display:inline-block;flex:none;font-weight:700;font-size:12.5px;padding:1px 8px;border-radius:999px;color:hsl(var(--hu) 70% 80%);background:hsl(var(--hu) 35% 22%)}}
+.prog{{height:5px;background:#232933;border-radius:3px;margin:6px 0 1px}} .prog i{{display:block;height:100%;border-radius:3px;background:var(--gold)}}
+.progt{{font-size:11.5px;color:var(--sub)}}
+.pc .top{{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--sub)}}
 .pc .top .ago{{margin-left:auto}} .id{{font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}}
 .pc .doing{{font-size:16px;margin:4px 0 2px}} .pc .meta{{font-size:12.5px;color:var(--sub)}}
 .empty{{color:var(--sub);background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}}
 ul.feed{{list-style:none;margin:0;padding:0}}
 ul.feed li{{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}}
-ul.feed time{{color:var(--sub);font-variant-numeric:tabular-nums;flex:none}} ul.feed .id{{flex:none;font-size:12px}}
+ul.feed time{{color:var(--sub);font-variant-numeric:tabular-nums;flex:none}}
+ul.feed li.win .tx{{color:#8fe3a8}} ul.feed li.lose .tx{{color:#f0948c}} ul.feed li.dim .tx{{color:var(--sub)}} ul.feed li.fight .tx{{color:#e8d6a8}}
 </style></head><body><main>
 <h1>TRI-ELEMENTS いま遊んでいる人</h1>
 <div class="sub">{now.strftime('%H:%M:%S')} 更新 ／ 1分ごとに更新・30秒ごとに読み込み直し ／ <a href="./">全体の集計へ</a></div>
@@ -181,7 +242,7 @@ ul.feed time{{color:var(--sub);font-variant-numeric:tabular-nums;flex:none}} ul.
 {''.join(c for _, c in cards) or '<div class="empty">いまは誰もいません。最後の動きから10分たつと一覧から外れます</div>'}
 <h2>できごとの流れ</h2>
 <ul class="feed">{feed or '<li>まだありません</li>'}</ul>
-<p class="sub">#の後ろは端末ごとの乱数（誰かは分かりません）。デッキを組んでいる間などは記録が出ないので、遊んでいても一覧から外れることがあります。</p>
+<p class="sub">名前は端末ごとの乱数から自動で付けたニックネームです（誰かは分かりません）。デッキを組んでいる間などは記録が出ないので、遊んでいても一覧から外れることがあります。</p>
 </main></body></html>"""
     tmp = OUT + '.tmp'
     with open(tmp, 'w', encoding='utf-8') as fh:
