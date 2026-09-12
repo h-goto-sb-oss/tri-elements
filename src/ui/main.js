@@ -614,6 +614,8 @@ function renderDraft() {
   }
 
   return `<div class="adventure draft">
+    <div class="dr-bg" style="--drbg:url(${withBase('/assets/backgrounds/draft_bg.webp')})" aria-hidden="true"></div>
+    <div class="dr-shade" aria-hidden="true"></div>
     <div class="adv-head">
       <h2>${L('選定の儀', 'Rite of Choosing')}</h2>
       <div class="desc">${L('その場でデッキを組んで、5人のライバルと連戦するモードです。', 'Draft a deck on the spot and battle 5 rivals in a row.')}</div>

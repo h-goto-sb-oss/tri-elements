@@ -1314,8 +1314,13 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 /* ============================================================
    選定の儀（2ピック：その場で30枚を組んで5連戦）
    ============================================================ */
-.adventure.draft{overflow-y:auto}
+.adventure.draft{overflow-y:auto;position:relative;isolation:isolate}
 .adventure.draft > *{flex:none}
+/* 背景「選定の間」。カードと文字が主役なので、上に濃いめの幕をかける */
+.dr-bg{position:fixed;inset:0;z-index:-2;background:var(--drbg) center 40%/cover no-repeat}
+.dr-shade{position:fixed;inset:0;z-index:-1;background:
+  radial-gradient(ellipse 70% 60% at 50% 48%,#04070e80 0 40%,#04070e5c 75%,#03050bb0 100%),
+  linear-gradient(180deg,#03050b70 0%,#03050b00 28%,#03050b88 100%)}
 .draft h3{font-size:16px;color:var(--gold);margin:14px 0 8px;letter-spacing:.06em}
 .dr-intro{max-width:880px;width:100%;margin:0 auto}
 .dr-lead{font-size:15px;line-height:1.7}
@@ -1348,7 +1353,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .dr-cards .card .body{font-size:10.5px;height:62px}
 .dr-cards .card .stats{height:26px;font-size:15px}
 .dr-take{width:100%;max-width:320px}
-.dr-or{font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.1em}
+.dr-or{font-size:13px;font-weight:800;color:#c9d3e2;letter-spacing:.1em;text-shadow:0 0 6px #000,0 1px 3px #000}
 .dr-tip{text-align:center;margin:2px 0 0}
 
 .dr-deck{max-width:880px;width:100%;margin:6px auto 0;padding:12px;border-radius:14px;border:1px solid var(--line);background:#0d131c}
