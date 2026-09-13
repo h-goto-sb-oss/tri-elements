@@ -44,6 +44,10 @@ function where() {
   const h = location.hostname;
   if (/itch\.(zone|io)$/.test(h)) return 'itch';
   if (h.endsWith('github.io')) return 'gh';
+  // PLiCy はゲーム本体を別のドメインから配信することがあるので、埋め込み元（親ページ）も見る
+  let parent = '';
+  try { parent = [document.referrer, ...(location.ancestorOrigins ? [...location.ancestorOrigins] : [])].join(' '); } catch { /* 見られなくてもよい */ }
+  if (/plicy/i.test(h) || /plicy\.net/i.test(parent)) return 'plicy';
   return 'other';
 }
 

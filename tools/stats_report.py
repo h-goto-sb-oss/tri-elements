@@ -170,7 +170,7 @@ def main():
         first_open.setdefault(q['u'], q)
     dev = Counter('スマホ' if q.get('m') == '1' else 'PC' for q in first_open.values())
     lng = Counter({'ja': '日本語', 'en': 'English'}.get(q.get('l'), q.get('l')) for q in first_open.values())
-    where = Counter({'itch': 'itch.io', 'gh': 'GitHub Pages'}.get(q.get('h'), 'その他') for q in first_open.values())
+    where = Counter({'itch': 'itch.io', 'gh': 'GitHub Pages', 'plicy': 'PLiCy'}.get(q.get('h'), 'その他') for q in first_open.values())
     returned = {q['u'] for q in opens if num(q.get('d'), 0) >= 1}
 
     # ---- ストーリー：敵ごと ----
