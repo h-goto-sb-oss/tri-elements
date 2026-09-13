@@ -40,7 +40,7 @@ DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 SCREEN = {'battle': '対戦中', 'adventure': '冒険のマップ', 'free': 'フリーバトル', 'deck': 'デッキ編集', 'collection': '図鑑',
           'title': 'タイトル', 'settings': '設定', 'rules': 'ルール', 'shop': 'ショップ'}
 OWNER = {'neyqzar7'}   # 作者自身の端末（stats_report.py と同じ）
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft', 'ach'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft', 'ach', 'rank'}
 E = html.escape
 
 
@@ -150,9 +150,17 @@ def say(q):
             return f'🏅 選定の儀 終了：{q.get("w", "?")}勝（{pj}）'
         if st == 'quit':
             return '選定の儀をやめた'
+        if st == 'dstart':
+            return f'🗓 今日の選定の儀を始めた（{pj}）'
+        if st == 'daily':
+            return f'🗓 今日の選定の儀 終了：{q.get("sc", "?")}点'
+        if st == 'dquit':
+            return '今日の選定の儀をやめた'
         if st == 'card':
             rite = {'r_shiena': 'シエナ', 'r_mirte': 'ミルテ', 'r_kagura': 'カグラ', 'r_elsion': 'エルシオン'}
             return f'🎴 限定カードを入手：{rite.get(q.get("c"), q.get("c"))}'
+    if e == 'rank':
+        return f'🏆 今日の選定の儀を記録：{q.get("sc", "?")}点（{q.get("w", "?")}勝）'
     if e == 'ach':
         return f'🏆 実績を解除：{ACH_NAMES.get(q.get("a"), q.get("a"))}'
     if e == 'thanks':

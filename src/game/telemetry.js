@@ -74,6 +74,20 @@ export function track(ev, data = {}) {
   try { new Image().src = url; } catch { /* 送れなくても遊ぶ邪魔はしない */ }
 }
 
+/**
+ * 今日の選定の儀の記録を送る（ランキング用）。
+ * 匿名の統計とは別で、ランキングに参加すると決めた人だけ（名前・称号・アイコン・点数）。
+ * 統計の送信を止めていても、参加していれば送る（本人がはっきり選んだものなので）。
+ */
+export function sendRank(data) {
+  if (!import.meta.env.PROD) return;
+  const q = new URLSearchParams({ v: '1', u: ME.id, s: SESSION, e: 'rank', h: where() });
+  for (const [k, v] of Object.entries(data)) if (v !== undefined && v !== null) q.set(k, String(v));
+  const url = `${ENDPOINT}?${q}`;
+  try { if (navigator.sendBeacon && navigator.sendBeacon(url)) return; } catch { /* 次へ */ }
+  try { new Image().src = url; } catch { /* 送れなくても遊ぶ邪魔はしない */ }
+}
+
 /** デッキを「f05-3.w02-2.x_g3」の形に詰める（id に - と . は使われていない）。並びは id 順 */
 export function packDeck(deck) {
   const n = {};

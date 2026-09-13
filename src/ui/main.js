@@ -29,7 +29,10 @@ import * as Fx from './fx.js';
 import { L, kwb, lang, setLang, storedLang, guessLang } from '../i18n/lang.js';
 import '../i18n/data.js';
 import { EN_SETS } from '../i18n/en_game.js';
-import { track, statsEnabled, setStatsEnabled, firstVisit, packDeck } from '../game/telemetry.js';
+import { track, statsEnabled, setStatsEnabled, firstVisit, packDeck, sendRank } from '../game/telemetry.js';
+import {
+  dayKey, prevDay, dailyPair, dailyOptions, dailyOpponent, dailyBattleSeed, battleScore, runScore, cleanName, mulberry,
+} from '../game/daily.js';
 import {
   ACHIEVEMENTS, ACH_CATS, TITLES, CHAR_AVATARS, bump, achProgress, checkAch, titleUnlocked, avatarUnlocked,
 } from '../game/achievements.js';
@@ -144,6 +147,7 @@ function go(screen) {
     writeSave(app.save);
   }
   if (screen === 'profile' && app.save.ach && app.save.ach.unseen) { app.save.ach.unseen = 0; writeSave(app.save); }
+  if (screen === 'draft') fetchRanking();
   syncBgm(); render({ resetScroll: true });   // 画面を変えたときは先頭から
 }
 
@@ -575,12 +579,15 @@ const PAIR_BLURB = {
 };
 
 function renderDraft() {
-  const d = app.save.draft;
+  const daily = drMode() === 'daily';
+  const d = curDraft();
   const phase = draftPhase(d);
   const stats = app.save.draftStats || { runs: 0, best: 0 };
   let body = '';
 
-  if (phase === 'none') {
+  if (phase === 'none' && daily) {
+    body = dailyIntroHtml();
+  } else if (phase === 'none') {
     const prog = riteProgress(app.save.draftStats, app.save.collection);
     const pairs = DRAFT_PAIRS.map(p => {
       const r = prog.find(x => x.id === RITE_PAIR_CARD[p.join(',')]);
@@ -613,7 +620,7 @@ function renderDraft() {
         <button class="btn primary dr-take" data-draftpick="${i}">${L('このセットを取る', 'Take this set')}</button>
       </div>`;
     body = `<div class="dr-top">
-        ${pairIcons(d.pair)}<b>${L(`ピック ${round} / ${DRAFT_ROUNDS}`, `Pick ${round} / ${DRAFT_ROUNDS}`)}</b>
+        ${daily ? `<span class="dy-tag">${L('今日', 'Daily')}</span>` : ''}${pairIcons(d.pair)}<b>${L(`ピック ${round} / ${DRAFT_ROUNDS}`, `Pick ${round} / ${DRAFT_ROUNDS}`)}</b>
         <div class="dr-progress"><i style="width:${(round - 1) / DRAFT_ROUNDS * 100}%"></i></div>
       </div>
       <div class="dr-options">${opt(d.options[0], 0)}<div class="dr-or">${L('または', 'or')}</div>${opt(d.options[1], 1)}</div>
@@ -624,7 +631,8 @@ function renderDraft() {
     const o = d.opp;
     const a = o ? AREAS[o.area] : null, e = a ? a.enemies[o.index] : null;
     body = `<div class="dr-status">
-        ${pairIcons(d.pair)}<b>${L(`${d.wins}勝 ${d.losses}敗`, `${d.wins}W ${d.losses}L`)}</b>
+        ${daily ? `<span class="dy-tag">${L('今日', 'Daily')}</span>` : ''}${pairIcons(d.pair)}<b>${L(`${d.wins}勝 ${d.losses}敗`, `${d.wins}W ${d.losses}L`)}</b>
+        ${daily ? `<span class="dy-sc">${runScore(d.scores || [], 0).toLocaleString()}${L('点', ' pts')}</span>` : ''}
         <span class="hint">${L(`${d.played + 1}戦目 / ${DRAFT_BATTLES}`, `Battle ${d.played + 1} of ${DRAFT_BATTLES}`)}</span>
         ${draftPipsHtml(d)}
       </div>
@@ -639,6 +647,18 @@ function renderDraft() {
       </div>` : ''}
       ${draftDeckHtml(d.picks)}
       <div class="dr-quit"><button class="btn tiny" data-draftquit>${app.draftQuitArm ? L('もう一度押すとやめます（報酬はもらえません）', 'Press again to abandon (no reward)') : L('この挑戦をやめる', 'Abandon this run')}</button></div>`;
+  } else if (daily) {
+    const total = runScore(d.scores || [], d.wins);
+    const best = dailyState().best;
+    const isBest = !best || best.day !== d.day || total > best.sc;
+    body = `<div class="dr-done">
+      <h3>${L('今日の選定の儀', 'Today’s rite')}</h3>
+      <div class="dr-bigscore">${total.toLocaleString()}<small>${L('点', ' pts')}</small></div>
+      ${draftPipsHtml(d)}
+      <div class="dr-reward">${L(`${d.wins}勝 ${d.losses}敗`, `${d.wins}W ${d.losses}L`)}${isBest ? `　<b class="dy-newbest">${L('今日の最高点！', 'New best today!')}</b>` : ''}</div>
+      <button class="btn primary" data-dailyfinish>${L('記録して終わる', 'Record and finish')}</button>
+    </div>
+    ${draftDeckHtml(d.picks)}`;
   } else {
     const rw = draftReward(d.wins);
     body = `<div class="dr-done">
@@ -660,26 +680,54 @@ function renderDraft() {
       <div class="desc">${L('その場でデッキを組んで、5人のライバルと連戦するモードです。', 'Draft a deck on the spot and battle 5 rivals in a row.')}</div>
       <div class="dust">${icon('stardust')} ${app.save.stardust || 0}</div>
     </div>
+    <div class="dy-tabs">
+      <button class="dy-tabbtn ${daily ? 'on' : ''}" data-drtab="daily">${L('今日の選定の儀', 'Daily rite')}<small>${L('ランキング', 'Ranking')}</small>${dailyState().run ? '<i></i>' : ''}</button>
+      <button class="dy-tabbtn ${daily ? '' : 'on'}" data-drtab="normal">${L('いつもの選定の儀', 'Regular rite')}<small>${L('星屑・限定カード', 'Stardust & exclusives')}</small>${app.save.draft ? '<i></i>' : ''}</button>
+    </div>
     ${body}
+    ${app.rankConsentAsk ? rankConsentOverlay() : ''}
     <div class="adv-foot"><button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button></div>
   </div>`;
 }
 
+function startDailyRun() {
+  const st = dailyState();
+  st.run = newDailyRun();
+  app.draftMode = 'daily';
+  app.draftQuitArm = 0;
+  writeSave(app.save);
+  track('draft', { st: 'dstart', pr: st.run.pair.join(',') });
+  return render({ resetScroll: true });
+}
+
 /** 2ピックの対戦を始める（相手がまだ決まっていなければここで決めて、セーブに残す） */
 function startDraftBattle() {
-  const d = app.save.draft;
+  const d = curDraft();
   if (draftPhase(d) !== 'battle') return;
-  if (!d.opp) { d.opp = draftOpponent(d.played, AREAS, Math.random, d.pair); writeSave(app.save); }
+  if (!d.opp) {
+    d.opp = d.day ? dailyOpponent(d.day, d.played, d.pair) : draftOpponent(d.played, AREAS, Math.random, d.pair);
+    writeSave(app.save);
+  }
   startBattle(d.opp.area, d.opp.index, false, { draft: true });
 }
 
 /** 2ピックの1戦の結果を記録して、次の相手を決める */
 function recordDraftBattle(win) {
-  const d = app.save.draft;
+  const d = app.draftRun || curDraft();
   if (!d) return { d: { wins: 0, losses: 0, played: 0 }, got: [] };
   d.log.push({ key: d.opp ? d.opp.key : null, win });
   if (win) d.wins++; else d.losses++;
   d.played++;
+  if (d.day) {
+    // 今日の選定の儀：点数だけ数える（星屑・限定カードの勝ち数は増やさない）
+    const g = app.game, me = g.players[0], foe = g.players[1];
+    const sc = battleScore({ win, myLife: me.life, turn: g.turn, foeStart: app.enemyLifeMax || 20, foeLife: foe.life });
+    d.scores = [...(d.scores || []), sc];
+    d.lastScore = sc;
+    d.opp = d.played < DRAFT_BATTLES ? dailyOpponent(d.day, d.played, d.pair) : null;
+    writeSave(app.save);
+    return { d, got: [] };
+  }
   d.opp = d.played < DRAFT_BATTLES ? draftOpponent(d.played, AREAS, Math.random, d.pair) : null;
   // 限定カードは1勝ごとに数える（挑戦を最後までやらなくても、勝った分は残る）
   let got = [];
@@ -690,6 +738,148 @@ function recordDraftBattle(win) {
   }
   writeSave(app.save);
   return { d, got };
+}
+
+// ============================================================
+// 今日の選定の儀（毎日のランキング）。計算は game/daily.js、表はサーバーの rank_build.py
+//   いつもの選定の儀（app.save.draft）とは別の挑戦（app.save.daily.run）として持つ。
+//   何回でも挑めて、その日の最高点がランキングに載る。星屑・限定カードの勝ち数は増えない。
+// ============================================================
+const LB_URL = 'https://te.161-33-217-165.nip.io/lb';
+function dailyState() {
+  if (!app.save.daily) app.save.daily = {};
+  const st = app.save.daily;
+  if (!st.rk) st.rk = Array.from({ length: 10 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+  // 昨日より前の挑戦の途中は、もう記録できないので捨てる
+  if (st.run && st.run.day !== dayKey() && st.run.day !== prevDay(dayKey())) st.run = null;
+  return st;
+}
+/** 画面が「今日」と「いつもの」のどちらを見ているか */
+function drMode() {
+  if (app.draftMode) return app.draftMode;
+  return app.save.draft ? 'normal' : 'daily';
+}
+/** いま見ている方の挑戦 */
+function curDraft() {
+  return drMode() === 'daily' ? dailyState().run : app.save.draft;
+}
+function newDailyRun() {
+  const day = dayKey(), pair = dailyPair(day);
+  return { v: 1, day, pair, picks: [], options: dailyOptions(day, pair, []), wins: 0, losses: 0, played: 0, opp: null, log: [], scores: [] };
+}
+
+/** ランキングを読み込む（1分以上たっていれば読み直す） */
+function fetchRanking(force = false) {
+  const now = Date.now();
+  if (!force && app.rankAt && now - app.rankAt < 60000) return;
+  app.rankAt = now;
+  fetch(`${LB_URL}/today.json?t=${Math.floor(now / 60000)}`, { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(j => { app.rank = j; app.rankErr = false; rankAwards(j); if (app.screen === 'draft') render(); })
+    .catch(() => { app.rankErr = true; if (app.screen === 'draft') render(); });
+}
+/** 人とライバルを混ぜた順位表 [{ kind:'me'|'p'|'rival', ... }] */
+function rankRows(t) {
+  if (!t) return [];
+  const me = dailyState().rk;
+  const rows = [
+    ...(t.entries || []).map(e => ({ kind: e.rk === me ? 'me' : 'p', nm: e.nm, ti: e.ti, av: e.av, sc: e.sc, w: e.w })),
+    ...(t.rivals || []).map(r => ({ kind: 'rival', key: r.key, sc: r.sc, w: r.w })),
+  ].sort((a, b) => b.sc - a.sc);
+  let rank = 0, prev = null;
+  rows.forEach((r, i) => { if (r.sc !== prev) { rank = i + 1; prev = r.sc; } r.rank = rank; });
+  return rows;
+}
+/** 昨日の最終順位で実績（10位以内・1位）。1日1回だけ数える */
+function rankAwards(j) {
+  const st = dailyState();
+  const y = j && j.yesterday;
+  if (!y || !y.day) return;
+  st.awarded = st.awarded || {};
+  if (st.awarded[y.day]) return;
+  const mine = rankRows(y).find(r => r.kind === 'me');
+  st.awarded[y.day] = true;
+  if (mine) {
+    if (mine.rank <= 10) bump(app.save, 'rankTop10');
+    if (mine.rank === 1) bump(app.save, 'rank1');
+  }
+  writeSave(app.save);
+  achNotice(achCheckNow());
+}
+function rankAvatarHtml(r) {
+  if (r.kind === 'rival') {
+    const [a, i] = r.key.split(':');
+    const src = ENEMY_ART[r.key];
+    return src ? `<img class="av-enemy" src="${src}" alt="">` : '';
+  }
+  return avatarHtml(/^\d+$/.test(r.av || '') ? Number(r.av) : (r.av || 1));
+}
+function rankNameHtml(r) {
+  if (r.kind === 'rival') {
+    const [a, i] = r.key.split(':');
+    const e = AREAS.find(x => x.id === a)?.enemies[Number(i)];
+    return `<b>${esc(e ? e.name : r.key)}</b><em class="rk-rival">${L('ライバル', 'Rival')}</em>`;
+  }
+  const t = r.ti && TITLES.find(x => x.id === r.ti);
+  return `${t ? `<small>${esc(L(...t.name))}</small>` : ''}<b>${esc(r.nm)}</b>${r.kind === 'me' ? `<em class="rk-me">${L('あなた', 'You')}</em>` : ''}`;
+}
+function rankTableHtml(t, limit = 10) {
+  const rows = rankRows(t);
+  if (!rows.length) return `<p class="hint">${L('まだ誰も記録していません', 'No records yet')}</p>`;
+  const top = rows.slice(0, limit);
+  const me = rows.find(r => r.kind === 'me');
+  const show = me && !top.includes(me) ? [...top, me] : top;
+  return `<ol class="rk-list">${show.map(r => `<li class="rk-row ${r.kind}">
+      <span class="rk-no">${r.rank}</span>
+      <span class="rk-av">${rankAvatarHtml(r)}</span>
+      <span class="rk-nm">${rankNameHtml(r)}</span>
+      <span class="rk-sc"><b>${r.sc.toLocaleString()}</b><small>${L(`${r.w}勝`, `${r.w}W`)}</small></span>
+    </li>`).join('')}</ol>`;
+}
+/** 今日の選定の儀の入口（お題・自己ベスト・ランキング） */
+function dailyIntroHtml() {
+  const st = dailyState();
+  const day = dayKey(), pair = dailyPair(day);
+  const best = st.best && st.best.day === day ? st.best : null;
+  const t = app.rank && app.rank.today && app.rank.today.day === day ? app.rank.today : null;
+  const y = app.rank && app.rank.yesterday && app.rank.yesterday.day === prevDay(day) ? app.rank.yesterday : null;
+  const myRow = t ? rankRows(t).find(r => r.kind === 'me') : null;
+  const yTop = y ? rankRows(y)[0] : null;
+  return `<div class="dy-intro">
+    <div class="dy-card">
+      <div class="dy-theme">${L('今日のお題', 'Today’s theme')} ${pairIcons(pair)}<b>${pairName(pair)}</b></div>
+      <p class="dr-lead">${L('今日は全員が、同じ候補のカード・同じ5人の相手で挑みます。何回でも挑戦でき、その日の最高点がランキングに載ります。毎日0時（日本時間）に入れ替わります。',
+        'Everyone gets the same card offers and the same 5 rivals today. Try as many times as you like — your best score of the day goes on the ranking. Resets daily at midnight (Japan time).')}</p>
+      <div class="dy-best">${best
+        ? L(`あなたの今日の最高 <b>${best.sc.toLocaleString()}</b>点（${best.w}勝）${myRow ? `／ いま <b>${myRow.rank}</b>位` : ''}`, `Your best today <b>${best.sc.toLocaleString()}</b> (${best.w}W)${myRow ? ` · now <b>#${myRow.rank}</b>` : ''}`)
+        : L('今日はまだ挑戦していません', 'You haven’t played today yet')}</div>
+      <button class="btn primary dy-start" data-dailystart>${st.run ? L('挑戦の続きから', 'Continue') : L('挑戦する', 'Play today’s rite')}</button>
+      <details class="dy-rules"><summary>${L('点数の決め方', 'How scoring works')}</summary>
+        <p>${L('勝ち 1000点＋残りライフ×20＋早さ（20ターンより早いほど1ターン25点）。負けても削ったライフ×10点。5戦全勝で＋1000点。',
+          'Win: 1000 + 20 per Life left + 25 per turn under 20. Loss: 10 per Life you took. +1000 for going 5-0.')}</p>
+        <p>${L('星屑や限定カードの勝ち数は増えません（いつもの選定の儀で）。', 'No Stardust or exclusive-card progress here (play the regular rite for those).')}</p>
+      </details>
+      ${st.consent === false ? `<p class="hint">${L('ランキングに参加していません（記録は送られません）。', 'You’re not on the ranking (scores aren’t sent).')} <button class="btn tiny" data-rankconsent="ask">${L('参加する', 'Join')}</button></p>` : ''}
+    </div>
+    <section class="dy-rank">
+      <h3>${L('今日のランキング', 'Today’s ranking')} ${t ? `<small>${L(`挑戦者 ${t.players}人`, `${t.players} players`)}</small>` : ''}</h3>
+      ${t ? rankTableHtml(t) : app.rankErr ? `<p class="hint">${L('ランキングを読み込めませんでした。あとでもう一度開いてください。', 'Couldn’t load the ranking. Please try again later.')}</p>` : `<p class="hint">${L('読み込み中…', 'Loading…')}</p>`}
+      <p class="hint">${L('「ライバル」は冒険の敵キャラ24人。今日のお題をAIが本気で遊んだ点数です。', '“Rivals” are the 24 Adventure characters — their scores come from the AI playing today’s rite.')}</p>
+      ${yTop ? `<p class="dy-yesterday">${L('昨日の1位', 'Yesterday’s #1')}：${yTop.kind === 'rival' ? rankNameHtml(yTop) : `<b>${esc(yTop.nm)}</b>`} ${yTop.sc.toLocaleString()}${L('点', '')}</p>` : ''}
+    </section>
+  </div>`;
+}
+/** 参加の確認（初めてのときだけ） */
+function rankConsentOverlay() {
+  return `<div class="overlay"><div class="modal" style="max-width:520px;text-align:left">
+    <h2>${L('ランキングに参加しますか？', 'Join the ranking?')}</h2>
+    <p>${L('ランキングには、<b>プレイヤー名・称号・アイコン</b>と点数が表示され、ほかの人も見られます。',
+      'The ranking shows your <b>player name, title, and avatar</b> with your score, visible to everyone.')}</p>
+    <p style="color:#ffd98a">${L('本名や、個人が分かる名前は使わないでください。', 'Please don’t use your real name or anything that identifies you.')}</p>
+    <p class="hint">${L(`いまの名前：${esc(myName())}（設定で変えられます）`, `Current name: ${esc(myName())} (change it in Settings)`)}</p>
+    <div class="row-btn"><button class="btn primary" data-rankconsent="yes">${L('参加する', 'Join')}</button>
+      <button class="btn" data-rankconsent="no">${L('参加しないで遊ぶ', 'Play without joining')}</button></div>
+  </div></div>`;
 }
 
 /** 限定カードの呼び名（日本語「夕凪の選定官 シエナ」→ シエナ、英語「Shiena, Selector of …」→ Shiena） */
@@ -1058,6 +1248,12 @@ function renderSettings() {
         ${L('遊び方の統計を送る（匿名）', 'Send anonymous play statistics')}</label>
       <div class="hint setnote">${L('どのライバルで負けたか、どこまで進んだか、対戦に使ったデッキの構成、何分遊んだかだけを送り、難しさとカードの調整に使います。名前やセーブの中身は送りません。',
         'Only which rivals you lost to, how far you got, the cards in the deck you battled with, and how long you played — used to tune the difficulty and the cards. Your name and save data are never sent.')}</div>
+    </div>
+    <div class="setrow col">
+      <label class="checkrow"><input type="checkbox" data-rankjoin ${dailyState().consent ? 'checked' : ''}>
+        ${L('今日の選定の儀のランキングに参加する', 'Join the Daily Rite ranking')}</label>
+      <div class="hint setnote">${L('参加すると、今日の選定の儀を終えたときに、プレイヤー名・称号・アイコンと点数を送り、ランキングに表示します。本名は使わないでください。',
+        'When you finish a Daily Rite, your player name, title, avatar, and score are sent and shown on the ranking. Please don’t use your real name.')}</div>
     </div>`;
 
   const panels = { player, sound, language, data };
@@ -1691,7 +1887,7 @@ function resultOverlay() {
     </div>`).join('')}
     ${r.charLeft ? `<p style="color:#c58cff;font-size:14px">${L(`「極」であと <b>${r.charLeft}</b> 回倒すと、このキャラのカードが手に入ります`, `Beat them <b>${r.charLeft}</b> more times on Extreme to get their character card`)}</p>` : ''}
     ${r.thanks ? thanksHtml(r.thanks) : ''}
-    ${r.draft ? `<div class="dr-resline">${draftPipsHtml(app.save.draft)}<p>${L(`選定の儀：${r.draft.wins}勝 ${r.draft.losses}敗（${r.draft.played}/${DRAFT_BATTLES}戦）`, `Rite of Choosing: ${r.draft.wins}W ${r.draft.losses}L (${r.draft.played}/${DRAFT_BATTLES})`)}</p></div>` : ''}
+    ${r.draft ? `<div class="dr-resline">${draftPipsHtml(app.draftRun || curDraft())}<p>${r.draft.daily ? L(`今日の選定の儀：+${(r.draft.score || 0).toLocaleString()}点`, `Daily rite: +${(r.draft.score || 0).toLocaleString()} pts`) + '　' : ''}${L(`${r.draft.wins}勝 ${r.draft.losses}敗（${r.draft.played}/${DRAFT_BATTLES}戦）`, `${r.draft.wins}W ${r.draft.losses}L (${r.draft.played}/${DRAFT_BATTLES})`)}</p></div>` : ''}
     ${r.draft ? `<div class="row-btn"><button class="btn primary" data-go="draft">${r.draft.played >= DRAFT_BATTLES ? L('結果を見る', 'See results') : L('次の対戦へ', 'Next battle')}</button></div>` : `<div class="row-btn">
       <button class="btn primary" data-go="${r.free ? 'free' : 'adventure'}">${r.free ? L('フリーバトルへ戻る', 'Back to Free Battle') : L('冒険へ戻る', 'Back to Adventure')}</button>
       <button class="btn" data-rematch>${L('もう一度', 'Rematch')}</button>
@@ -1893,7 +2089,8 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   // 鳴りかけの音を止め、下げたままのBGM音量を戻しておく
   Audio.stopSe();
   Audio.unduckBgm(0);
-  const dr = opts.draft ? app.save.draft : null;
+  const dr = opts.draft ? curDraft() : null;
+  app.draftRun = dr;
   // 複数スロットのせいで、30枚に満たないデッキを選んだまま挑めてしまわないように
   if (!dr && app.save.deck.length !== 30) {
     const d = app.save.decks[app.save.activeDeck];
@@ -1921,7 +2118,8 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   // 台本の試合：最初のトト戦。デッキにクラゲが無ければ（先にデッキを組み替えた人）台本は使わない
   app.tutorial = tutOn() && !tutHas('script') && !free && !dr && `${area.id}:${enemyIndex}` === 'a1:0'
     && app.save.deck.includes('w01');
-  const seed = (Math.random() * 1e9) | 0;
+  const seed = dr && dr.day ? dailyBattleSeed(dr.day, dr.played) : (Math.random() * 1e9) | 0;
+  app.aiRand = dr && dr.day ? mulberry(seed + 1) : null;
   // フリーバトルの「極」では、そのキャラ自身のカードを1枚だけ持ってくる。
   // 狙っているカードを手に入れる前に見られる、という導線でもある。
   // 枚数を増やすと同じキャラが場に並んでしまうので、枚数は1枚のまま
@@ -2396,7 +2594,7 @@ function aiStep() {
   }
   // 「極」はミスをしない全力のAIにする（キャラごとのnoiseは弱め設定なので上書き）
   const aiNoise = app.free?.difficulty === 'extreme' ? 0 : (app.enemy?.noise || 0);
-  const act = tutorialAiAction(g) || aiChooseAction(g, 1, { noise: aiNoise, profile: app.enemy?.profile || 'balanced' });
+  const act = tutorialAiAction(g) || aiChooseAction(g, 1, { noise: aiNoise, profile: app.enemy?.profile || 'balanced', rand: app.aiRand || undefined });
   if (act && act.type !== 'end') {
     const pause = aiPauseFor(g, act);
     actWithFx(1, act).then(() => scheduleAi(pause));
@@ -2463,7 +2661,7 @@ function finishGameCore() {
     const { d, got } = recordDraftBattle(win);
     trackBattleEnd(win ? 'w' : 'l');
     got.forEach(id => track('draft', { st: 'card', c: id }));
-    app.result = { win, reason: g.reason, draft: { wins: d.wins, losses: d.losses, played: d.played }, riteCards: got };
+    app.result = { win, reason: g.reason, draft: { wins: d.wins, losses: d.losses, played: d.played, daily: !!d.day, score: d.lastScore }, riteCards: got };
     Audio.playSe(win ? 'se_win' : 'se_lose', { duckBgm: 0.14 });
     if (got.length) setTimeout(() => Audio.playSe('se_rare'), 700);
     return render();
@@ -2876,18 +3074,69 @@ function handleClick(ev) {
   const fb = hit('[data-feedback]');
   if (fb) { track('fb', { to: fb.dataset.feedback }); return; }
 
+  // --- 今日の選定の儀 ---
+  const drt = hit('[data-drtab]');
+  if (drt) { app.draftMode = drt.dataset.drtab; app.draftQuitArm = 0; if (app.draftMode === 'daily') fetchRanking(); return render({ resetScroll: true }); }
+  const rc = hit('[data-rankconsent]');
+  if (rc) {
+    const v = rc.dataset.rankconsent;
+    if (v === 'ask') { app.rankConsentAsk = true; return render(); }
+    dailyState().consent = v === 'yes';
+    app.rankConsentAsk = false;
+    writeSave(app.save);
+    if (app.rankStartAfter) { app.rankStartAfter = false; return startDailyRun(); }
+    return render();
+  }
+  if (hit('[data-dailystart]')) {
+    const st = dailyState();
+    if (st.run) { app.draftMode = 'daily'; return render({ resetScroll: true }); }
+    if (st.consent === undefined) { app.rankConsentAsk = true; app.rankStartAfter = true; return render(); }
+    return startDailyRun();
+  }
+  if (hit('[data-dailyfinish]')) {
+    const st = dailyState(), d = st.run;
+    if (!d || draftPhase(d) !== 'done') return;
+    const total = runScore(d.scores || [], d.wins);
+    const newBest = !st.best || st.best.day !== d.day || total > st.best.sc;
+    if (newBest) st.best = { day: d.day, sc: total, w: d.wins };
+    if (st.consent) {
+      const nm = cleanName(myName()) || L('旅人', 'Traveler');
+      sendRank({ d: d.day, sc: total, w: d.wins, nm, ti: app.save.profile?.title || '', av: String(myAvatar()), rk: st.rk });
+      bump(app.save, 'rankJoin');
+    }
+    track('draft', { st: 'daily', sc: total, w: d.wins });
+    st.run = null;
+    writeSave(app.save);
+    Audio.playSe(newBest ? 'se_rare' : 'se_confirm');
+    notice(newBest ? L(`今日の最高点 ${total.toLocaleString()}点！`, `New best today: ${total.toLocaleString()}!`) : L(`${total.toLocaleString()}点でした`, `${total.toLocaleString()} pts`), 2600);
+    const fresh = achCheckNow();
+    if (fresh.length) setTimeout(() => achNotice(fresh), 2700);
+    // 送った記録が表に入るのは数分後（サーバーが作り直すまで）
+    setTimeout(() => fetchRanking(true), 2500);
+    return render({ resetScroll: true });
+  }
+
   // --- 2ピック ---
   const dp = hit('[data-draftpair]');
   if (dp) {
     app.save.draft = newDraft(dp.dataset.draftpair.split(','));
+    app.draftMode = 'normal';
     app.draftQuitArm = 0;
     writeSave(app.save);
     track('draft', { st: 'start', pr: dp.dataset.draftpair });
     return render({ resetScroll: true });
   }
   const pk = hit('[data-draftpick]');
-  if (pk && app.save.draft && app.save.draft.options) {
-    const d = applyPick(app.save.draft, Number(pk.dataset.draftpick));
+  if (pk && curDraft() && curDraft().options) {
+    let d = curDraft();
+    if (d.day) {
+      // 今日の選定の儀：候補は「日付＋何回目のピックか」で決まる
+      d.picks.push(...d.options[Number(pk.dataset.draftpick)]);
+      d.options = d.picks.length >= DRAFT_ROUNDS * 2 ? null : dailyOptions(d.day, d.pair, d.picks);
+      if (draftPhase(d) === 'battle' && !d.opp) d.opp = dailyOpponent(d.day, 0, d.pair);
+    } else {
+      d = applyPick(d, Number(pk.dataset.draftpick));
+    }
     // 30枚そろったら、1戦目の相手をここで決めて残す（読み込み直しで相手が変わらないように）
     if (draftPhase(d) === 'battle' && !d.opp) d.opp = draftOpponent(0, AREAS, Math.random, d.pair);
     writeSave(app.save);
@@ -2900,8 +3149,9 @@ function handleClick(ev) {
     const now = Date.now();
     if (!app.draftQuitArm || now - app.draftQuitArm > 5000) { app.draftQuitArm = now; return render(); }
     app.draftQuitArm = 0;
-    track('draft', { st: 'quit', w: app.save.draft ? app.save.draft.wins : 0, n: app.save.draft ? app.save.draft.picks.length : 0 });
-    app.save.draft = null;
+    const qd = curDraft();
+    track('draft', { st: qd && qd.day ? 'dquit' : 'quit', w: qd ? qd.wins : 0, n: qd ? qd.picks.length : 0 });
+    if (drMode() === 'daily') dailyState().run = null; else app.save.draft = null;
     writeSave(app.save);
     return render({ resetScroll: true });
   }
@@ -3025,6 +3275,7 @@ function handleClick(ev) {
     setStatsEnabled(t.checked);
     return;
   }
+  if (t.matches('[data-rankjoin]')) { dailyState().consent = t.checked; writeSave(app.save); return; }
   const pft = hit('[data-pftab]');
   if (pft) { app.profileTab = pft.dataset.pftab; return render(); }
   const stt = hit('[data-settitle]');

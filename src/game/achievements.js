@@ -111,6 +111,14 @@ export const ACHIEVEMENTS = [
   A('rite_card_4', 'rite', 4, s => owned(s, c => c.set === 10),
     () => L('大祭司の祝福', 'High Priest’s Blessing'), () => L('限定カードを4枚すべて手に入れる', 'Earn all 4 exclusive cards'), ['大祭司の弟子', 'Priest’s Disciple']),
 
+  // ---- 今日の選定の儀（ランキング） ----
+  A('rank_join', 'rank', 1, s => cnt(s, 'rankJoin'),
+    () => L('ランキングに名を刻む', 'On the Board'), () => L('今日の選定の儀の記録をランキングに送る', 'Post a Daily Rite score to the ranking')),
+  A('rank_top10', 'rank', 1, s => cnt(s, 'rankTop10'),
+    () => L('上位の常連', 'Top Ten'), () => L('今日の選定の儀で、その日の最終順位10位以内に入る（ライバル込み）', 'Finish a day in the top 10 of the Daily Rite (Rivals included)'), ['選定の上位者', 'Top Selector']),
+  A('rank_1', 'rank', 1, s => cnt(s, 'rank1'),
+    () => L('一日の覇者', 'Champion of the Day'), () => L('今日の選定の儀で、その日の1位になる（ライバル込み）', 'Finish a day at #1 in the Daily Rite (Rivals included)'), ['一日の覇者', 'Champion of the Day']),
+
   // ---- 全体（ほかの実績の数で決まる） ----
   A('ach_20', 'meta', 20, s => gotCount(s),
     () => L('積み重ね', 'Piling Up'), () => L('実績を20個解除する', 'Unlock 20 achievements')),
@@ -127,7 +135,7 @@ function gotCount(s) {
 
 export const ACH_CATS = [
   ['story', ['冒険', 'Adventure']], ['battle', ['対戦の腕', 'Battle Skill']], ['free', ['フリーバトル', 'Free Battle']],
-  ['collect', ['収集', 'Collection']], ['rite', ['選定の儀', 'Rite of Choosing']], ['meta', ['全体', 'Overall']],
+  ['collect', ['収集', 'Collection']], ['rite', ['選定の儀', 'Rite of Choosing']], ['rank', ['ランキング', 'Ranking']], ['meta', ['全体', 'Overall']],
 ];
 
 /** 数える回数を足す（守った・有利で攻撃した など）。save.ach.c */

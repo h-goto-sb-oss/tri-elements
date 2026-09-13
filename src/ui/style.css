@@ -1549,3 +1549,45 @@ button.titleprof:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .pf-ach{flex-wrap:wrap}.pf-reward{flex-basis:100%;padding-left:34px;white-space:normal}
   .tp-ach{padding:3px 8px;font-size:10px}
 }
+
+/* ============================================================
+   今日の選定の儀（ランキング）
+   ============================================================ */
+.dy-tabs{display:flex;gap:8px;max-width:880px;width:100%;margin:4px auto 0}
+.dy-tabbtn{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 8px;border-radius:12px;
+  border:1px solid var(--line);background:#101a28d9;color:var(--ink,#e8eef6);font-weight:800;font-size:14px;cursor:pointer}
+.dy-tabbtn small{font-size:11px;color:#aebdd0;font-weight:600}
+.dy-tabbtn.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 12px #f2c15b33}
+.dy-tabbtn i{position:absolute;top:6px;right:8px;width:8px;height:8px;border-radius:50%;background:#ffd36a}
+.dy-intro{display:flex;flex-direction:column;gap:14px;max-width:880px;width:100%;margin:0 auto}
+.dy-card{padding:14px 16px;border-radius:14px;background:#0f1824e6;border:1px solid #dfb85f55}
+.dy-theme{display:flex;align-items:center;gap:6px;font-size:14px;color:#c9d3e2}
+.dy-theme b{font-size:18px;color:#fff4d4}
+.dy-best{margin:8px 0 10px;font-size:14px;color:#c9d3e2}
+.dy-best b{color:#ffd98a;font-size:16px}
+.dy-start{width:100%;padding:12px;font-size:16px}
+.dy-rules{margin-top:10px;font-size:12.5px;color:#aebdd0}
+.dy-rules summary{cursor:pointer;color:#c9d3e2}
+.dy-rank h3{display:flex;align-items:baseline;gap:8px}
+.dy-rank h3 small{color:#aebdd0;font-weight:600;font-size:12px}
+.rk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.rk-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:#0f1824d9;border:1px solid #ffffff12}
+.rk-row.me{border-color:var(--gold);background:#231d10e6}
+.rk-row.rival{background:#0c1320c4}
+.rk-no{width:28px;text-align:center;font-weight:900;font-size:15px;color:#c9d3e2;font-variant-numeric:tabular-nums}
+.rk-row:nth-child(1) .rk-no{color:#ffd36a}.rk-row:nth-child(2) .rk-no{color:#dfe6ef}.rk-row:nth-child(3) .rk-no{color:#e0a060}
+.rk-av{width:38px;height:38px;border-radius:9px;overflow:hidden;flex:none;background:#0a0f18}
+.rk-av img,.rk-av .avfb{width:100%;height:100%;object-fit:cover}
+.rk-nm{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.rk-nm small{font-size:10.5px;color:#ffd98a}
+.rk-nm b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk-rival,.rk-me{align-self:flex-start;font-style:normal;font-size:10px;font-weight:800;padding:0 6px;border-radius:999px;margin-top:2px}
+.rk-rival{color:#9fb2c8;border:1px solid #6f86a655}
+.rk-me{color:#2a1600;background:linear-gradient(180deg,#ffe9a8,#e7b54a)}
+.rk-sc{text-align:right;display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.rk-sc b{font-size:15px;color:#fff4d4}.rk-sc small{font-size:11px;color:#aebdd0}
+.dy-yesterday{font-size:13px;color:#c9d3e2;margin-top:8px}
+.dy-tag{padding:1px 8px;border-radius:999px;background:linear-gradient(180deg,#ffe9a8,#e7b54a);color:#2a1600;font-size:11px;font-weight:900}
+.dy-sc{font-weight:800;color:#ffd98a;font-variant-numeric:tabular-nums}
+.dy-newbest{color:#ffd36a}
+.dr-bigscore small{font-size:.5em;margin-left:4px;color:#c9d3e2}
