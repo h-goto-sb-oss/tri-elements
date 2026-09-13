@@ -343,6 +343,9 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .mini .gmark.pierce{background:#8a3a1cdd;top:40px}
 .mini .gmark.dbl{background:#7a2f7add;top:40px}
 .mini .gmark.stunned{background:#445a86dd;left:auto;right:3px;top:40px;color:#e9f1ff}
+/* 氷の防壁・森の加護で守られている（戦闘で破壊されない） */
+.mini .gmark.shield{background:linear-gradient(180deg,#bfe8ffee,#6fb8e8ee);color:#06243a;left:auto;right:3px;top:auto;bottom:26px;box-shadow:0 0 8px #8fd8ff99;font-weight:900}
+.mini:has(.gmark.shield) .inner{box-shadow:inset 0 0 0 2px #8fd8ffaa,0 0 12px #8fd8ff66}
 .mini.canact{box-shadow:0 0 0 2px #f2c15baa,0 0 12px #f2c15b44}
 .mini.attacking{box-shadow:0 0 0 3px var(--gold),0 0 16px #f2c15b88;transform:translateY(-5px)}
 .mini.targetable{box-shadow:0 0 0 3px var(--danger),0 0 14px #ff556688;cursor:crosshair}
@@ -1553,12 +1556,22 @@ button.titleprof:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* ============================================================
    今日の選定の儀（ランキング）
    ============================================================ */
-.dy-tabs{display:flex;gap:8px;max-width:880px;width:100%;margin:4px auto 0}
-.dy-tabbtn{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 8px;border-radius:12px;
-  border:1px solid var(--line);background:#101a28d9;color:var(--ink,#e8eef6);font-weight:800;font-size:14px;cursor:pointer}
-.dy-tabbtn small{font-size:11px;color:#aebdd0;font-weight:600}
-.dy-tabbtn.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 12px #f2c15b33}
-.dy-tabbtn i{position:absolute;top:6px;right:8px;width:8px;height:8px;border-radius:50%;background:#ffd36a}
+.dy-tabs{display:flex;gap:10px;max-width:880px;width:100%;margin:6px auto 2px}
+/* 2つのタブは、どちらを遊んでいるか一目で分かるように、色も背景も変える（今日＝青い星空、いつもの＝金） */
+.dy-tabbtn{position:relative;overflow:hidden;isolation:isolate;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  min-height:74px;padding:12px 10px;border-radius:14px;border:2px solid #3a4a64;color:#e8eef6;font-weight:900;font-size:17px;letter-spacing:.04em;
+  cursor:pointer;background:#0f1824;opacity:.72;transition:opacity .15s,transform .15s,box-shadow .15s}
+.dy-tabbtn::before{content:'';position:absolute;inset:0;z-index:-1}
+.dy-tabbtn[data-drtab="daily"]::before{background:radial-gradient(circle at 20% 20%,#6f9bff55,transparent 55%),linear-gradient(135deg,#16244a,#0c1430)}
+.dy-tabbtn[data-drtab="normal"]::before{background:radial-gradient(circle at 80% 20%,#ffcf5a44,transparent 55%),linear-gradient(135deg,#3a2a10,#1a1208)}
+.dy-tabbtn small{font-size:12px;color:#c9d3e2;font-weight:700;letter-spacing:.02em}
+.dy-tabbtn:hover{opacity:.95}
+.dy-tabbtn.on{opacity:1;transform:translateY(-1px)}
+.dy-tabbtn.on[data-drtab="daily"]{border-color:#86a8ff;box-shadow:0 0 18px #86a8ff55,inset 0 0 0 1px #c9d8ff44;color:#fff}
+.dy-tabbtn.on[data-drtab="normal"]{border-color:#ffcf5a;box-shadow:0 0 18px #ffcf5a55,inset 0 0 0 1px #ffe9a844;color:#fff4d4}
+.dy-tabbtn.on::after{content:'';position:absolute;left:18%;right:18%;bottom:6px;height:3px;border-radius:2px;background:currentColor;opacity:.8}
+.dy-tabbtn i{position:absolute;top:8px;right:10px;width:9px;height:9px;border-radius:50%;background:#ffd36a;box-shadow:0 0 8px #ffd36a}
+@media (max-width:680px){.dy-tabbtn{min-height:66px;font-size:15px;padding:10px 6px}.dy-tabbtn small{font-size:11px}}
 .dy-intro{display:flex;flex-direction:column;gap:14px;max-width:880px;width:100%;margin:0 auto}
 .dy-card{padding:14px 16px;border-radius:14px;background:#0f1824e6;border:1px solid #dfb85f55}
 .dy-theme{display:flex;align-items:center;gap:6px;font-size:14px;color:#c9d3e2}

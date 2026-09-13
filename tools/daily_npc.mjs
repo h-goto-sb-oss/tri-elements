@@ -14,7 +14,7 @@ import { aiTakeTurn } from '../src/engine/ai.js';
 import { card } from '../src/engine/cards.js';
 import { aiChoose, DRAFT_ROUNDS, DRAFT_BATTLES, DRAFT_NOISE } from '../src/game/draft.js';
 import {
-  dayKey, dailyPair, dailyOptions, dailyOpponent, dailyBattleSeed, battleScore, runScore, RIVALS, mulberry, hash32,
+  dayKey, dailyPair, dailyOptions, dailyOpponent, dailyBattleSeed, battleScore, runScore, RIVALS, mulberry, hash32, draftVer,
 } from '../src/game/daily.js';
 
 const day = process.argv[2] || dayKey();
@@ -46,7 +46,7 @@ for (const r of RIVALS) {
   const picks = [];
   for (let k = 0; k < DRAFT_ROUNDS; k++) {
     const opts = dailyOptions(day, pair, picks);
-    picks.push(...opts[aiChoose(opts, picks, rand)]);
+    picks.push(...opts[aiChoose(opts, picks, rand, draftVer(day))]);
   }
   const scores = [];
   let wins = 0;

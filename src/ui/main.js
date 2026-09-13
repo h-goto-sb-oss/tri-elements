@@ -683,10 +683,10 @@ function renderDraft() {
       <div class="desc">${L('その場でデッキを組んで、5人のライバルと連戦するモードです。', 'Draft a deck on the spot and battle 5 rivals in a row.')}</div>
       <div class="dust">${icon('stardust')} ${app.save.stardust || 0}</div>
     </div>
-    <div class="dy-tabs">
+    ${phase === 'pick' ? '' : `<div class="dy-tabs">
       <button class="dy-tabbtn ${daily ? 'on' : ''}" data-drtab="daily">${L('今日の選定の儀', 'Daily rite')}<small>${L('ランキング', 'Ranking')}</small>${dailyState().run ? '<i></i>' : ''}</button>
       <button class="dy-tabbtn ${daily ? '' : 'on'}" data-drtab="normal">${L('いつもの選定の儀', 'Regular rite')}<small>${L('星屑・限定カード', 'Stardust & exclusives')}</small>${app.save.draft ? '<i></i>' : ''}</button>
-    </div>
+    </div>`}
     ${body}
     ${app.rankConsentAsk ? rankConsentOverlay() : ''}
     <div class="adv-foot"><button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button></div>
@@ -784,11 +784,16 @@ function fetchRanking(force = false) {
 /** 人とライバルを混ぜた順位表 [{ kind:'me'|'p'|'rival', ... }] */
 function rankRows(t) {
   if (!t) return [];
-  const me = dailyState().rk;
-  const rows = [
-    ...(t.entries || []).map(e => ({ kind: e.rk === me ? 'me' : 'p', nm: e.nm, ti: e.ti, av: e.av, sc: e.sc, w: e.w })),
-    ...(t.rivals || []).map(r => ({ kind: 'rival', key: r.key, sc: r.sc, w: r.w })),
-  ].sort((a, b) => b.sc - a.sc);
+  const st = dailyState(), me = st.rk;
+  const people = (t.entries || []).map(e => ({ kind: e.rk === me ? 'me' : 'p', nm: e.nm, ti: e.ti, av: e.av, sc: e.sc, w: e.w }));
+  // 自分の今日の最高点は、サーバーの表が作り直されるのを待たずにすぐ入れる（送ったのに載っていない、をなくす）
+  if (st.consent && st.best && st.best.day === t.day) {
+    const mine = people.find(r => r.kind === 'me');
+    const nm = cleanName(myName()) || L('旅人', 'Traveler');
+    if (!mine) people.push({ kind: 'me', nm, ti: app.save.profile?.title || '', av: String(myAvatar()), sc: st.best.sc, w: st.best.w, local: true });
+    else if (mine.sc < st.best.sc) Object.assign(mine, { sc: st.best.sc, w: st.best.w });
+  }
+  const rows = [...people, ...(t.rivals || []).map(r => ({ kind: 'rival', key: r.key, sc: r.sc, w: r.w }))].sort((a, b) => b.sc - a.sc);
   let rank = 0, prev = null;
   rows.forEach((r, i) => { if (r.sc !== prev) { rank = i + 1; prev = r.sc; } r.rank = rank; });
   return rows;
@@ -861,7 +866,7 @@ function dailyIntroHtml() {
       ${st.consent === false ? `<p class="hint">${L('ランキングに参加していません（記録は送られません）。', 'You’re not on the ranking (scores aren’t sent).')} <button class="btn tiny" data-rankconsent="ask">${L('参加する', 'Join')}</button></p>` : ''}
     </div>
     <section class="dy-rank">
-      <h3>${L('今日のランキング', 'Today’s ranking')} ${t ? `<small>${L(`挑戦者 ${t.players}人`, `${t.players} players`)}</small>` : ''}</h3>
+      <h3>${L('今日のランキング', 'Today’s ranking')} ${t ? `<small>${L(`挑戦者 ${rankRows(t).filter(r => r.kind !== 'rival').length}人`, `${rankRows(t).filter(r => r.kind !== 'rival').length} players`)}</small>` : ''}</h3>
       ${t ? rankTableHtml(t) : app.rankErr ? `<p class="hint">${L('ランキングを読み込めませんでした。あとでもう一度開いてください。', 'Couldn’t load the ranking. Please try again later.')}</p>` : `<p class="hint">${L('読み込み中…', 'Loading…')}</p>`}
       <p class="hint">${L('「ライバル」は冒険の敵キャラ24人。今日のお題をAIが本気で遊んだ点数です。', '“Rivals” are the 24 Adventure characters — their scores come from the AI playing today’s rite.')}</p>
       ${yTop ? `<p class="dy-yesterday">${L('昨日の1位', 'Yesterday’s #1')}：${yTop.kind === 'rival' ? rankNameHtml(yTop) : `<b>${esc(yTop.nm)}</b>`} ${yTop.sc.toLocaleString()}${L('点', '')}</p>` : ''}
@@ -1544,9 +1549,12 @@ function renderBattle() {
   }
 
   const coach = coachStep(g);
+  // 【氷の防壁】【森の加護】で、いま戦闘で破壊されないモンスター（盤面に印を出す。出さないと効いているか分からない）
+  const shielded = (p, m) => !!m && (g.turn <= (m.invulnUntil ?? -1)
+    || (g.turn <= (p.fogUntil ?? -1) && (!p.fogElement || card(m.id).element === p.fogElement)));
   const enemyMon = op.field.map((m, i) => {
     const cls = targetSlots.includes(i) || dropEnemy.includes(i) ? 'targetable' : '';
-    return `<div class="slot mon ${m ? '' : 'empty'} ${dropEnemy.includes(i) ? 'drop' : ''}" data-eslot="${i}">${m ? monsterHtml(m, 1, i, { cls }) : ''}</div>`;
+    return `<div class="slot mon ${m ? '' : 'empty'} ${dropEnemy.includes(i) ? 'drop' : ''}" data-eslot="${i}">${m ? monsterHtml(m, 1, i, { cls, shielded: shielded(op, m) }) : ''}</div>`;
   }).join('');
 
   const myMon = me.field.map((m, i) => {
@@ -1558,7 +1566,7 @@ function renderBattle() {
       if (coach === 'direct' && canAttack(g, 0, i)) cls += ' coach-pulse';
     }
     const drop = dropMonster.includes(i) || (m && dropSelf.includes(i));
-    return `<div class="slot mon ${m ? '' : 'empty'} ${drop ? 'drop' : ''}" data-mslot="${i}">${m ? monsterHtml(m, 0, i, { cls }) : ''}</div>`;
+    return `<div class="slot mon ${m ? '' : 'empty'} ${drop ? 'drop' : ''}" data-mslot="${i}">${m ? monsterHtml(m, 0, i, { cls, shielded: shielded(me, m) }) : ''}</div>`;
   }).join('');
 
   const supRow = p => p.supports.map(s =>
@@ -3110,8 +3118,8 @@ function handleClick(ev) {
     notice(newBest ? L(`今日の最高点 ${total.toLocaleString()}点！`, `New best today: ${total.toLocaleString()}!`) : L(`${total.toLocaleString()}点でした`, `${total.toLocaleString()} pts`), 2600);
     const fresh = achCheckNow();
     if (fresh.length) setTimeout(() => achNotice(fresh), 2700);
-    // 送った記録が表に入るのは数分後（サーバーが作り直すまで）
-    setTimeout(() => fetchRanking(true), 2500);
+    // 自分の点はすぐ表に入る（rankRows）。ほかの人のぶんはサーバーが10秒ごとに作り直す
+    setTimeout(() => fetchRanking(true), 12000);
     return render({ resetScroll: true });
   }
 

@@ -43,13 +43,15 @@ export const dayRand = (day, tag) => mulberry(hash32(`tri-daily:${day}:${tag}`))
 export function dailyPair(day) {
   return DRAFT_PAIRS[hash32(`tri-daily:${day}:pair`) % DRAFT_PAIRS.length];
 }
+/** その日に使うドラフトの版（draft.js の DRAFT_VER）。同じ日の途中で候補が変わらないよう、日付で切り替える */
+export const draftVer = day => (day >= '2026-09-14' ? 2 : 1);
 /** ピックの候補：何回目のピックかで乱数を決める（途中から再開しても同じ候補） */
 export function dailyOptions(day, pair, picks) {
-  return makeOptions(pair, picks, dayRand(day, `pick${picks.length / 2}`));
+  return makeOptions(pair, picks, dayRand(day, `pick${picks.length / 2}`), draftVer(day));
 }
 /** n 戦目（0〜4）の相手 */
 export function dailyOpponent(day, n, pair) {
-  return draftOpponent(n, AREAS, dayRand(day, `opp${n}`), pair);
+  return draftOpponent(n, AREAS, dayRand(day, `opp${n}`), pair, draftVer(day));
 }
 /** n 戦目の対戦の乱数の種（山札の混ぜ方） */
 export function dailyBattleSeed(day, n) {

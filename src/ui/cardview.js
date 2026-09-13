@@ -79,6 +79,7 @@ export function monsterHtml(m, side, slot, opts = {}) {
       ${hasKw(m, 'pierce') ? `<div class="gmark pierce">${L('貫通', 'Pierce')}</div>` : ''}
       ${hasKw(m, 'double') ? `<div class="gmark dbl">${L('連撃', 'Double')}</div>` : ''}
       ${(m.stunnedUntil || -1) >= 0 ? `<div class="gmark stunned">${L('停止', 'Stun')}</div>` : ''}
+      ${opts.shielded ? `<div class="gmark shield" title="${L('次の相手のターンが終わるまで、戦闘で破壊されない', 'Can’t be destroyed in battle until the end of the opponent’s next turn')}">${L('不壊', 'Safe')}</div>` : ''}
       <div class="mstat ${buffed ? 'buffed' : ''}">
         <span class="atk">${icon('atk')}${effAtk(m)}</span><span class="def">${icon('def')}${effDef(m)}</span>
       </div>

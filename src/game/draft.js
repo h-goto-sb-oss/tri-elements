@@ -39,7 +39,11 @@ export const OPPONENT_PAIRS = {
 };
 // 30枚のコスト配分の目安（7 は 7以上）と、モンスター／サポートの目安
 const CURVE_TARGET = { 1: 4, 2: 7, 3: 6, 4: 4, 5: 4, 6: 3, 7: 2 };
-const TYPE_TARGET = { monster: 20, support: 10 };
+// v1（〜2026-09-13）：目安 20:10、候補は全部同じ引き方 → 実測 17.4:12.6 でサポートが多すぎた
+// v2：目安 21:9、2枚1組のうち1枚は必ずモンスター（博史さんの指摘「モンスター多めのほうがいい」）
+// 今日の選定の儀は日付で版を切り替える（同じ日の途中で候補が変わると不公平なので。daily.js の draftVer）
+export const DRAFT_VER = 2;
+const TYPE_TARGETS = { 1: { monster: 20, support: 10 }, 2: { monster: 21, support: 9 } };
 
 const costKey = c => Math.min(c.cost, 7);
 
@@ -57,7 +61,8 @@ export function cardScore(c) {
 }
 
 /** このカードが、今のデッキにどれだけ「欲しい」か（1前後の倍率） */
-function needFactor(picks, c) {
+function needFactor(picks, c, v = DRAFT_VER) {
+  const TYPE_TARGET = TYPE_TARGETS[v] || TYPE_TARGETS[DRAFT_VER];
   const have = { cost: {}, type: { monster: 0, support: 0 } };
   for (const id of picks) {
     const x = card(id);
@@ -81,7 +86,7 @@ function pickWeighted(items, weightOf, rand) {
 }
 
 /** 1枚引く。taken＝このデッキ（＋今出している候補）に既にある枚数 */
-function drawOne(pool, picks, taken, rand) {
+function drawOne(pool, picks, taken, rand, v = DRAFT_VER) {
   const rarity = pickWeighted(Object.keys(RARITY_W), k => RARITY_W[k], rand);
   const want = RARITY_ORDER.indexOf(rarity);
   const ok = c => (taken[c.id] || 0) < (c.maxCopies || 3);
@@ -95,47 +100,49 @@ function drawOne(pool, picks, taken, rand) {
     }
   }
   if (!cand.length) cand = pool.filter(ok);
-  const c = pickWeighted(cand, x => needFactor(picks, x), rand);
+  const c = pickWeighted(cand, x => needFactor(picks, x, v), rand);
   taken[c.id] = (taken[c.id] || 0) + 1;
   return c.id;
 }
 
 /** 次のピックの候補：[[id, id], [id, id]] */
-export function makeOptions(pair, picks, rand = Math.random) {
+export function makeOptions(pair, picks, rand = Math.random, v = DRAFT_VER) {
   const pool = draftPool(pair);
+  const mons = pool.filter(c => c.type === 'monster');
   const taken = {};
   for (const id of picks) taken[id] = (taken[id] || 0) + 1;
-  const opts = [];
-  for (let i = 0; i < 2; i++) opts.push([drawOne(pool, picks, taken, rand), drawOne(pool, picks, taken, rand)]);
+  // v2 は1枚目を必ずモンスターから引く（2枚ともサポートのセットを出さない）
+  const set = () => [drawOne(v >= 2 ? mons : pool, picks, taken, rand, v), drawOne(pool, picks, taken, rand, v)];
+  const opts = [set(), set()];
   // 2つのセットがまったく同じ中身なら、片方を引き直す（選ぶ意味がないので）
   const same = (a, b) => [...a].sort().join() === [...b].sort().join();
   for (let t = 0; t < 4 && same(opts[0], opts[1]); t++) {
     opts[1].forEach(id => { taken[id]--; });
-    opts[1] = [drawOne(pool, picks, taken, rand), drawOne(pool, picks, taken, rand)];
+    opts[1] = set();
   }
   return opts;
 }
 
 /** AI のピック：セットの価値＋今のデッキに合うか。少しだけ揺らす */
-export function aiChoose(options, picks, rand = Math.random) {
-  const val = set => set.reduce((s, id) => { const c = card(id); return s + cardScore(c) * needFactor(picks, c); }, 0);
+export function aiChoose(options, picks, rand = Math.random, v = DRAFT_VER) {
+  const val = set => set.reduce((s, id) => { const c = card(id); return s + cardScore(c) * needFactor(picks, c, v); }, 0);
   const a = val(options[0]) + (rand() - 0.5) * 0.6;
   const b = val(options[1]) + (rand() - 0.5) * 0.6;
   return a >= b ? 0 : 1;
 }
 
 /** AI が1本ドラフトする（ライバルのデッキ・シミュレーター用） */
-export function aiDraft(pair, rand = Math.random) {
+export function aiDraft(pair, rand = Math.random, v = DRAFT_VER) {
   const picks = [];
   for (let r = 0; r < DRAFT_ROUNDS; r++) {
-    const opts = makeOptions(pair, picks, rand);
-    picks.push(...opts[aiChoose(opts, picks, rand)]);
+    const opts = makeOptions(pair, picks, rand, v);
+    picks.push(...opts[aiChoose(opts, picks, rand, v)]);
   }
   return picks;
 }
 
 /** 何戦目の相手か → ライバル（冒険の顔ぶれから、戦うほど後半のエリアの人に） */
-export function draftOpponent(battleNo, areas, rand = Math.random, myPair = DRAFT_PAIRS[0]) {
+export function draftOpponent(battleNo, areas, rand = Math.random, myPair = DRAFT_PAIRS[0], v = DRAFT_VER) {
   const bands = [[0, 1], [2, 3], [4, 5], [6, 6], [7, 7]];
   const [lo, hi] = bands[Math.min(battleNo, bands.length - 1)];
   const ai = Math.min(areas.length - 1, lo + Math.floor(rand() * (hi - lo + 1)));
@@ -144,7 +151,7 @@ export function draftOpponent(battleNo, areas, rand = Math.random, myPair = DRAF
   const pair = allowed[Math.floor(rand() * allowed.length)];
   return {
     area: ai, index: ei, key: `${areas[ai].id}:${ei}`, pair,
-    deck: aiDraft(pair, rand), noise: DRAFT_NOISE[Math.min(battleNo, DRAFT_NOISE.length - 1)],
+    deck: aiDraft(pair, rand, v), noise: DRAFT_NOISE[Math.min(battleNo, DRAFT_NOISE.length - 1)],
   };
 }
 
