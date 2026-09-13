@@ -264,11 +264,14 @@ function areaSceneSvg(id) {
   return '<svg class="scene" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice">' + (scenes[id] || '') + '</svg>';
 }
 
+/** 敵キャラの小さな顔アイコン（160px。tools/enemy_icons.py）。立ち絵は大きくて、24人並ぶと重い */
+const enemyIcon = key => withBase(`/assets/enemy_icons/${key.replace(':', '_')}.webp`);
+
 /** プレイヤーのアバター。assets/players に画像があればそれを使う */
 export function avatarHtml(idx) {
   // 'c:a1:0' … 冒険で勝った敵キャラのアイコン（実績・プロフィール画面で解放）
   const ch = /^c:(.+)$/.exec(String(idx));
-  if (ch && ENEMY_ART[ch[1]]) return `<img class="av-enemy" src="${ENEMY_ART[ch[1]]}" alt="">`;
+  if (ch && ENEMY_ART[ch[1]]) return `<img src="${enemyIcon(ch[1])}" alt="">`;
   const src = PLAYER_ART[String(idx)];
   if (src) return `<img src="${src}" alt="">`;
   const a = AVATARS.find(x => x.id === Number(idx)) || AVATARS[0];
@@ -807,11 +810,7 @@ function rankAwards(j) {
   achNotice(achCheckNow());
 }
 function rankAvatarHtml(r) {
-  if (r.kind === 'rival') {
-    const [a, i] = r.key.split(':');
-    const src = ENEMY_ART[r.key];
-    return src ? `<img class="av-enemy" src="${src}" alt="">` : '';
-  }
+  if (r.kind === 'rival') return ENEMY_ART[r.key] ? `<img src="${enemyIcon(r.key)}" alt="">` : '';
   return avatarHtml(/^\d+$/.test(r.av || '') ? Number(r.av) : (r.av || 1));
 }
 function rankNameHtml(r) {

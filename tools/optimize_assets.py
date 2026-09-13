@@ -25,6 +25,7 @@ OUT_ROOT = os.path.join('public', 'assets')
 RULES = {
     'art':         {'max': None, 'q': 85},   # 図鑑の拡大で使うので縮小しない
     'art_full':    {'max': 1024, 'q': 85},   # 選定の儀の限定カードの一枚絵（拡大表示だけで使う）
+    'enemy_icons': {'max': 160,  'q': 85},   # 敵キャラの顔アイコン（プロフィール・ランキング。tools/enemy_icons.py）
     'enemies':     {'max': 768,  'q': 82},   # 冒険画面で最大 267px 表示
     'players':     {'max': 512,  'q': 85},   # アバター選択で最大 88px 表示
     'backgrounds': {'max': 1600, 'q': 80},   # 全画面の背景（暗幕越しに敷く）
