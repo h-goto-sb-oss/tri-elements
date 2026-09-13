@@ -39,7 +39,7 @@ for a, ens in [('a1', ['見習いのトト', '罠師のガロ', '草原の主 �
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 SCREEN = {'battle': '対戦中', 'adventure': '冒険のマップ', 'free': 'フリーバトル', 'deck': 'デッキ編集', 'collection': '図鑑',
           'title': 'タイトル', 'settings': '設定', 'rules': 'ルール', 'shop': 'ショップ'}
-OWNER = {'neyqzar7'}   # 作者自身の端末（stats_report.py と同じ）
+OWNER = {'neyqzar7', 'uux1g5k5'}   # 作者自身の端末（stats_report.py と同じ）
 KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft', 'ach', 'rank'}
 E = html.escape
 

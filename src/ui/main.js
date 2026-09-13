@@ -136,6 +136,7 @@ function syncBgm() {
 }
 
 function go(screen) {
+  if (screen === 'draft' && !draftUnlocked()) { notice(draftLockText(), 2600); return; }
   clearTimeout(app.aiTimer);
   Audio.stopSe();
   app.screen = screen; app.result = null; app.popup = null; app.sel = null; app.detail = null; app.artZoom = null;
@@ -282,6 +283,19 @@ const myAvatar = () => {
   const a = app.save.profile?.avatar || 1;
   return avatarUnlocked(app.save, a) ? a : 1;
 };
+// 選定の儀は、エリア3「凍る入り江」のボスを倒すと解放（炎・水・草の三属にひととおり出会ってから）。
+// 慣れる前に難しいほうへ行って負け続けると、そこでやめてしまうので（PLiCy の新しい人がそうだった）。
+// 入れる前から遊んでいた人は、そのまま遊べる。
+const DRAFT_UNLOCK_AREA = 2;
+const draftBossKey = () => `${AREAS[DRAFT_UNLOCK_AREA].id}:${AREAS[DRAFT_UNLOCK_AREA].enemies.length - 1}`;
+function draftUnlocked() {
+  const s = app.save;
+  return !!(s.cleared[draftBossKey()] || (s.draftStats && s.draftStats.runs) || s.draft
+    || (s.daily && (s.daily.run || s.daily.best)));
+}
+const draftLockText = () => L(`エリア${DRAFT_UNLOCK_AREA + 1}「${AREAS[DRAFT_UNLOCK_AREA].name}」をクリアすると解放`,
+  `Unlocks after clearing Area ${DRAFT_UNLOCK_AREA + 1}: ${AREAS[DRAFT_UNLOCK_AREA].name}`);
+
 /** 選んでいる称号の名前（無ければ空） */
 const myTitle = () => {
   const id = app.save.profile?.title;
@@ -331,7 +345,7 @@ function renderTitle() {
       <div class="title-menu">
         <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>${L('冒険へ出る', 'Adventure')}</b><small>${L('物語を進める', 'Continue the story')}</small></span></button>
         <button class="title-action feature fb" data-go="free" style="--tabg:url(${withBase('/assets/backgrounds/battle-common.webp')})"><span class="ta-icon">${icon('freebattle')}</span><span><b>${L('フリーバトル', 'Free Battle')}</b><small>${L('好きな相手と対戦', 'Fight any opponent you like')}</small></span></button>
-        <button class="title-action feature dr" data-go="draft" style="--tabg:url(${withBase('/assets/backgrounds/draft_bg.webp')})">${app.save.seen && app.save.seen.draft ? '' : '<span class="ta-new">NEW</span>'}<span class="ta-icon">${icon('draft')}</span><span><b>${L('選定の儀', 'Rite of Choosing')}</b><small>${app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
+        <button class="title-action feature dr ${draftUnlocked() ? '' : 'locked'}" data-go="draft" style="--tabg:url(${withBase('/assets/backgrounds/draft_bg.webp')})">${!draftUnlocked() ? `<span class="ta-lock">${icon('lock')}</span>` : app.save.seen && app.save.seen.draft ? '' : '<span class="ta-new">NEW</span>'}<span class="ta-icon">${icon('draft')}</span><span><b>${L('選定の儀', 'Rite of Choosing')}</b><small>${!draftUnlocked() ? draftLockText() : app.save.draft ? L('挑戦の続きから', 'Continue your run') : L('その場で組んで5連戦', 'Draft a deck, fight 5 rivals')}</small></span></button>
         <button class="title-action" data-go="deck"><span class="ta-icon">${icon('deck')}</span><span><b>${L('デッキ編集', 'Deck Builder')}</b><small>${L('30枚を編成', 'Build a 30-card deck')}</small></span></button>
         <button class="title-action" data-go="collection"><span class="ta-icon">${icon('collection')}</span><span><b>${L('カード図鑑', 'Card Library')}</b><small>${L(`全${ALL_CARDS.filter(c => !c.hidden).length}種を眺める`, `Browse all ${ALL_CARDS.filter(c => !c.hidden).length} cards`)}</small></span></button>
         <button class="title-action" data-go="shop"><span class="ta-icon">${icon('shop')}</span><span><b>${L('カードショップ', 'Card Shop')}</b><small>${L(`星屑 ${icon('stardust')}${app.save.stardust || 0} でパックと交換`, `Trade ${icon('stardust')}${app.save.stardust || 0} Stardust for packs`)}</small></span></button>
@@ -1719,6 +1733,23 @@ function popupHtml() {
   return '';
 }
 
+/** 新しいモードの解放を知らせる（結果の画面を閉じて、対戦の外に出てから） */
+function unlockPopHtml() {
+  return `<div class="overlay"><div class="modal unlock-modal">
+    <div class="unlock-art" style="--ubg:url(${withBase('/assets/backgrounds/draft_bg.webp')})"><span>${icon('draft')}</span></div>
+    <div class="unlock-kicker">${L('新しいモードが解放されました', 'New mode unlocked')}</div>
+    <h2>${L('選定の儀', 'Rite of Choosing')}</h2>
+    <p>${L('2枚1組のセットから1つを選び、その場で30枚のデッキを組んで5人のライバルと連戦するモードです。持っていないカードも使えます。',
+      'Pick one of two card pairs, build a 30-card deck on the spot, and battle 5 rivals in a row. You can use cards you don’t own yet.')}</p>
+    <ul>
+      <li>${L('勝つと星屑。勝ち続けると、ここでしか手に入らない限定カード', 'Earn Stardust — and exclusive cards if you keep winning')}</li>
+      <li>${L('「今日の選定の儀」は毎日のランキング。全員が同じ条件で点数を競います', 'The Daily Rite is a daily ranking — everyone plays the same conditions')}</li>
+    </ul>
+    <div class="row-btn"><button class="btn primary" data-unlockgo>${L('行ってみる', 'Take me there')}</button>
+      <button class="btn" data-unlockclose>${L('あとで', 'Later')}</button></div>
+  </div></div>`;
+}
+
 function overlays() {
   let h = '';
   if (app.phase === 'mulligan') h += mulliganOverlay();
@@ -1731,6 +1762,7 @@ function overlays() {
   if (app.tutModal && app.screen === 'battle') h += tutModalOverlay();
   if (app.result) h += resultOverlay();
   if (app.packResult) h += packOverlay();
+  if (app.save.unlockPop === 'draft' && app.screen !== 'battle' && !app.result && !app.packResult) h += unlockPopHtml();
   return h;
 }
 
@@ -1878,6 +1910,7 @@ function resultOverlay() {
     ${r.reward ? `<p style="color:var(--gold);font-size:15px">${L(`報酬: ${PACK_TYPES[r.reward].name} を1つ獲得！`, `Reward: 1 ${PACK_TYPES[r.reward].name}!`)}</p>` : ''}
     ${r.dust ? `<p style="color:var(--gold);font-size:15px">${L(`星屑 ${icon('stardust')}${r.dust} を獲得！（所持 ${icon('stardust')}${app.save.stardust}）`, `Got ${icon('stardust')}${r.dust} Stardust! (Total ${icon('stardust')}${app.save.stardust})`)}</p>` : ''}
     ${r.unlocked ? `<p style="color:#8fe0a8">${L(`「${esc(r.unlocked)}」が解放されました！`, `${esc(r.unlocked)} unlocked!`)}</p>` : ''}
+    ${!r.free && !r.draft && app.save.unlockPop === 'draft' ? `<p class="unlock-line">${icon('draft')} ${L('新しいモード「選定の儀」が解放されました！', 'New mode unlocked: Rite of Choosing!')}</p>` : ''}
     ${r.charCard ? `<div class="charget">
       <div class="charget-label">${icon('stardust')} ${L('キャラクターカードを入手', 'Character card get!')} ${icon('stardust')}</div>
       ${cardHtml(card(r.charCard), { cls: 'big' })}
@@ -2723,6 +2756,9 @@ function finishGameCore() {
       reward = REWARD[areaId];
       app.save.packs[reward] = (app.save.packs[reward] || 0) + 1;
     }
+    if (first && key === draftBossKey() && !app.save.unlockPop && !(app.save.seen && app.save.seen.draftUnlock)) {
+      app.save.unlockPop = 'draft';
+    }
     if (first) {
       const area = AREAS.find(a => a.id === areaId);
       const next = area.enemies[Number(idx) + 1];
@@ -3042,6 +3078,13 @@ function handleClick(ev) {
   const t = ev.target;
   const hit = sel => t.closest(sel);
 
+  if (hit('[data-unlockgo]') || hit('[data-unlockclose]')) {
+    const goNow = !!hit('[data-unlockgo]');
+    app.save.unlockPop = null;
+    app.save.seen = { ...(app.save.seen || {}), draftUnlock: 1 };
+    writeSave(app.save);
+    return goNow ? go('draft') : render();
+  }
   const coachOk = hit('[data-coachok]');
   if (coachOk) { tutDone(coachOk.dataset.coachok); return render(); }
   const tutOk = hit('[data-tutok]');

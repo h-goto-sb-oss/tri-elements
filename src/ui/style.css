@@ -1604,3 +1604,25 @@ button.titleprof:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .dy-sc{font-weight:800;color:#ffd98a;font-variant-numeric:tabular-nums}
 .dy-newbest{color:#ffd36a}
 .dr-bigscore small{font-size:.5em;margin-left:4px;color:#c9d3e2}
+
+/* ============================================================
+   選定の儀：解放前のボタンと、解放のお知らせ
+   ============================================================ */
+.title-action.feature.locked{filter:saturate(.25) brightness(.8);border-color:#5a6a82;box-shadow:inset 0 1px #ffffff14,0 5px 14px #0006}
+.title-action.feature.locked small{color:#c9d3e2}
+.ta-lock{position:absolute;top:6px;right:8px;z-index:2;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+  background:#0b1220cc;border:1px solid #9fb2c866}
+.ta-lock .gi{width:16px;height:16px}
+.unlock-line{color:#ffd98a;font-weight:800}
+.unlock-line .gi{width:20px;height:20px;vertical-align:-4px}
+.unlock-modal{max-width:min(460px,94vw);text-align:left;overflow:hidden;padding:0 0 18px}
+.unlock-modal > :not(.unlock-art){margin-left:22px;margin-right:22px}
+.unlock-art{height:140px;background:var(--ubg) center 30%/cover;position:relative;display:flex;align-items:flex-end;justify-content:center;
+  box-shadow:inset 0 -40px 40px -10px var(--panel)}
+.unlock-art span{margin-bottom:-24px;width:64px;height:64px;border-radius:18px;background:#0f1824;border:2px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px #f2c15b66}
+.unlock-art .gi{width:44px;height:44px}
+.unlock-kicker{margin-top:30px;color:#ffd98a;font-size:12.5px;font-weight:800;letter-spacing:.1em}
+.unlock-modal h2{margin:2px 0 6px;color:var(--gold);font-size:24px}
+.unlock-modal p{font-size:14px;line-height:1.7}
+.unlock-modal ul{margin:6px 0 12px;padding-left:1.2em;font-size:13.5px;line-height:1.7;color:#c9d3e2}

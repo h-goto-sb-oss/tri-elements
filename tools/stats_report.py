@@ -39,7 +39,7 @@ STAGES = [(f'{a}:{i}', f'{an} {i + 1}', n) for a, an, ens in AREAS for i, n in e
 NAME = {k: n for k, _, n in STAGES}
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 # 作者自身の端末（数字に混ぜない）。博史さんのスマホの GitHub Pages 版＝2026-09-12 に判明
-OWNER = {'neyqzar7'}
+OWNER = {'neyqzar7', 'uux1g5k5'}   # スマホの GitHub Pages 版／PC の PLiCy 版（公開直後の確認・2026-09-13）
 KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft', 'ach'}
 
 
