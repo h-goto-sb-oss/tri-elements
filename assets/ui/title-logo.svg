@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" role="img" aria-labelledby="title desc">
+  <title id="title">TRI-ELEMENTS 三属の戦記</title>
+  <desc id="desc">炎・水・草の三属性を表すゲームタイトルロゴ</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff7cf"/>
+      <stop offset=".38" stop-color="#ffd86d"/>
+      <stop offset=".7" stop-color="#d79125"/>
+      <stop offset="1" stop-color="#7d3f0e"/>
+    </linearGradient>
+    <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#8f541d" stop-opacity="0"/>
+      <stop offset=".2" stop-color="#ffd778"/>
+      <stop offset=".5" stop-color="#fff1b0"/>
+      <stop offset=".8" stop-color="#ffd778"/>
+      <stop offset="1" stop-color="#8f541d" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fire" x1="0" y1="1" x2="0" y2="0">
+      <stop stop-color="#bb2b17"/><stop offset=".55" stop-color="#ff6a22"/><stop offset="1" stop-color="#ffd06a"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="1" x2="0" y2="0">
+      <stop stop-color="#1760c5"/><stop offset=".55" stop-color="#35bde8"/><stop offset="1" stop-color="#d7fbff"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="1" x2="0" y2="0">
+      <stop stop-color="#277331"/><stop offset=".55" stop-color="#63c94c"/><stop offset="1" stop-color="#e5f887"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/>
+      <feOffset dy="8" result="off"/>
+      <feColorMatrix in="off" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .82 0"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <path d="M226 155C306 82 385 49 500 49c115 0 194 33 274 106" fill="none" stroke="#1c2632" stroke-width="26" stroke-linecap="round" opacity=".92"/>
+    <path d="M226 155C306 82 385 49 500 49c115 0 194 33 274 106" fill="none" stroke="url(#goldLine)" stroke-width="7" stroke-linecap="round"/>
+
+    <g transform="translate(500 69)" filter="url(#glow)">
+      <path d="M0-49 31-8 17 34 0 48-17 34-31-8Z" fill="url(#water)" stroke="#fff1ae" stroke-width="5"/>
+      <path d="M-8-38 8-8 0 35-18 8Z" fill="#fff" opacity=".32"/>
+      <path d="M-55-27-30-2-42 31-69 39-82 14Z" fill="url(#fire)" stroke="#ffd478" stroke-width="4"/>
+      <path d="M55-27 82 14 69 39 42 31 30-2Z" fill="url(#grass)" stroke="#ffd478" stroke-width="4"/>
+    </g>
+
+    <text x="500" y="202" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="94" font-weight="900" letter-spacing="8"
+      fill="url(#gold)" stroke="#30170a" stroke-width="12" paint-order="stroke fill">TRI-ELEMENTS</text>
+    <text x="500" y="202" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="94" font-weight="900" letter-spacing="8"
+      fill="url(#gold)" stroke="#ffeaa0" stroke-width="2" paint-order="stroke fill">TRI-ELEMENTS</text>
+
+    <path d="M150 232H360l36 18 104-18 104 18 36-18h210" fill="none" stroke="#27170d" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M150 232H360l36 18 104-18 104 18 36-18h210" fill="none" stroke="url(#goldLine)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <text x="500" y="302" text-anchor="middle" font-family="'Yu Mincho','Hiragino Mincho ProN','Noto Serif JP',serif" font-size="57" font-weight="800" letter-spacing="20"
+      fill="#fff4ca" stroke="#2c1709" stroke-width="9" paint-order="stroke fill">三属の戦記</text>
+    <text x="500" y="302" text-anchor="middle" font-family="'Yu Mincho','Hiragino Mincho ProN','Noto Serif JP',serif" font-size="57" font-weight="800" letter-spacing="20"
+      fill="#fff4ca" stroke="#d59a38" stroke-width="1.5" paint-order="stroke fill">三属の戦記</text>
+  </g>
+</svg>
