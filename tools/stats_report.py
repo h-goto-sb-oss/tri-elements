@@ -40,7 +40,7 @@ NAME = {k: n for k, _, n in STAGES}
 DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 # 作者自身の端末（数字に混ぜない）。博史さんのスマホの GitHub Pages 版＝2026-09-12 に判明
 OWNER = {'neyqzar7'}
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft', 'ach'}
 
 
 def read_events():
@@ -265,6 +265,17 @@ def main():
             c[0] += 1
             c[1] += q.get('r') == 'w'
 
+    # 実績：何人が解除したか（難しすぎ・易しすぎを見る）。名前は tools/ach_names.json（ゲームから書き出す）
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ach_names.json'), encoding='utf-8') as fh:
+            ACH_NAMES = json.load(fh)
+    except (OSError, ValueError):
+        ACH_NAMES = {}
+    ach_users = defaultdict(set)
+    for q in ev:
+        if q['e'] == 'ach' and q.get('a'):
+            ach_users[q['a']].add(q['u'])
+    ach_rows = sorted(ach_users.items(), key=lambda kv: -len(kv[1]))
     packs = Counter(q.get('p') for q in ev if q['e'] == 'pack')
     optout = len({q['u'] for q in ev if q['e'] == 'optout'})
     n_thanks = sum(1 for q in ev if q['e'] == 'thanks')
@@ -445,6 +456,10 @@ tr.warn td{{background:#3a1f22}}
 赤い行は「ここで勝てずに先へ進んでいない端末」が3人以上かつ3割以上（難しすぎるかも）</p>
 <div class="box">{funnel or '<p class="note">まだありません</p>'}</div>
 <details><summary>数字で見る（勝率・ターン数）</summary><div class="wrap"><table><tr><th>ライバル</th><th>挑んだ</th><th>突破</th><th>勝率</th><th>ターン</th><th>止まり</th></tr>{rows_stage}</table></div></details>
+
+<h2>実績（解除した人数）</h2>
+<div class="box">{('<div class="wrap"><table><tr><th>実績</th><th>人数</th></tr>' + ''.join(f'<tr><td>{E(ACH_NAMES.get(k, k))}</td><td>{len(v)}</td></tr>' for k, v in ach_rows) + '</table></div>') if ach_rows else '<p class="note">まだありません（実績を入れた版から数えます）</p>'}
+<p class="note">実績を入れる前から遊んでいた人は、初めて開いたときにこれまでの記録の分がまとめて数えられます。</p></div>
 
 <h2>フリーバトル</h2>
 <div class="wrap"><table><tr><th>難易度</th><th>端末</th><th>勝ち</th><th>負け</th><th>投了</th></tr>{rows_free or '<tr><td colspan="5">まだありません</td></tr>'}</table></div>

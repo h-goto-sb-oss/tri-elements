@@ -23,6 +23,11 @@ TAIL_BYTES = 1_500_000
 FEED = 40
 
 NAMES = {}
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ach_names.json'), encoding='utf-8') as _fh:
+        ACH_NAMES = json.load(_fh)
+except (OSError, ValueError):
+    ACH_NAMES = {}
 for a, ens in [('a1', ['見習いのトト', '罠師のガロ', '草原の主 モーリー']), ('a2', ['火の子ピリカ', '溶岩守りゴウ', '炎皇バルガ']),
                ('a3', ['潮見のミナ', '氷壁のヴァル', '海皇ネプト']), ('a4', ['蔦使いリム', '森の狩人ヨナ', '世界樹の守護者 ヴェルダ']),
                ('a5', ['双子の術士 フレア & ミスト', '無銘の剣士', '三属の王 トリアデス']),
@@ -35,7 +40,7 @@ DIFF = {'normal': 'ノーマル', 'hard': '強化', 'extreme': '極'}
 SCREEN = {'battle': '対戦中', 'adventure': '冒険のマップ', 'free': 'フリーバトル', 'deck': 'デッキ編集', 'collection': '図鑑',
           'title': 'タイトル', 'settings': '設定', 'rules': 'ルール', 'shop': 'ショップ'}
 OWNER = {'neyqzar7'}   # 作者自身の端末（stats_report.py と同じ）
-KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft'}
+KNOWN = {'open', 'lang', 'start', 'end', 'pack', 'hide', 'optout', 'thanks', 'fb', 'draft', 'ach'}
 E = html.escape
 
 
@@ -148,6 +153,8 @@ def say(q):
         if st == 'card':
             rite = {'r_shiena': 'シエナ', 'r_mirte': 'ミルテ', 'r_kagura': 'カグラ', 'r_elsion': 'エルシオン'}
             return f'🎴 限定カードを入手：{rite.get(q.get("c"), q.get("c"))}'
+    if e == 'ach':
+        return f'🏆 実績を解除：{ACH_NAMES.get(q.get("a"), q.get("a"))}'
     if e == 'thanks':
         return '💌 お礼のメッセージが出た（' + ('ラスボス初撃破' if q.get('k') == 'final' else 'キャラカード初入手') + '）'
     if e == 'fb':

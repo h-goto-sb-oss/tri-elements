@@ -31,6 +31,9 @@ import '../i18n/data.js';
 import { EN_SETS } from '../i18n/en_game.js';
 import { track, statsEnabled, setStatsEnabled, firstVisit, packDeck } from '../game/telemetry.js';
 import {
+  ACHIEVEMENTS, ACH_CATS, TITLES, CHAR_AVATARS, bump, achProgress, checkAch, titleUnlocked, avatarUnlocked,
+} from '../game/achievements.js';
+import {
   DRAFT_ROUNDS, DRAFT_BATTLES, DRAFT_PAIRS, newDraft, applyPick, draftPhase, draftOpponent, draftReward,
   RITE_PAIR_CARD, riteProgress, riteUnlocks, addDraftWin,
 } from '../game/draft.js';
@@ -140,6 +143,7 @@ function go(screen) {
     app.save.seen = { ...(app.save.seen || {}), draft: 1 };
     writeSave(app.save);
   }
+  if (screen === 'profile' && app.save.ach && app.save.ach.unseen) { app.save.ach.unseen = 0; writeSave(app.save); }
   syncBgm(); render({ resetScroll: true });   // 画面を変えたときは先頭から
 }
 
@@ -258,13 +262,25 @@ function areaSceneSvg(id) {
 
 /** プレイヤーのアバター。assets/players に画像があればそれを使う */
 export function avatarHtml(idx) {
+  // 'c:a1:0' … 冒険で勝った敵キャラのアイコン（実績・プロフィール画面で解放）
+  const ch = /^c:(.+)$/.exec(String(idx));
+  if (ch && ENEMY_ART[ch[1]]) return `<img class="av-enemy" src="${ENEMY_ART[ch[1]]}" alt="">`;
   const src = PLAYER_ART[String(idx)];
   if (src) return `<img src="${src}" alt="">`;
   const a = AVATARS.find(x => x.id === Number(idx)) || AVATARS[0];
   return `<div class="avfb" style="background:radial-gradient(circle at 50% 34%, ${a.tint}, #0a0f18 76%)">${a.emoji}</div>`;
 }
 const myName = () => (app.save.profile?.name || L('あなた', 'You'));
-const myAvatar = () => (app.save.profile?.avatar || 1);
+const myAvatar = () => {
+  const a = app.save.profile?.avatar || 1;
+  return avatarUnlocked(app.save, a) ? a : 1;
+};
+/** 選んでいる称号の名前（無ければ空） */
+const myTitle = () => {
+  const id = app.save.profile?.title;
+  const t = id && TITLES.find(x => x.id === id);
+  return t && titleUnlocked(app.save, id) ? L(...t.name) : '';
+};
 
 // ============================================================
 // スマホ用の下メニュー（戦闘中は出さない）
@@ -300,10 +316,11 @@ function renderTitle() {
       </div>
     </div>
     <div class="title-panel">
-      <div class="titleprof">
+      <button class="titleprof" data-go="profile" aria-label="${L('プロフィール・実績', 'Profile & achievements')}">
         <div class="tface">${avatarHtml(myAvatar())}</div>
-        <div class="titleprof-text"><b>${esc(myName())}</b><div>${L(`${app.save.stats.wins}勝 ${app.save.stats.losses}敗`, `${app.save.stats.wins}W ${app.save.stats.losses}L`)}　<span>${L(`所持 ${owned}枚`, `${owned} cards`)}</span></div></div>
-      </div>
+        <div class="titleprof-text">${myTitle() ? `<small class="tp-title">${esc(myTitle())}</small>` : ''}<b>${esc(myName())}</b><div>${L(`${app.save.stats.wins}勝 ${app.save.stats.losses}敗`, `${app.save.stats.wins}W ${app.save.stats.losses}L`)}　<span>${L(`所持 ${owned}枚`, `${owned} cards`)}</span></div></div>
+        <span class="tp-ach">${icon('stardust')} ${L('実績', 'Achievements')} <b>${achProgress(app.save).filter(x => x.done).length}/${ACHIEVEMENTS.length}</b>${app.save.ach && app.save.ach.unseen ? `<em class="tp-new">NEW ${app.save.ach.unseen}</em>` : ''}</span>
+      </button>
       <div class="title-menu">
         <button class="title-action main" data-go="adventure"><span class="ta-icon">${icon('adventure')}</span><span><b>${L('冒険へ出る', 'Adventure')}</b><small>${L('物語を進める', 'Continue the story')}</small></span></button>
         <button class="title-action feature fb" data-go="free" style="--tabg:url(${withBase('/assets/backgrounds/battle-common.webp')})"><span class="ta-icon">${icon('freebattle')}</span><span><b>${L('フリーバトル', 'Free Battle')}</b><small>${L('好きな相手と対戦', 'Fight any opponent you like')}</small></span></button>
@@ -884,12 +901,104 @@ function renderCollection() {
 
 const renderRules = () => renderRulesPage();
 
+// ============================================================
+// プロフィール：実績・称号・アイコン
+// ============================================================
+function renderProfile() {
+  const tab = app.profileTab || 'ach';
+  const prog = achProgress(app.save);
+  const done = prog.filter(x => x.done).length;
+  const head = `<div class="pf-head">
+    <div class="pf-face">${avatarHtml(myAvatar())}</div>
+    <div class="pf-name">${myTitle() ? `<small>${esc(myTitle())}</small>` : ''}<b>${esc(myName())}</b>
+      <div class="pf-bar"><i style="width:${done / ACHIEVEMENTS.length * 100}%"></i></div>
+      <span>${L(`実績 ${done} / ${ACHIEVEMENTS.length}`, `${done} / ${ACHIEVEMENTS.length} achievements`)}</span></div>
+  </div>`;
+  const tabs = [['ach', L('実績', 'Achievements')], ['title', L('称号', 'Titles')], ['icon', L('アイコン', 'Avatars')]]
+    .map(([k, n]) => `<button class="pf-tab ${tab === k ? 'on' : ''}" data-pftab="${k}">${n}</button>`).join('');
+  let body = '';
+  if (tab === 'ach') {
+    body = ACH_CATS.map(([cat, name]) => {
+      const rows = prog.filter(x => x.a.cat === cat);
+      const n = rows.filter(x => x.done).length;
+      return `<section class="pf-sec"><h3>${L(...name)} <small>${n}/${rows.length}</small></h3>
+        ${rows.map(({ a, v, done }) => `<div class="pf-ach ${done ? 'done' : ''}">
+          <span class="pf-mark">${done ? '✓' : ''}</span>
+          <div class="pf-ach-t"><b>${esc(a.name())}</b><small>${esc(a.desc())}</small>
+            ${done ? '' : `<div class="pf-prog"><i style="width:${a.goal ? v / a.goal * 100 : 0}%"></i></div><em>${v} / ${a.goal}</em>`}</div>
+          ${a.title ? `<span class="pf-reward">${L('称号', 'Title')}「${esc(L(...a.title))}」</span>` : ''}
+        </div>`).join('')}</section>`;
+    }).join('');
+  } else if (tab === 'title') {
+    const cur = app.save.profile?.title || '';
+    body = `<p class="hint">${L('選んだ称号は、名前の上に表示されます。', 'Your title appears above your name.')}</p>
+      <div class="pf-titles">
+        <button class="pf-titlebtn ${!cur ? 'on' : ''}" data-settitle="">${L('（なし）', '(none)')}</button>
+        ${TITLES.map(t => titleUnlocked(app.save, t.id)
+          ? `<button class="pf-titlebtn ${cur === t.id ? 'on' : ''}" data-settitle="${t.id}">${esc(L(...t.name))}</button>`
+          : `<div class="pf-titlebtn locked"><b>？？？</b><small>${esc(t.from.desc())}</small></div>`).join('')}
+      </div>`;
+  } else {
+    const base = AVATARS.map(a => `<button class="avpick ${String(myAvatar()) === String(a.id) ? 'on' : ''}" data-avatar="${a.id}"><div class="avimg">${avatarHtml(a.id)}</div></button>`).join('');
+    const chars = CHAR_AVATARS.map(c => {
+      const e = AREAS.find(a => a.id === c.area).enemies[c.index];
+      return avatarUnlocked(app.save, c.id)
+        ? `<button class="avpick ${String(myAvatar()) === c.id ? 'on' : ''}" data-avatar="${c.id}" title="${esc(e.name)}"><div class="avimg">${avatarHtml(c.id)}</div></button>`
+        : `<div class="avpick locked" title="${esc(L(`冒険で${e.name}に勝つ`, `Beat ${e.name} in Adventure`))}"><div class="avimg">${avatarHtml(c.id)}</div><span>？</span></div>`;
+    }).join('');
+    const nChar = CHAR_AVATARS.filter(c => avatarUnlocked(app.save, c.id)).length;
+    body = `<h3 class="pf-h">${L('はじまりの6人', 'Starting six')}</h3><div class="avgrid">${base}</div>
+      <h3 class="pf-h">${L(`ライバル ${nChar}/${CHAR_AVATARS.length}`, `Rivals ${nChar}/${CHAR_AVATARS.length}`)}</h3>
+      <p class="hint">${L('冒険でそのキャラに勝つと使えるようになります。', 'Beat a rival in Adventure to unlock their avatar.')}</p>
+      <div class="avgrid">${chars}</div>`;
+  }
+  return `<div class="screen profile-screen">
+    ${head}
+    <div class="pf-tabs">${tabs}</div>
+    <div class="pf-body">${body}</div>
+    <div class="row-btn"><button class="btn" data-go="title">${L('タイトルへ', 'Back to Title')}</button></div>
+  </div>`;
+}
+
+/** 実績を確かめて、新しく取れたものを返す（セーブと送信もここで） */
+function achCheckNow() {
+  const fresh = checkAch(app.save);
+  if (fresh.length) {
+    // プロフィールを開くまで、タイトルの「実績」に NEW を出しておく（知らせを見逃しても分かるように）
+    app.save.ach.unseen = (app.save.ach.unseen || 0) + fresh.length;
+    writeSave(app.save);
+    fresh.forEach(a => track('ach', { a: a.id }));
+  }
+  return fresh;
+}
+/** 対戦の外で取れた実績は、知らせで出す */
+function achNotice(fresh) {
+  if (!fresh.length) return;
+  const first = fresh[0];
+  notice(fresh.length === 1
+    ? L(`実績「${first.name()}」を解除しました`, `Achievement unlocked: ${first.name()}`)
+    : L(`実績「${first.name()}」ほか${fresh.length - 1}個を解除しました`, `Unlocked ${first.name()} and ${fresh.length - 1} more`), 3200);
+}
+/** 対戦の終わり：勝ち方で数えるもの */
+function achBattleEnd(g, win) {
+  if (!win) return;
+  const me = g.players[0];
+  if (!app.dmgTaken) bump(app.save, 'perfect');
+  if (me.life <= 3) bump(app.save, 'clutch');
+  if (g.turn <= 10) bump(app.save, 'speed');
+  if (app.free && app.free.difficulty === 'hard') bump(app.save, 'hard');
+  if (!app.draftBattle) {
+    const els = new Set(app.save.deck.map(id => card(id).element).filter(e => e !== 'none'));
+    if (els.size === 1) bump(app.save, 'mono');
+  }
+}
+
 function renderSettings() {
   const st = Audio.audioState;
   const tab = app.settingsTab || 'player';
-  const avatars = AVATARS.map(a => `
-    <button class="avpick ${myAvatar() === a.id ? 'on' : ''}" data-avatar="${a.id}">
-      <div class="avimg">${avatarHtml(a.id)}</div>
+  const avatars = [...AVATARS.map(a => a.id), ...CHAR_AVATARS.filter(c => avatarUnlocked(app.save, c.id)).map(c => c.id)].map(id => `
+    <button class="avpick ${String(myAvatar()) === String(id) ? 'on' : ''}" data-avatar="${id}">
+      <div class="avimg">${avatarHtml(id)}</div>
     </button>`).join('');
 
   const player = `
@@ -900,6 +1009,7 @@ function renderSettings() {
     <div class="setrow col">
       <label>${L('アバター', 'Avatar')}</label>
       <div class="avgrid">${avatars}</div>
+      <p class="hint">${L('冒険で勝った敵キャラも、アイコンに使えるようになります（プロフィールの画面で一覧を見られます）', 'Rivals you beat in Adventure become avatars too (see them all on the Profile screen)')}</p>
     </div>`;
 
   const sound = `
@@ -1570,6 +1680,10 @@ function resultOverlay() {
       ${cardHtml(card(r.charCard), { cls: 'big' })}
       <div class="charget-name">${esc(card(r.charCard).name)}</div>
     </div>` : ''}
+    ${r.ach && r.ach.length ? `<div class="ach-got">${r.ach.slice(0, 3).map(id => {
+      const a = ACHIEVEMENTS.find(x => x.id === id);
+      return `<div>${icon('stardust')} ${L('実績解除：', 'Achievement: ')}<b>${esc(a.name())}</b>${a.title ? `<small>${L(`称号「${L(...a.title)}」`, `Title: ${L(...a.title)}`)}</small>` : ''}</div>`;
+    }).join('')}${r.ach.length > 3 ? `<div class="hint">${L(`ほか${r.ach.length - 3}個`, `and ${r.ach.length - 3} more`)}</div>` : ''}</div>` : ''}
     ${(r.riteCards || []).map(id => `<div class="charget riteget">
       <div class="charget-label">${icon('stardust')} ${L('限定カードを入手', 'Exclusive card get!')} ${icon('stardust')}</div>
       ${cardHtml(card(id), { cls: 'big' })}
@@ -1741,6 +1855,7 @@ function render(opts = {}) {
     case 'shop': html = renderShop(); break;
     case 'rules': html = renderRules(); break;
     case 'settings': html = renderSettings(); break;
+    case 'profile': html = renderProfile(); break;
     case 'battle': html = renderBattle() + popupHtml(); break;
     default: html = renderTitle();
   }
@@ -1800,6 +1915,7 @@ function startBattle(areaIndex, enemyIndex, free = false, opts = {}) {
   app.enemyKey = `${area.id}:${enemyIndex}`;
   app.result = null; app.sel = null; app.popup = null; app.hint = ''; app.detail = null;
   app.feedLogHinted = false; app.tutModal = null; app.tutPending = null; app.tutEndTurn = false; clearFeed();
+  app.dmgTaken = 0; app.killTurn = -1; app.turnKills = 0; app.tripled = false;
   // 一度も対戦を終えていない人は、ここで手引きを始める（すでに遊んだ人には何も出さない）
   if (isFirstTimer() && !tutOn()) tutDone('started');
   // 台本の試合：最初のトト戦。デッキにクラゲが無ければ（先にデッキを組み替えた人）台本は使わない
@@ -2104,6 +2220,26 @@ async function runActionFx(g, pi, action) {
 
   const ok = applyAction(g, pi, action);
   const entries = g.log.slice(mark);
+  // 実績のために数える（守った・有利で攻撃した・倒した・受けたダメージ）
+  if (ok) {
+    const hurt = entries.filter(e => e.kind === 'damage' && e.slot == null && e.p === 0).reduce((a, e) => a + e.v, 0);
+    app.dmgTaken = (app.dmgTaken || 0) + hurt;
+    if (pi === 1) {
+      const held = entries.filter(e => e.kind === 'guard' && e.p === 0).length;
+      if (held) bump(app.save, 'guard', held);
+    } else {
+      const atkLog = entries.find(e => e.kind === 'attack');
+      if (action.type === 'attack' && action.target === 'face') bump(app.save, 'direct');
+      if (atkLog && atkLog.bonus) bump(app.save, 'adv');
+      const kills = entries.filter(e => e.kind === 'destroy' && e.p === 1).length;
+      if (kills) {
+        bump(app.save, 'kills', kills);
+        if (app.killTurn !== g.turn) { app.killTurn = g.turn; app.turnKills = 0; app.tripled = false; }
+        app.turnKills += kills;
+        if (app.turnKills >= 3 && !app.tripled) { app.tripled = true; bump(app.save, 'triple'); }
+      }
+    }
+  }
   // 手引き：実際にやったら、その手引きは終わり
   if (ok && pi === 0 && app.tutorial) {
     if (action.type === 'summon') tutDone('play');
@@ -2311,6 +2447,14 @@ function takeThanks(kind) {
 function finishGame() {
   const g = app.game;
   if (!g || g.winner === null || app.result) return;
+  achBattleEnd(g, g.winner === 0);
+  finishGameCore();
+  const fresh = achCheckNow();
+  if (fresh.length && app.result) { app.result.ach = fresh.map(a => a.id); render(); }
+}
+
+function finishGameCore() {
+  const g = app.game;
   const win = g.winner === 0;
   let reward = null, unlocked = null, dust = 0, firstClear = false;
 
@@ -2335,6 +2479,7 @@ function finishGame() {
       st.w++;
       dust = FREE_DIFFICULTY[app.free.difficulty].dust;
       app.save.stardust = (app.save.stardust || 0) + dust;
+      bump(app.save, 'dust', dust);
       // 「極」で本人を規定回数倒すと、そのキャラのカードが手に入る
       if (app.free.difficulty === 'extreme') {
         st.xw = (st.xw || 0) + 1;
@@ -2765,6 +2910,7 @@ function handleClick(ev) {
     if (!d) return;
     const rw = draftReward(d.wins);
     app.save.stardust = (app.save.stardust || 0) + rw.dust;
+    bump(app.save, 'dust', rw.dust);
     if (rw.prism) app.save.packs.prism = (app.save.packs.prism || 0) + 1;
     const st = app.save.draftStats || { runs: 0, best: 0, wins: 0 };
     st.runs = (st.runs || 0) + 1; st.best = Math.max(st.best || 0, d.wins);   // wins は対戦ごとに足してある
@@ -2776,6 +2922,8 @@ function handleClick(ev) {
     notice(rw.prism
       ? L('プリズムパックは、冒険の画面で開けられます', 'Open your Prism Pack from the Adventure screen')
       : L(`星屑 ${rw.dust} を受け取りました`, `Received ${rw.dust} Stardust`), 2600);
+    const fresh = achCheckNow();
+    if (fresh.length) setTimeout(() => achNotice(fresh), 2700);
     return render({ resetScroll: true });
   }
 
@@ -2798,7 +2946,7 @@ function handleClick(ev) {
     if (!item || !shopUnlocked(app.save, item) || (app.save.stardust || 0) < item.cost) return;
     app.save.stardust -= item.cost;
     app.packResult = openPack(item.pack);
-    addCards(app.save, app.packResult); writeSave(app.save);
+    addCards(app.save, app.packResult); bump(app.save, 'packs'); writeSave(app.save);
     track('pack', { p: item.pack, shop: 1 });
     return render();
   }
@@ -2807,11 +2955,14 @@ function handleClick(ev) {
     if ((app.save.packs[k] || 0) <= 0) return;
     app.save.packs[k]--;
     app.packResult = openPack(k);
-    addCards(app.save, app.packResult); writeSave(app.save);
+    addCards(app.save, app.packResult); bump(app.save, 'packs'); writeSave(app.save);
     track('pack', { p: k });
     return render();
   }
-  if (hit('[data-closepack]')) { app.packResult = null; app.packRevealing = false; app.packRevealed = 0; return render(); }
+  if (hit('[data-closepack]')) {
+    app.packResult = null; app.packRevealing = false; app.packRevealed = 0;
+    render(); return achNotice(achCheckNow());
+  }
   if (hit('[data-rematch]')) {
     const [a, e] = app.enemyKey.split(':');
     const ai = AREAS.findIndex(x => x.id === a);
@@ -2874,11 +3025,22 @@ function handleClick(ev) {
     setStatsEnabled(t.checked);
     return;
   }
+  const pft = hit('[data-pftab]');
+  if (pft) { app.profileTab = pft.dataset.pftab; return render(); }
+  const stt = hit('[data-settitle]');
+  if (stt) {
+    const id = stt.dataset.settitle;
+    if (id && !titleUnlocked(app.save, id)) return;
+    app.save.profile = { ...(app.save.profile || { name: L('あなた', 'You'), avatar: 1 }), title: id || null };
+    writeSave(app.save); return render();
+  }
   const st = hit('[data-settab]');
   if (st) { app.settingsTab = st.dataset.settab; return render(); }
   const av = hit('[data-avatar]');
   if (av) {
-    app.save.profile = { ...(app.save.profile || { name: L('あなた', 'You') }), avatar: Number(av.dataset.avatar) };
+    const id = /^\d+$/.test(av.dataset.avatar) ? Number(av.dataset.avatar) : av.dataset.avatar;
+    if (!avatarUnlocked(app.save, id)) return;
+    app.save.profile = { ...(app.save.profile || { name: L('あなた', 'You') }), avatar: id };
     writeSave(app.save); return render();
   }
   // --- 初回の名前入力 ---
@@ -2928,6 +3090,8 @@ function handleClick(ev) {
       app.pendingSlot = null;
       writeSave(app.save);
       toast(L(`「${app.save.decks[app.save.activeDeck].name}」を保存しました`, `Saved “${app.save.decks[app.save.activeDeck].name}”`));
+      const fresh = achCheckNow();
+      if (fresh.length) setTimeout(() => achNotice(fresh), 2100);
       return render();
     }
     if (hit('[data-resetdeck]')) { app.deckDraft = [...STARTER_DECK]; return render(); }
@@ -3198,3 +3362,11 @@ Audio.scanAudio().then(info => { app.audioInfo = info; });
 if (app.langChosen) renameDefaultDecks();
 syncBgm();
 render();
+// 実績を入れる前から遊んでいた人は、これまでの記録でまとめて解除する（知らせは1回だけ）
+if (app.save.profile) {
+  const fresh = achCheckNow();
+  if (fresh.length) {
+    setTimeout(() => notice(L(`これまでの記録から、実績を${fresh.length}個解除しました（タイトル画面のプロフィールから見られます）`,
+      `Unlocked ${fresh.length} achievements from your past progress (tap your profile on the title screen)`), 6000), 900);
+  }
+}
