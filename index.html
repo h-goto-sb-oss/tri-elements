@@ -15,19 +15,57 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" href="/tri-elements/assets/icon-192-CTdmHVMQ.png">
 <link rel="apple-touch-icon" href="/tri-elements/assets/icon-192-CTdmHVMQ.png">
-<!-- 読み込みが終わるまで真っ白にならないように、背景と「読み込み中」だけは HTML に直接書く（ゲームが描くと消える） -->
+<!-- 読み込み画面。ゲームが最初の画面を描くまでの間に出す（JS を待たずに出るよう HTML に直接書く）。
+     タイトル画面と同じ背景とロゴにして、そのままタイトルへつながって見えるようにする -->
 <style>
   html,body{background:#0b0d16;margin:0}
-  .boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-    color:#d9b25f;font:700 15px/1.4 system-ui,"Hiragino Sans","Yu Gothic",sans-serif;letter-spacing:.08em}
-  .boot b{font-size:26px;letter-spacing:.12em;color:#f3d27a}
-  .boot i{width:34px;height:34px;border-radius:50%;border:3px solid #d9b25f33;border-top-color:#d9b25f;animation:bootspin .9s linear infinite}
-  @keyframes bootspin{to{transform:rotate(360deg)}}
+  .boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 20px;
+    background:#0b0d16 center 48%/cover no-repeat;color:#f1e6c8;font:600 14px/1.5 system-ui,"Hiragino Sans","Yu Gothic",sans-serif;text-align:center}
+  .boot::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,#0b0d1655 0,#0b0d16d9 75%)}
+  .boot>*{position:relative}
+  .boot img{width:min(460px,78vw);filter:drop-shadow(0 4px 12px #000c);opacity:0;transition:opacity .4s}
+  .boot img.on{opacity:1}
+  .boot .bootbar{width:min(300px,64vw);height:6px;border-radius:99px;background:#ffffff1f;overflow:hidden}
+  .boot .bootbar span{display:block;width:40%;height:100%;border-radius:99px;background:linear-gradient(90deg,#e0703a,#3aa0e0,#4cc15a);animation:bootbar 1.3s ease-in-out infinite}
+  @keyframes bootbar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+  .boot .tip{min-height:3em;max-width:520px;color:#e8dcbc;text-shadow:0 1px 4px #000}
+  .boot .tip small{display:block;color:#d9b25f;font-size:11px;letter-spacing:.14em;margin-bottom:2px}
+  @media (prefers-reduced-motion:reduce){.boot .bootbar span{animation:none;width:100%}}
 </style>
-  <script type="module" crossorigin src="/tri-elements/assets/index-CDwzpxqp.js"></script>
+  <script type="module" crossorigin src="/tri-elements/assets/index-DRZT88wf.js"></script>
   <link rel="stylesheet" crossorigin href="/tri-elements/assets/index-_MIzIK1c.css">
 </head>
 <body>
-<div id="app"><div class="boot"><b>TRI-ELEMENTS</b><i></i><span>Loading…</span></div></div>
+<div id="app"><div class="boot" id="boot"><img id="bootlogo" alt="TRI-ELEMENTS"><div class="bootbar"><span></span></div><div class="tip" id="boottip"></div></div></div>
+<script>
+  // 背景・ロゴは、置き場所（GitHub のサブフォルダ・itch・CrazyGames）に関係なく、このページから見た場所で読む
+  (function () {
+    var ja = /^ja/i.test(navigator.language || '');
+    try { var st = localStorage.getItem('tri-elements-lang'); if (st) ja = st === 'ja'; } catch (e) {}
+    var at = function (p) { return new URL(p, location.href).href; };
+    var boot = document.getElementById('boot'), logo = document.getElementById('bootlogo'), tip = document.getElementById('boottip');
+    boot.style.backgroundImage = 'url(' + at('assets/backgrounds/title-bg.webp') + ')';
+    logo.onload = function () { logo.className = 'on'; };
+    logo.src = at(ja ? 'assets/ui/title-logo.svg' : 'assets/ui/title-logo-en.svg');
+    var tips = ja ? [
+      '炎は草に、草は水に、水は炎に強い。有利な属性で攻撃すると攻撃力+2。',
+      '防御モードのモンスターは攻撃できないが、防御力のぶんダメージを受け止める。',
+      '【守護】を持つモンスターがいると、相手はまずそれを倒さないといけない。',
+      '相手の場が空なら、プレイヤーに直接攻撃できる。',
+      '今日の選定の儀は、全員が同じカード・同じ相手。毎日ランキングで競える。',
+      '水曜と土曜は特別ルールの日。3位までに絵違いカードの景品がある。'
+    ] : [
+      'Fire beats Grass, Grass beats Water, Water beats Fire. Attacking with the advantage gives +2 ATK.',
+      'Monsters in Defense Mode can’t attack, but they absorb damage up to their DEF.',
+      'While an enemy has a [Guard] monster, you must defeat it first.',
+      'If the enemy field is empty, you can attack the player directly.',
+      'In the Daily Rite, everyone gets the same cards and rivals — compete on the ranking.',
+      'Wednesdays and Saturdays are special rule days. The top 3 win an alternate-art card.'
+    ];
+    var n = Math.floor(Math.random() * tips.length);
+    var show = function () { if (!document.getElementById('boottip')) return; tip.innerHTML = '<small>TIPS</small>' + tips[n++ % tips.length]; setTimeout(show, 3500); };
+    show();
+  })();
+</script>
 </body>
 </html>
