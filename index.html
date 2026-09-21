@@ -32,7 +32,7 @@
   .boot .tip small{display:block;color:#d9b25f;font-size:11px;letter-spacing:.14em;margin-bottom:2px}
   @media (prefers-reduced-motion:reduce){.boot .bootbar span{animation:none;width:100%}}
 </style>
-  <script type="module" crossorigin src="/tri-elements/assets/index-SJySJkR4.js"></script>
+  <script type="module" crossorigin src="/tri-elements/assets/index-ByYB16Gx.js"></script>
   <link rel="stylesheet" crossorigin href="/tri-elements/assets/index-4sYBkqYX.css">
 </head>
 <body>
@@ -46,7 +46,7 @@
     var boot = document.getElementById('boot'), logo = document.getElementById('bootlogo'), tip = document.getElementById('boottip');
     boot.style.backgroundImage = 'url(' + at('assets/backgrounds/title-bg.webp') + ')';
     logo.onload = function () { logo.className = 'on'; };
-    logo.src = at(ja ? 'assets/ui/title-logo.svg' : 'assets/ui/title-logo-en.svg');
+    logo.src = at((ja ? 'assets/ui/title-logo.' : 'assets/ui/title-logo-en.') + ('production' === 'freem' ? 'png' : 'svg'));   // ふりーむ！版は svg が使えない
     var tips = ja ? [
       '炎は草に、草は水に、水は炎に強い。有利な属性で攻撃すると攻撃力+2。',
       '防御モードのモンスターは攻撃できないが、防御力のぶんダメージを受け止める。',
