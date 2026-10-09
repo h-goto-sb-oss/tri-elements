@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -92 200 200"><defs>
+<linearGradient id="fire" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#bb2b17"/><stop offset=".55" stop-color="#ff6a22"/><stop offset="1" stop-color="#ffd06a"/></linearGradient>
+<linearGradient id="water" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#1760c5"/><stop offset=".55" stop-color="#35bde8"/><stop offset="1" stop-color="#d7fbff"/></linearGradient>
+<linearGradient id="grass" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#277331"/><stop offset=".55" stop-color="#63c94c"/><stop offset="1" stop-color="#e5f887"/></linearGradient>
+<linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#8f541d" stop-opacity="0"/><stop offset=".2" stop-color="#ffd778"/><stop offset=".5" stop-color="#fff1b0"/><stop offset=".8" stop-color="#ffd778"/><stop offset="1" stop-color="#8f541d" stop-opacity="0"/></linearGradient>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs><g filter="url(#glow)">
+<path d="M0-49 31-8 17 34 0 48-17 34-31-8Z" fill="url(#water)" stroke="#fff1ae" stroke-width="5"/>
+<path d="M-8-38 8-8 0 35-18 8Z" fill="#fff" opacity=".32"/>
+<path d="M-55-27-30-2-42 31-69 39-82 14Z" fill="url(#fire)" stroke="#ffd478" stroke-width="4"/>
+<path d="M55-27 82 14 69 39 42 31 30-2Z" fill="url(#grass)" stroke="#ffd478" stroke-width="4"/>
+</g></svg>
